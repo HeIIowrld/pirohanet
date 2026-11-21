@@ -1,5 +1,9 @@
+import stationPoints from '../src/routing/seoul-station-points.json' with { type: 'json' };
+
 const ENDPOINT = 'http://ws.bus.go.kr/api/rest/pathinfo';
-const OPERATIONS = ['getPathInfoByBusNSub', 'getPathInfoBySubway'];
+const SUBWAY = 'getPathInfoBySubway';
+const MAX_STATION_DISTANCE = 1600;
+const stations = Object.values(stationPoints).flatMap(line => Object.entries(line));
 const CACHE_TIME = 60_000;
 const MAX_CACHE_ENTRIES = 256;
 
@@ -43,9 +47,9 @@ function walkStep(from, to, guidance) {
   };
 }
 
-function normalizeRoute(item, origin, destination) {
-  const totalTime = Number(item?.time) * 60;
-  const totalDistance = Number(item?.distance ?? NaN);
+function normalizeRoute(item, origin, destination, extraWalk = 0) {
+  const totalTime = Number(item?.time) * 60 + Math.round(extraWalk * 60 / 75);
+  const totalDistance = Number(item?.distance ?? NaN) + extraWalk;
   if (!(totalTime > 0) || !Number.isFinite(totalTime) || !item.pathList?.length || !Array.isArray(item.pathList)) return null;
   const rides = item.pathList.map(rideStep);
   if (rides.some(ride => !ride)) return null;
@@ -80,13 +84,27 @@ function normalizeRoute(item, origin, destination) {
   };
 }
 
+function nearbyStations(position) {
+  const nearby = stations.map(([name, point]) => ({ name, point, distance: metersBetween(position, point) }))
+    .filter(station => station.distance <= MAX_STATION_DISTANCE)
+    .sort((a, b) => a.distance - b.distance);
+  if (!nearby.length) return [];
+  const [first] = nearby;
+  const second = nearby.find(station => station.name !== first.name);
+  return second ? [first, second] : [first];
+}
+
 function providerError(status, message) {
   return Object.assign(new Error(message), { status });
 }
 
 export function createSeoulTransit({ serviceKey, fetchFn = fetch }) {
   const cache = new Map();
-  const request = async (operation, query, origin, destination) => {
+  const request = async (operation, origin, destination, start = origin, end = destination) => {
+    const query = new URLSearchParams({
+      serviceKey: decodeURIComponent(serviceKey), resultType: 'json',
+      startX: start[0], startY: start[1], endX: end[0], endY: end[1],
+    });
     const response = await fetchFn(`${ENDPOINT}/${operation}?${query}`, { redirect: 'error', signal: AbortSignal.timeout(5000) });
     if (response.status === 429) throw providerError(429, '서울시 경로 조회 한도에 도달했어요.');
     if (!response.ok) throw providerError(502, '서울시 경로 서비스가 요청을 처리하지 못했어요.');
@@ -103,20 +121,33 @@ export function createSeoulTransit({ serviceKey, fetchFn = fetch }) {
     }
     const items = msgBody?.itemList;
     const rows = Array.isArray(items) ? items : items ? [items] : [];
-    const routes = rows.map(item => normalizeRoute(item, origin, destination)).filter(Boolean);
+    const extraWalk = metersBetween(origin, start) + metersBetween(end, destination);
+    const routes = rows.map(item => normalizeRoute(item, origin, destination, extraWalk)).filter(Boolean);
     if (rows.length && !routes.length) throw providerError(502, '서울시 경로 응답을 처리하지 못했어요.');
     return routes;
+  };
+
+  const subwayRoutes = async (origin, destination) => {
+    const direct = await request(SUBWAY, origin, destination);
+    if (direct.length || metersBetween(origin, destination) < 700) return direct;
+    const starts = nearbyStations(origin);
+    const ends = nearbyStations(destination);
+    if (!starts.length || !ends.length || (starts[0].distance <= 250 && ends[0].distance <= 250)) return direct;
+    const stationPairs = starts.flatMap(start => ends.filter(end => end.name !== start.name)
+      .map(end => [start.point, end.point]));
+    const results = await Promise.allSettled(stationPairs.map(([start, end]) =>
+      request(SUBWAY, origin, destination, start, end)));
+    return results.flatMap(result => result.status === 'fulfilled' ? result.value : []);
   };
 
   const lookup = async (params) => {
     if (!serviceKey) throw providerError(503, '서울시 경로 API 키가 설정되지 않았어요.');
     const origin = [params.start_x, params.start_y];
     const destination = [params.end_x, params.end_y];
-    const query = new URLSearchParams({
-      serviceKey: decodeURIComponent(serviceKey), resultType: 'json',
-      startX: origin[0], startY: origin[1], endX: destination[0], endY: destination[1],
-    });
-    const results = await Promise.allSettled(OPERATIONS.map(operation => request(operation, query, origin, destination)));
+    const results = await Promise.allSettled([
+      request('getPathInfoByBusNSub', origin, destination),
+      subwayRoutes(origin, destination),
+    ]);
     const unique = new Map();
     for (const result of results) {
       if (result.status !== 'fulfilled') continue;

@@ -21,7 +21,7 @@ function routeParams(origin, destination) {
 
 // 대중교통 조회는 하루 한도가 작다. 성공한 응답을 이 브라우저에 보관해 같은 구간은 10분 동안 다시 묻지 않고,
 // 한도가 끝났을 때는 전에 받아 둔 응답으로 보여 준다. 테스트처럼 fetch를 바꿔 넣으면 보관하지 않는다.
-const TRANSIT_CACHE_KEY = 'modo.transit.v3';
+const TRANSIT_CACHE_KEY = 'modo.transit.v4';
 const TRANSIT_FRESH_MS = 10 * 60_000;
 const TRANSIT_CACHE_ENTRIES = 12;
 const transitInFlight = new Map();
@@ -89,14 +89,14 @@ async function requestRoutes(origin, destination, fetchFn) {
     route.steps.some((step) => step.type === 'SUBWAY' || step.type === 'BUS'));
 }
 
-export async function requestWalk(origin, destination, fetchFn = fetch) {
+export async function requestWalk(origin, destination, fetchFn = fetch, maxDistance = MAX_WALK_DISTANCE_METERS) {
   const response = await fetchFn(`/api/walk?${routeParams(origin, destination)}`);
   if (!response.ok) return null;
   const { status, route } = await response.json();
   const seconds = route?.properties?.totalTime;
   const distance = route?.properties?.totalDistance;
   if (status !== 'OK' || !Number.isFinite(seconds) || seconds <= 0 ||
-      !Number.isFinite(distance) || distance > MAX_WALK_DISTANCE_METERS) return null;
+      !Number.isFinite(distance) || distance > maxDistance) return null;
   return {
     mode: 'WALKING',
     links: [{ url: mapLink(origin, destination, 'walk') }],
