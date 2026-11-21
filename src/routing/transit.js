@@ -251,6 +251,11 @@ export async function queryTransit({ places, departAt, preferences, detourOnly =
       ? await savedStopRoute(places, departAt, preferences.savedStop.stayMinutes, data, fetchFn) : null;
     return route ? [route] : [];
   }
+  // 대중교통 결과가 없는 가까운 거리는 걸어가는 길을 돌려준다. 없으면 '경로를 찾지 못했어요'에서 막힌다.
+  if (!rawRoutes.length) {
+    const walk = await requestWalk(places.origin, places.destination, fetchFn).catch(() => null);
+    if (walk) return [{ ...profile(walk, departAt, data), stayMinutes: 0, viaStop: false, links: [{ ...walk.links[0], label: '카카오맵에서 도보 길찾기' }] }];
+  }
   const routes = rawRoutes.map((route) => ({ ...profile(route, departAt, data), crowdingAsOf: data?.asOf }));
   const seen = new Set();
   const bases = routes.filter(({ boardings }) => {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makeTrip,routeResult,fromInput,localInput,suggestedLevel } from './services.js';
+import { makeTrip,routeResult,fromInput,localInput,suggestedLevel,finalLevel } from './services.js';
 import { SAMPLE_EVENTS } from '../../src/calendar/sample.js';
 const form={origin:'서울시청',destination:'광화문',departure:'2026-11-21T23:50',arrival:'2026-11-22T00:30'};
 test('Korean times cross midnight regardless of machine timezone',()=>{assert.equal(fromInput(form.departure).toISOString(),'2026-11-21T14:50:00.000Z');assert.equal(localInput(fromInput(form.departure)),form.departure)});
@@ -58,4 +58,15 @@ test('calendar suggestion stays on the 1-5 scale and is accepted by makeTrip',()
     assert.ok(level===null||[1,2,3,4,5].includes(level),`level ${level}`);
     if(level!==null)assert.doesNotThrow(()=>makeTrip(form,null,level));
   }
+});
+
+test('route search uses the chosen condition plus the remaining schedule, capped at 5',()=>{
+  const at=hhmm=>new Date(`2026-11-20T${hhmm}:00+09:00`);
+  assert.equal(finalLevel(SAMPLE_EVENTS,1,at('14:05')),3);
+  assert.equal(finalLevel(SAMPLE_EVENTS,4,at('14:05')),5);
+  assert.equal(finalLevel(SAMPLE_EVENTS,null,at('14:05')),3); // 건너뛰면 달력만으로
+  assert.equal(finalLevel(SAMPLE_EVENTS,1,at('22:00')),1); // 남은 일정이 없으면 고른 값 그대로
+  assert.equal(finalLevel([],2,at('14:05')),2);
+  assert.equal(finalLevel([],null,at('14:05')),null);
+  for(const level of [null,1,2,3,4,5])assert.doesNotThrow(()=>makeTrip(form,null,finalLevel(SAMPLE_EVENTS,level,at('14:05'))));
 });

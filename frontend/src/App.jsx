@@ -2,7 +2,7 @@ import TimeWheel from './TimeWheel.jsx';
 import Onboarding from './Onboarding.jsx';
 import {readOnboarding,completeOnboarding,DEFAULT_TRAVEL_PREFERENCES,normalizeTravelPreferences} from './onboarding.js';
 import React,{useEffect,useRef,useState} from 'react';
-import {locateCandidates,exportSavedPlaces,savePlace as saveLocal,syncMyPlaces,pushMyPlaces} from '../../src/calendar/location.js';
+import {locateCandidates,exportSavedPlaces,savedPlace,savePlace as saveLocal,syncMyPlaces,pushMyPlaces} from '../../src/calendar/location.js';
 import {fetchGoogleEvents,requestGoogleAuthorization} from '../../src/calendar/calendar.js';
 import {planDepartureReminder} from '../../src/main/departure-reminder.js';
 import {readSession,saveSession,clearSession} from '../../src/main/login-session.js';
@@ -10,7 +10,7 @@ import {RouteDetails,RouteComparison} from './RouteFlow.jsx';
 import LiveMap from './LiveMap.jsx';
 import {FATIGUE_SCALE as scale} from './copy.js';
 import {designRoutes} from './design-demo.js';
-import {api,clock,localInput,fromInput,suggestedLevel,makeTrip,queryRoutes,searchWithFallback,validateTimes,timeDraftFromInput,applyTimeDraft,backScreen} from './services.js';
+import {api,clock,localInput,fromInput,suggestedLevel,finalLevel,makeTrip,queryRoutes,searchWithFallback,validateTimes,timeDraftFromInput,applyTimeDraft,backScreen} from './services.js';
 import {Icon,Art,Button,Actions,AppBar,Welcome,CalendarIntro,PlaceRow,Field,FatigueScale,Sheet,Badge,Summary,ListRow,MapSurface} from './design.jsx';
 const kstNow=()=>localInput(new Date());
 const designDemo=import.meta.env.DEV && new URLSearchParams(location.search).get('demo')==='1';
@@ -94,7 +94,7 @@ export default function App(){
  },[]);
  useEffect(()=>{
   if(!expiresAt)return;
-  const timer=setTimeout(disconnect,Math.max(0,expiresAt-Date.now()));
+  const timer=setTimeout(()=>{disconnect();setToast('Google 로그인 시간이 지났어요. 다시 로그인해 주세요.')},Math.max(0,expiresAt-Date.now()));
   return()=>clearTimeout(timer);
  },[expiresAt]);
  useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(''),4500);return()=>clearTimeout(id)},[toast]);
@@ -147,14 +147,14 @@ export default function App(){
   }
  }
  function openSearch(field='destination'){setSearchReturn(screen==='confirm'?'confirm':'home');setPicker(field);setQuery('');setHits(null);go('search')}
- async function search(e){e?.preventDefault();if(!query.trim())return;const id=++request.current;setBusy(true);setError('');try{const matches=saved.filter(p=>[p.alias,p.name,p.address].some(t=>t?.includes(query)));const found=designDemo?[{name:'광화문',subtitle:'관광명소, 종로구',distance:'1.2km',address:'서울 종로구 사직로 161',latitude:37.5759,longitude:126.9768},{name:'광화문역 5호선',subtitle:'지하철역, 종로구',distance:'1.3km',address:'서울 종로구 세종대로',latitude:37.5716,longitude:126.9768}]:matches.length?matches:await searchWithFallback(query,locateCandidates);if(request.current===id)setHits(found)}catch(e){if(request.current===id)setError('장소 검색을 완료하지 못했어요. 검색 API 설정이나 주소를 확인해 주세요.')}finally{if(request.current===id)setBusy(false)}}
+ async function search(e){e?.preventDefault();if(!query.trim())return;const id=++request.current;setBusy(true);setError('');try{const matches=saved.filter(p=>[p.alias,p.name,p.address].some(t=>t?.includes(query)));const found=designDemo?[{name:'광화문',subtitle:'관광명소, 종로구',distance:'1.2km',address:'서울 종로구 사직로 161',latitude:37.5759,longitude:126.9768},{name:'광화문역 5호선',subtitle:'지하철역, 종로구',distance:'1.3km',address:'서울 종로구 세종대로',latitude:37.5716,longitude:126.9768}]:[...matches,...(await searchWithFallback(query,locateCandidates).catch(e=>{if(!matches.length)throw e;return[]})).filter(p=>!matches.some(m=>m.latitude===p.latitude&&m.longitude===p.longitude))];if(request.current===id)setHits(found)}catch(e){if(request.current===id)setError('장소 검색을 완료하지 못했어요. 검색 API 설정이나 주소를 확인해 주세요.')}finally{if(request.current===id)setBusy(false)}}
  useEffect(()=>{if(screen!=='search'||!query.trim())return;const timer=setTimeout(()=>void search(),350);return()=>clearTimeout(timer)},[query,screen]);
  function choose(place,field=picker){
   if(field==='save'){void save(place);return}
   setDemo(designDemo);
   // 일정에 적힌 위치 글자(예: '1공')에 대해 실제 장소를 고른 것이면 그 글자로 기억한다.
   // 다음에 같은 글자가 나오면 검색 없이 이 장소를 쓴다.
-  const alias=event?.location?.trim();
+  const alias=screen==='search'?event?.location?.trim():'';
   if(field==='destination'&&!designDemo&&alias&&form.destination.trim()===alias){
    setToast(`‘${alias}’은(는) 이 장소로 기억할게요.`);
    void persistPlace(alias,place);
@@ -199,7 +199,7 @@ export default function App(){
      const known=saved.filter(p=>[p.alias,p.name,p.address].includes(form[field]));
      const candidates=known.length?known:await searchWithFallback(form[field],locateCandidates);
      if(request.current!==id)return;
-     if(candidates.length!==1){setPicker(field);setSearchReturn('confirm');setQuery(form[field]);setHits(candidates);go('search');return}
+     if(candidates.length!==1||!known.length&&!savedPlace(form[field])&&candidates[0].name&&!form[field].includes(candidates[0].name)){setPicker(field);setSearchReturn('confirm');setQuery(form[field]);setHits(candidates);go('search');return}
      setPoints(p=>({...p,[field]:candidates[0]}));
     }
    }
@@ -215,7 +215,7 @@ export default function App(){
   setDwell(false);
   setScreen('loading');
   try {
-   const t=makeTrip({...form,preferences:onboarding.preferences},event,overrideLevel);
+   const t=makeTrip({...form,preferences:onboarding.preferences},event,designDemo?overrideLevel:finalLevel(events,overrideLevel));
    setTrip(t);
    if(!withStops){setDepartureAlert(null);setRoute(null)}
    const r=designDemo?designRoutes(t,stay):await queryRoutes(t,{places:points,previous:result,stops:withStops,saved,stayMinutes:stay});
@@ -226,8 +226,9 @@ export default function App(){
     setRoute(directChoice??r.direct[0]);
     setScreen('stops');
    }else{
-    setRoute(r.direct[0]??null);
-    setDirectChoice(r.direct[0]??null);
+    const pick=(r.direct[1]?.comfortScore<r.direct[0]?.comfortScore?r.direct[1]:r.direct[0])??null;
+    setRoute(pick);
+    setDirectChoice(pick);
     setScreen('routes');
    }
   }catch(error){
@@ -266,8 +267,8 @@ export default function App(){
  {screen==='routes'&&<RouteComparison result={result} route={route} trip={trip} demo={demo} select={item=>{setRoute(item);setDirectChoice(item)}} choose={chooseRoute} changeCondition={()=>go('condition')} changeTrip={()=>go('confirm')} showLate={item=>{setRoute(item);go('details')}}/>}
  {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button></Actions></Sheet>}
  {screen==='stops'&&<Sheet className="recommendation-sheet"><div className="sheet-body"><div className="heading-row"><h2>{activeStop?'가는 길에 들를 만한 곳이 있어요.':'지금은 바로 가는 게 좋겠어요.'}</h2>{demo&&<Badge/>}</div>{activeStop?<PlaceRow place={activeStop.place} onClick={()=>go('waypoint')} tail={activeStop.place.detourDistance}/>:<p>조건에 맞는 장소를 찾지 못했어요.</p>}</div><Actions>{activeStop&&<Button onClick={()=>go('waypoint')}>장소 보기</Button>}<Button kind={activeStop?'text':'primary'} onClick={()=>{setRoute(directChoice??result.direct[0]);go('details')}}>바로 가기</Button></Actions></Sheet>}
- {screen==='waypoint'&&activeStop&&<Sheet className="waypoint-sheet"><div className="sheet-body"><div className="heading-row"><h2>여기 들러볼까요?</h2>{demo&&<Badge/>}</div><PlaceRow place={activeStop.place} onClick={()=>{}} tail={activeStop.place.detourDistance}/><dl className="metrics"><div><dt>이동 시간</dt><dd>{activeStop.travelMinutes}분</dd></div><div><dt>체류 시간</dt><dd>{activeStop.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(activeStop.arrivalAt)}</dd></div></dl><p className="waypoint-hint">{Math.max(0,activeStop.extraTravelMinutes)}분 더 이동하면 {activeStop.stayMinutes}분 머물 수 있어요.</p></div><Actions><Button onClick={()=>{setRoute(activeStop);go('waypoint-confirmed')}}>이곳 들르기</Button><Button kind="secondary" onClick={()=>setStopIndex(i=>(i+1)%result.stops.length)} hidden={result.stops.length<2}>다른 곳 보기</Button><Button kind="text" onClick={()=>go('stops')}>닫기</Button></Actions></Sheet>}
- {screen==='waypoint-confirmed'&&route&&<Sheet className="waypoint-confirmed-sheet"><div className="sheet-body"><div className="heading-row"><h2>{route.place.name}에 들르는 길이에요.</h2>{demo&&<Badge/>}</div><dl className="metrics"><div><dt>이동 시간</dt><dd>{route.travelMinutes}분</dd></div><div><dt>체류 시간</dt><dd>{route.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(route.arrivalAt)}</dd></div></dl></div><Actions><Button onClick={()=>go('details')}>경로 상세 보기</Button><Button kind="text" onClick={()=>{setRoute(directChoice??result.direct[0]);go('details')}}>경유지 빼기</Button></Actions></Sheet>}
+ {screen==='waypoint'&&activeStop&&<Sheet className="waypoint-sheet"><div className="sheet-body"><div className="heading-row"><h2>여기 들러볼까요?</h2>{demo&&<Badge/>}</div><PlaceRow place={activeStop.place} onClick={()=>{}} tail={activeStop.place.detourDistance}/><dl className="metrics"><div><dt>이동 시간</dt><dd>{Math.ceil(activeStop.travelMinutes)}분</dd></div><div><dt>체류 시간</dt><dd>{activeStop.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(activeStop.arrivalAt)}</dd></div></dl><p className="waypoint-hint">{Math.max(0,Math.ceil(activeStop.extraTravelMinutes))}분 더 이동하면 {activeStop.stayMinutes}분 머물 수 있어요.</p></div><Actions><Button onClick={()=>{setRoute(activeStop);go('waypoint-confirmed')}}>이곳 들르기</Button>{result.stops.length>1&&<Button kind="secondary" onClick={()=>setStopIndex(i=>(i+1)%result.stops.length)}>다른 곳 보기</Button>}<Button kind="text" onClick={()=>go('stops')}>닫기</Button></Actions></Sheet>}
+ {screen==='waypoint-confirmed'&&route&&<Sheet className="waypoint-confirmed-sheet"><div className="sheet-body"><div className="heading-row"><h2>{route.place.name}에 들르는 길이에요.</h2>{demo&&<Badge/>}</div><dl className="metrics"><div><dt>이동 시간</dt><dd>{Math.ceil(route.travelMinutes)}분</dd></div><div><dt>체류 시간</dt><dd>{route.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(route.arrivalAt)}</dd></div></dl></div><Actions><Button onClick={()=>go('details')}>경로 상세 보기</Button><Button kind="text" onClick={()=>{setRoute(directChoice??result.direct[0]);go('details')}}>경유지 빼기</Button></Actions></Sheet>}
  {screen==='details'&&route&&<RouteDetails route={route} trip={trip} demo={demo} navigate={navigate} copyLink={copyLink} openDwell={()=>setDwell(true)}/>}
  {screen==='my'&&<section className="page list-page"><ListRow title="내 장소" subtitle="저장한 장소 관리" onClick={()=>go('saved')}/><ListRow title="캘린더 설정" subtitle="Google 캘린더 연결" onClick={()=>go('settings')}/></section>}
  {screen==='settings'&&<section className="page list-page"><ListRow title="Google 캘린더" subtitle="일정은 읽기만 해요." tail={<small>연결됨</small>}/><ListRow title="약속 장소가 있는 일정만 보기" onClick={()=>setLocatedOnly(v=>!v)} tail={<span className={`toggle ${locatedOnly?'on':''}`} role="switch" aria-checked={locatedOnly} aria-label="약속 장소가 있는 일정만 보기"/>}/><Actions><Button kind="danger" onClick={disconnect}>연결 해제 및 로그아웃</Button></Actions></section>}

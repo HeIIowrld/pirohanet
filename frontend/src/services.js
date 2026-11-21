@@ -10,6 +10,9 @@ export const localInput = date => new Date(+new Date(date) + 9*3600000).toISOStr
 export const fromInput = value => value ? new Date(value + ':00+09:00') : null;
 // 달력 모듈의 피로도는 이미 1~5점이다. 환산하지 않고 그대로 쓴다.
 export function suggestedLevel(events, now) { return summarize(events, now).suggestedFatigue?.level ?? null; }
+// 경로 추천에 쓰는 최종 피로도: 고른 컨디션에 약속 전까지 남은 일정 부담을 더한 값(최대 5).
+// 건너뛰면(null) 달력만으로 계산하고, 달력 근거도 없으면 null이다.
+export function finalLevel(events, level, now=new Date()) { return summarize(events, now, level).fatigue?.level ?? level; }
 export function makeTrip(form, event, level, now=new Date()) {
   if(level!==null && ![1,2,3,4,5].includes(level)) throw new Error('피로도는 1에서 5 사이여야 해요.');
   const departAt=fromInput(form.departure) ?? now, arriveBy=fromInput(form.arrival);
