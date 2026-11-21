@@ -19,6 +19,13 @@
     </header>
 
     <main>
+      <section class="panel" aria-label="Google 계정">
+        <p id="account-status" class="status" role="status">일정과 내 장소를 연결하려면 Google로 로그인하세요.</p>
+        <div class="account-actions">
+          <button id="google-calendar" class="secondary" type="button">Google로 로그인</button>
+          <button id="logout" class="secondary" type="button" hidden>연결 끊기</button>
+        </div>
+      </section>
       <form id="trip-form">
         <section class="panel" aria-labelledby="trip-heading">
           <h2 id="trip-heading">이동 계획</h2>
@@ -51,11 +58,6 @@
             <h2 id="schedule-heading">일정</h2>
             <button id="load-sample" type="button" class="secondary">샘플 일정 불러오기</button>
           </div>
-          <div class="account-actions">
-            <button id="google-calendar" class="secondary" type="button">Google 일정 불러오기</button>
-            <button id="logout" class="secondary" type="button" hidden>연결 끊기</button>
-          </div>
-          <p id="account-status" class="status" role="status" hidden></p>
           <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
           <p id="departure-status" class="status" role="status" tabindex="-1" hidden></p>
           <div id="calendar-place-candidates" class="account-actions"></div>

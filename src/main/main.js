@@ -27,6 +27,7 @@ const stopSource = document.querySelector('#stop-source');
 const calendarButton = document.querySelector('#google-calendar');
 const logout = document.querySelector('#logout');
 const accountStatus = document.querySelector('#account-status');
+const signInMessage = accountStatus.textContent;
 const candidates = document.querySelector('#calendar-place-candidates');
 const previewDeparture = document.querySelector('#preview-departure');
 const emptySummary = summary.textContent;
@@ -52,8 +53,7 @@ const sampleTrip = prepareTrip({}, SAMPLE_EVENTS, SAMPLE_NOW);
 const sampleArrival = seoulTimeField(sampleTrip.arriveBy);
 
 function accountMessage(message) {
-  accountStatus.textContent = message;
-  accountStatus.hidden = !message;
+  accountStatus.textContent = message || (token ? 'Google 계정이 연결됐어요.' : signInMessage);
 }
 
 // ‘회사’가 / ‘집’이 — 받침에 맞춰 조사를 붙인다.
@@ -259,7 +259,7 @@ async function importCalendar() {
   try {
     // 로그인 창이 막히지 않도록 다른 await보다 먼저 부른다.
     // 창을 닫아도 응답이 오지 않는 경우가 있어, 버튼은 토큰을 받은 뒤에 잠근다.
-    granted = await requestGoogleToken();
+    granted = token ?? await requestGoogleToken();
   } catch {
     accountMessage('Google 연결을 완료하지 못했어요. 다시 시도해 주세요.');
     return;
@@ -267,6 +267,7 @@ async function importCalendar() {
 
   token = granted;
   logout.hidden = false;
+  calendarButton.textContent = 'Google 일정 다시 불러오기';
   calendarButton.disabled = true;
   try {
     const items = await fetchGoogleEvents(granted);
@@ -284,7 +285,15 @@ async function importCalendar() {
     showSchedule(items, 'google');
   } catch (error) {
     console.warn(error);
-    if (token === granted) accountMessage('Google 일정을 불러오지 못했어요. 다시 시도해 주세요.');
+    if (token === granted) {
+      const expired = error.status === 401 || /401/.test(error.message);
+      if (expired) {
+        token = null;
+        logout.hidden = true;
+        calendarButton.textContent = 'Google로 로그인';
+      }
+      accountMessage(expired ? 'Google 연결이 만료됐어요. 다시 로그인해 주세요.' : 'Google 일정을 불러오지 못했어요. 다시 시도해 주세요.');
+    }
   } finally {
     calendarButton.disabled = false;
   }
@@ -309,6 +318,7 @@ logout.addEventListener('click', () => {
   source = null;
   scheduleVersion += 1; // 진행 중이던 조회 결과를 버린다
   logout.hidden = true;
+  calendarButton.textContent = 'Google로 로그인';
   form.reset();
   candidates.replaceChildren();
   clearRouteResults();

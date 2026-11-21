@@ -4,6 +4,7 @@ import { exportSavedPlaces, pushMyPlaces, savedPlace, savePlace, searchPlaceCand
 const list = document.querySelector('#saved-place-list');
 const status = document.querySelector('#saved-places-status');
 const login = document.querySelector('#saved-places-login');
+const accountStatus = document.querySelector('#saved-places-account');
 const addPanel = document.querySelector('#saved-place-add');
 const addForm = addPanel.querySelector('form');
 const addQuery = addForm.elements.query;
@@ -17,7 +18,7 @@ let googleToken = null; // 메모리에만 있어서 페이지를 떠나면 사�
 async function applyPlace(alias, place) {
   savePlace(alias, place);
   if (Boolean(savedPlace(alias)) !== Boolean(place)) throw new Error('이 브라우저에 변경 사항을 저장하지 못했어요.');
-  if (!googleToken) return '이 브라우저에만 반영했어요. Google 계정과 맞추면 다른 기기에도 반영돼요.';
+  if (!googleToken) return '이 브라우저에만 반영했어요. Google로 로그인하면 다른 기기에도 반영돼요.';
   try {
     await pushMyPlaces(googleToken);
     return 'Google 계정에도 반영했어요.';
@@ -221,10 +222,12 @@ login.addEventListener('click', async () => {
     login.disabled = true;
     googleToken = token;
     const count = Object.keys(await syncMyPlaces(token)).length;
-    loadPlaces(`Google 계정의 내 장소 ${count}곳과 맞췄어요.`);
+    login.textContent = 'Google 계정과 다시 동기화';
+    accountStatus.textContent = `Google 계정의 내 장소 ${count}곳과 동기화했어요.`;
+    loadPlaces();
   } catch (error) {
     console.warn(error);
-    loadPlaces('Google 계정과 맞추지 못했어요. 잠시 뒤 다시 눌러 주세요. 이 브라우저에 저장한 장소는 그대로 쓸 수 있어요.');
+    accountStatus.textContent = 'Google 연결 또는 동기화에 실패했어요. 다시 시도해 주세요.';
   } finally {
     login.disabled = false;
   }
