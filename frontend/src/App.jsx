@@ -227,7 +227,7 @@ export default function App(){
   update(field,place.name||place.address);
   const next=field==='origin'&&!form.destination?'home':'confirm';
   if(screen==='search'&&navigation.previous?.screen===next)goBack();
-  else go(next,{replace:screen==='search'});
+  else{if(!designDemo)update('departure',kstNow());go(next,{replace:screen==='search'})}
  }
  async function persistPlace(alias,place){
   const session=readSession();
@@ -390,11 +390,11 @@ export default function App(){
  {screen==='loading'&&<Sheet className="loading-sheet"><div className="sheet-body"><h2>경로를 찾고 있어요.</h2><div className="skeleton"/><div className="skeleton"/></div><Actions><Button disabled><Icon name="refresh"/></Button></Actions></Sheet>}
  {screen==='routes'&&<RouteComparison result={result} route={route} trip={trip} demo={demo} select={item=>{setRoute(item);setDirectChoice(item)}} choose={chooseRoute} changeCondition={()=>go('condition')} changeTrip={()=>go('confirm')} showLate={item=>{setRoute(item);go('details')}}/>}
  {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button></Actions></Sheet>}
- {screen==='stops'&&<GapStops result={result} trip={trip} direct={directChoice??result.direct[0]} demo={demo}
+ {screen==='stops'&&result&&<GapStops result={result} trip={trip} direct={directChoice??result.direct[0]} demo={demo}
   openStop={index=>{setStopIndex(index);go('waypoint')}}
   goDirect={()=>startJourney(directChoice??result.direct[0])}/>}
  {screen==='waypoint'&&activeStop&&<Sheet className="waypoint-sheet"><div className="sheet-body"><div className="heading-row"><h2>여기 들러볼까요?</h2>{demo&&<Badge/>}</div><PlaceRow place={activeStop.place} onClick={()=>{}} tail={activeStop.place.detourDistance}/><dl className="metrics"><div><dt>이동 시간</dt><dd>{Math.ceil(activeStop.travelMinutes)}분</dd></div><div><dt>체류 시간</dt><dd>{activeStop.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(activeStop.arrivalAt)}</dd></div></dl><StopTiming stop={activeStop}/><p className="waypoint-hint">직행 대비 추가 이동 {Math.max(0,Math.ceil(activeStop.extraTravelMinutes))}분</p></div><Actions><Button onClick={()=>{setRoute(activeStop);setDepartureAlert(null);go('waypoint-confirmed')}}>이곳 들르기</Button>{result.stops.length>1&&<Button kind="secondary" onClick={()=>setStopIndex(i=>(i+1)%result.stops.length)}>다른 곳 보기</Button>}<Button kind="text" onClick={()=>go('stops')}>닫기</Button></Actions></Sheet>}
- {screen==='waypoint-confirmed'&&route&&<Sheet className="waypoint-confirmed-sheet"><div className="sheet-body"><div className="heading-row"><h2>{route.place.name}에 들르는 길이에요.</h2>{demo&&<Badge/>}</div><dl className="metrics"><div><dt>이동 시간</dt><dd>{Math.ceil(route.travelMinutes)}분</dd></div><div><dt>체류 시간</dt><dd>{route.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(route.arrivalAt)}</dd></div></dl><StopTiming stop={route}/></div><Actions><Button onClick={()=>startJourney()}>이 경로로 안내 시작</Button><Button kind="text" onClick={()=>startJourney(directChoice??result.direct[0])}>경유지 빼기</Button></Actions></Sheet>}
+ {screen==='waypoint-confirmed'&&route?.place&&<Sheet className="waypoint-confirmed-sheet"><div className="sheet-body"><div className="heading-row"><h2>{route.place.name}에 들르는 길이에요.</h2>{demo&&<Badge/>}</div><dl className="metrics"><div><dt>이동 시간</dt><dd>{Math.ceil(route.travelMinutes)}분</dd></div><div><dt>체류 시간</dt><dd>{route.stayMinutes}분</dd></div><div><dt>도착 시간</dt><dd>{clock(route.arrivalAt)}</dd></div></dl><StopTiming stop={route}/></div><Actions><Button onClick={()=>startJourney()}>이 경로로 안내 시작</Button><Button kind="text" onClick={()=>startJourney(directChoice??result.direct[0])}>경유지 빼기</Button></Actions></Sheet>}
  {screen==='journey'&&route&&trip&&progress&&<Journey route={route} trip={trip} demo={demo} progress={progress}
   advance={()=>setProgress(current=>({index:Math.min(current.index+1,route.steps.length-1),startsAt:Date.now()}))} finish={finishJourney}
   openDetails={()=>go('details')} openDwell={!trip.arriveBy&&!route.viaStop&&progress.index===0?()=>openOverlay('dwell'):null} position={journeyPosition} setPosition={setJourneyPosition}/>}
