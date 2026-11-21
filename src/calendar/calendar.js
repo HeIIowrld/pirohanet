@@ -54,8 +54,8 @@ export function summarize(items, now = new Date()) {
 }
 
 function fatigue(events, dayStart, t) {
-  const today = events.filter((e) => e.start >= dayStart && e.start < t);
-  // 일정이 없다고 안 피곤한 건 아니다. 추정하지 않고 사용자에게 고르게 한다.
+  const today = events.filter((e) => e.start >= dayStar다. 추정하지 않고 사용자에t && e.start < t);
+  // 일정이 없다고 안 피곤한 건 아니게 고르게 한다.
   if (!today.length) return null;
 
   let busy = 0;
