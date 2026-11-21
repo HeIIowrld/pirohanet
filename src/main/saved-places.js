@@ -1,4 +1,4 @@
-import { locateCandidates } from '../calendar/location.js';
+import { searchPlaceCandidates } from '../calendar/location.js';
 import { api, savePlace } from '../preferences/account-api.js';
 
 const list = document.querySelector('#saved-place-list');
@@ -99,7 +99,7 @@ function renderPlace(entry) {
 
   edit.addEventListener('submit', (event) => {
     event.preventDefault();
-    void findPlaces(search, locateCandidates, '', '주소를 찾지 못했어요.');
+    void findPlaces(search, searchPlaceCandidates, '', '주소를 찾지 못했어요.');
   });
   current.addEventListener('click', () => {
     void findPlaces(current, locateCurrentPlace, '현재 위치를 확인하는 중이에요.', '현재 위치의 주소를 찾지 못했어요.');

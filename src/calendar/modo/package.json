@@ -1,0 +1,7 @@
+{
+  "name": "modo",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "dev": "node --env-file-if-exists=.env.local server.mjs" }
+}

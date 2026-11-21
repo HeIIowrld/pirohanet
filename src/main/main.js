@@ -1,4 +1,4 @@
-import { locateCandidates } from '../calendar/location.js';
+import { searchPlaceCandidates } from '../calendar/location.js';
 import { SAMPLE_EVENTS, SAMPLE_NOW } from '../calendar/sample.js';
 import { resolvePlace, resolveTripPlaces } from '../map/places.js';
 import { api, savePlace } from '../preferences/account-api.js';
@@ -113,7 +113,7 @@ async function refreshSchedule() {
   summary.textContent = `${appointment} · 주소 확인 중…`;
   try {
     if (source === 'google' && signedIn) {
-      const places = (await locateCandidates(alias)).filter((place) => place.address &&
+      const places = (await searchPlaceCandidates(alias)).filter((place) => place.address &&
         Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
       if (version !== scheduleVersion) return;
       summary.textContent = `${appointment} · ${places.length ? '일정 장소를 확인해 주세요.' : '목적지에 주소를 직접 입력해 주세요.'}`;

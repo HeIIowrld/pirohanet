@@ -1,7 +1,7 @@
-import { locate } from '../calendar/location.js';
+import { searchPlaceCandidates } from '../calendar/location.js';
 
 export async function resolvePlace(query, fetchFn = fetch) {
-  const place = await locate(query, fetchFn);
+  const [place] = await searchPlaceCandidates(query, fetchFn);
   if (!place || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return null;
   return place;
 }

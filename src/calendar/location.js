@@ -6,6 +6,10 @@
 //
 // Geocoding은 주소만 찾는다. 그래서 주소로 안 잡히는 위치는 이름으로 장소를 검색한다.
 // 같은 이름의 장소가 여러 곳일 수 있어 후보를 여러 개 돌려주고, 어느 곳인지는 화면에서 사용자가 고른다.
+//
+// "회사", "집"처럼 사용자만 아는 이름은 검색하면 무관한 곳이 나온다. 그래서 사용자가 한 번 알려 준 장소를
+// 브라우저에 "내 장소"로 저장해 두고, 위치를 찾을 때 저장된 것부터 본다.
+// 내 장소는 사용자의 Google 계정에도 저장해 기기가 바뀌어도 이어 쓴다(파일 아래쪽의 syncMyPlaces, pushMyPlaces).
 
 const MAX_QUERIES = 3; // 위치 글자 하나에 시도할 검색어 수
 const MAX_CANDIDATES = 5; // 사용자에게 보여 줄 후보 수
@@ -19,6 +23,66 @@ const queriesFor = (text) => {
     .filter(Boolean);
   return [...new Set([text.trim(), ...parts.reverse()])].filter(Boolean).slice(0, MAX_QUERIES);
 };
+
+const STORE_KEY = 'pirohanet.myPlaces';
+// 검색하지 않고 사용자에게 물어야 하는 이름. 여기 없는 별명은 사용자가 후보를 고쳐 저장하면 그 뒤로 맞게 나온다.
+const PERSONAL_LABELS = new Set(['회사', '직장', '사무실', '오피스', '집', '우리집', '우리 집', '본가', '자취방', '기숙사', '학교', '학원', '헬스장', 'home', 'work', 'office', 'school']);
+
+const keyOf = (text) => (text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+// ponytail: 한 브라우저를 여러 Google 계정이 번갈아 쓰면 이 저장소의 내 장소가 섞인다. 계정별로 나누려면 저장 키에 계정을 넣는다
+const defaultStore = () => {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null; // 저장소 접근이 막힌 브라우저
+  }
+};
+
+const readSaved = (store) => {
+  try {
+    const all = JSON.parse(store?.getItem(STORE_KEY) ?? '{}');
+    return all && typeof all === 'object' ? all : {};
+  } catch {
+    return {}; // 저장소가 막혔거나 값이 깨졌으면 저장된 것이 없는 것으로 본다
+  }
+};
+
+const validPlace = (place) => Number.isFinite(place?.latitude) && Number.isFinite(place?.longitude);
+
+const writeSaved = (all, store) => {
+  try {
+    store?.setItem(STORE_KEY, JSON.stringify(all));
+  } catch {
+    // 저장이 막힌 브라우저에서는 기억하지 못할 뿐, 위치 찾기는 계속 동작한다
+  }
+};
+
+export const isPersonalLabel = (text) => PERSONAL_LABELS.has(keyOf(text));
+
+// 저장된 내 장소 전체 { 위치 글자: 장소 }. 계정과 맞출 때 쓴다.
+export const exportSavedPlaces = (store = defaultStore()) => readSaved(store);
+
+// 내 장소 전체를 바꿔 넣는다. 좌표가 없는 항목은 버린다.
+export function importSavedPlaces(places, store = defaultStore()) {
+  writeSaved(Object.fromEntries(Object.entries(places ?? {}).filter(([, place]) => validPlace(place))), store);
+}
+
+// 이 위치 글자로 저장해 둔 내 장소. 없으면 null.
+export function savedPlace(text, store = defaultStore()) {
+  const place = readSaved(store)[keyOf(text)];
+  return validPlace(place) ? place : null;
+}
+
+// 위치 글자를 이 장소로 기억한다. place가 null이면 기억을 지운다.
+export function savePlace(text, place, store = defaultStore()) {
+  const key = keyOf(text);
+  if (!key) return;
+  const all = readSaved(store);
+  if (place) all[key] = { name: place.name, address: place.address, latitude: place.latitude, longitude: place.longitude };
+  else delete all[key];
+  writeSaved(all, store);
+}
 
 const get = (path, query, fetchFn) => fetchFn(`${path}?${new URLSearchParams({ query })}`, { headers: { Accept: 'application/json' } });
 
@@ -45,7 +109,15 @@ async function searchPlaces(query, fetchFn) {
 
 // 후보 장소 배열 [{ name, address, latitude, longitude }]. 검색 서비스가 준 순서 그대로이고, 못 찾으면 빈 배열.
 // 후보가 둘 이상이면 화면에서 사용자가 고르게 한다. 빈 배열이면 직접 입력받는다.
-export async function locateCandidates(text, fetchFn = fetch) {
+// 내 장소로 저장된 글자는 검색하지 않고 그 장소 하나만 돌려준다.
+export async function locateCandidates(text, fetchFn = fetch, store = defaultStore()) {
+  const saved = savedPlace(text, store);
+  if (saved) return [saved];
+  if (isPersonalLabel(text)) return []; // 검색하면 무관한 곳이 나온다. 화면에서 어디인지 묻고 savePlace로 저장한다
+  return searchPlaceCandidates(text, fetchFn);
+}
+
+export async function searchPlaceCandidates(text, fetchFn = fetch) {
   const queries = queriesFor(text ?? '');
   for (const query of queries) {
     const hits = await geocode(query, fetchFn);
@@ -60,17 +132,17 @@ export async function locateCandidates(text, fetchFn = fetch) {
 
 // 첫 번째 후보 하나, 없으면 null. src/map/places.js의 resolvePlace 형식과 같다.
 // 같은 이름이 여러 곳이면 엉뚱한 곳일 수 있으니, 사용자가 고를 수 없는 자리에서만 쓴다.
-export async function locate(text, fetchFn = fetch) {
-  return (await locateCandidates(text, fetchFn))[0] ?? null;
+export async function locate(text, fetchFn = fetch, store = defaultStore()) {
+  return (await locateCandidates(text, fetchFn, store))[0] ?? null;
 }
 
 // 여러 위치 글자를 한꺼번에 바꾼다. 같은 글자는 한 번만 찾고, 빈 값은 건너뛴다.
 // 결과는 Map(위치 글자 → 후보 배열)이라 places.get(event.location)으로 꺼낸다.
 // 사용 예: const places = await locateAll(items.map((e) => e.location));
-export async function locateAll(texts, fetchFn = fetch) {
+export async function locateAll(texts, fetchFn = fetch, store = defaultStore()) {
   const unique = [...new Set(texts.map((text) => text?.trim()).filter(Boolean))];
   // ponytail: 전부 동시에 요청한다. 일주일 치 일정 수준이면 충분하고, 위치가 수십 곳을 넘으면 동시 요청 수를 제한한다
-  const candidates = await Promise.all(unique.map((text) => locateCandidates(text, fetchFn)));
+  const candidates = await Promise.all(unique.map((text) => locateCandidates(text, fetchFn, store)));
   return new Map(unique.map((text, i) => [text, candidates[i]]));
 }
 
@@ -80,4 +152,67 @@ export async function locateAll(texts, fetchFn = fetch) {
 export function staticMapUrl(points, keyId, { width = 600, height = 400 } = {}) {
   const markers = points.map(({ longitude, latitude }) => `markers=${encodeURIComponent(`type:d|size:mid|pos:${longitude} ${latitude}`)}`);
   return `https://maps.apigw.ntruss.com/map-static/v2/raster-cors?w=${width}&h=${height}&${markers.join('&')}&X-NCP-APIGW-API-KEY-ID=${encodeURIComponent(keyId)}`;
+}
+
+// ---- 내 장소를 Google 계정에 저장 ----
+// 저장 위치는 Google Drive의 앱 전용 숨김 폴더(appDataFolder)다. 이 앱만 읽고 쓸 수 있고 사용자의 Drive 화면에는 보이지 않는다.
+// 필요한 것: 로그인 때 drive.appdata 권한(calendar.js의 requestGoogleToken이 함께 요청한다)과,
+// Google Cloud 프로젝트에서 Google Drive API 사용 설정.
+// 시연 서버가 정해 둔 파일만 내보내서, 따로 파일을 만들지 않고 여기에 둔다.
+
+const FILE_NAME = 'my-places.json';
+const FILES = 'https://www.googleapis.com/drive/v3/files';
+const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+
+async function call(token, url, init, fetchFn) {
+  const res = await fetchFn(url, { ...init, headers: { Authorization: `Bearer ${token}`, ...init?.headers } });
+  if (!res.ok) {
+    // 403은 원인이 여럿이라(Drive API 미사용 설정, 권한 미동의) Google이 준 사유를 함께 남긴다
+    const detail = (await res.json?.().catch(() => null))?.error;
+    const reason = detail?.errors?.[0]?.reason ?? detail?.status ?? '';
+    throw new Error(`Drive ${res.status}${reason ? ` ${reason}` : ''}`);
+  }
+  return res;
+}
+
+async function findFileId(token, fetchFn) {
+  const params = new URLSearchParams({ spaces: 'appDataFolder', q: `name = '${FILE_NAME}'`, fields: 'files(id)', pageSize: '1' });
+  const { files = [] } = await (await call(token, `${FILES}?${params}`, undefined, fetchFn)).json();
+  return files[0]?.id ?? null;
+}
+
+async function upload(token, fileId, places, fetchFn) {
+  const body = JSON.stringify(places);
+  if (fileId) {
+    return call(token, `${UPLOAD}/${fileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }, fetchFn);
+  }
+  const boundary = 'pirohanet_my_places';
+  const metadata = JSON.stringify({ name: FILE_NAME, parents: ['appDataFolder'] });
+  return call(
+    token,
+    `${UPLOAD}?uploadType=multipart`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`,
+    },
+    fetchFn,
+  );
+}
+
+// 로그인 직후에 부른다. 계정에 저장된 내 장소를 받아 이 브라우저의 것과 합치고, 달라졌으면 계정에 다시 저장한다.
+// 합친 내 장소 { 위치 글자: 장소 }를 돌려준다. 같은 글자가 양쪽에 있으면 계정 쪽을 따른다.
+export async function syncMyPlaces(token, fetchFn = fetch, store) {
+  const fileId = await findFileId(token, fetchFn);
+  const remote = fileId ? await (await call(token, `${FILES}/${fileId}?alt=media`, undefined, fetchFn)).json() : {};
+  importSavedPlaces({ ...exportSavedPlaces(store), ...remote }, store);
+  const merged = exportSavedPlaces(store);
+  if (JSON.stringify(merged) !== JSON.stringify(remote)) await upload(token, fileId, merged, fetchFn);
+  return merged;
+}
+
+// 내 장소를 기억하거나 지운 직후에 부른다. 이 브라우저의 내 장소로 계정의 것을 덮어쓴다.
+// ponytail: 로그인하지 않은 채 지운 기억은 계정에 남아 다음 로그인 때 돌아온다. 지운 기록을 따로 남겨야 고쳐진다
+export async function pushMyPlaces(token, fetchFn = fetch, store) {
+  await upload(token, await findFileId(token, fetchFn), exportSavedPlaces(store), fetchFn);
 }
