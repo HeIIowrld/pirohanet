@@ -23,6 +23,7 @@ test('Seoul paths preserve candidate times and IDs through the weighted route co
     const params = new URL(url).searchParams;
     assert.equal(params.get('serviceKey'), 'fixture+key');
     assert.equal(Number(params.get('startX')), coords.start_x);
+    if (new URL(url).pathname.endsWith('/getPathInfoBySubway')) return response([]);
     return response([
       { time: '26', distance: '7634', pathList: [bus, rail] },
       { time: '30', distance: '8000', pathList: [{ ...bus, tx: coords.end_x, ty: coords.end_y }] },
@@ -30,7 +31,7 @@ test('Seoul paths preserve candidate times and IDs through the weighted route co
   } });
   const [result, same] = await Promise.all([city(coords), city(coords)]);
   assert.equal(result, same);
-  assert.equal(lookups, 1);
+  assert.equal(lookups, 2);
   const previousFetch = globalThis.fetch;
   let requestedBus = false;
   globalThis.fetch = async (url) => {
@@ -65,9 +66,31 @@ test('a provider limit stays retryable and differs from a successful empty resul
   let lookups = 0;
   const city = createSeoulTransit({ serviceKey: 'fixture', fetchFn: () => {
     lookups++;
-    return lookups === 1 ? new Response(null, { status: 429 }) : response([]);
+    return lookups <= 2 ? new Response(null, { status: 429 }) : response([]);
   } });
   await assert.rejects(city(coords), { status: 429 });
   assert.deepEqual(await city(coords), { status: 'NO_RESULTS', routes: [], source: 'seoul' });
-  assert.equal(lookups, 2);
+  assert.equal(lookups, 4);
+});
+
+test('Seoul subway-only trips appear alongside bus trips and survive a mixed endpoint failure', async () => {
+  const stationPair = { start_x: 126.93698, start_y: 37.5552, end_x: 126.91445, end_y: 37.54991 };
+  const sinchonToHapjeong = {
+    routeNm:'2호선', fname:'신촌역', tname:'합정역',
+    fx:'126.93702', fy:'37.55515', tx:'126.91447', ty:'37.54990',
+    railLinkList:[{railLinkId:'1'}, {railLinkId:'2'}],
+  };
+  const subwayTrip = {time:'8', distance:'3110',pathList:[sinchonToHapjeong]};
+  const nearbyBus = {...bus, tname:'합정역',tx:'126.91384',ty:'37.54949'};
+  const city = createSeoulTransit({serviceKey:'fixture', fetchFn:url =>
+    new URL(url).pathname.endsWith('/getPathInfoBySubway') ? response([subwayTrip]) : response([
+      {time:'11',pathList:[nearbyBus]}, subwayTrip,
+    ])});
+  const result = await city(stationPair);
+  assert.deepEqual(result.routes.map(route=>route.properties.type),['BUS','SUBWAY']);
+  assert.equal(result.routes[1].steps.find(step=>step.properties.type==='SUBWAY').properties.railSegments,2);
+
+  const partial = createSeoulTransit({serviceKey:'fixture', fetchFn:url =>
+    new URL(url).pathname.endsWith('/getPathInfoBySubway') ? response([subwayTrip]) : new Response(null,{status:429})});
+  assert.equal((await partial(stationPair)).routes[0].properties.totalTime,480);
 });
