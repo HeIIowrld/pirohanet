@@ -1,4 +1,5 @@
-const ENDPOINT = 'http://ws.bus.go.kr/api/rest/pathinfo/getPathInfoByBusNSub';
+const ENDPOINT = 'http://ws.bus.go.kr/api/rest/pathinfo';
+const OPERATIONS = ['getPathInfoByBusNSub', 'getPathInfoBySubway'];
 const CACHE_TIME = 60_000;
 const MAX_CACHE_ENTRIES = 256;
 
@@ -85,21 +86,14 @@ function providerError(status, message) {
 
 export function createSeoulTransit({ serviceKey, fetchFn = fetch }) {
   const cache = new Map();
-  const lookup = async (params) => {
-    if (!serviceKey) throw providerError(503, '서울시 경로 API 키가 설정되지 않았어요.');
-    const query = new URLSearchParams({
-      serviceKey: decodeURIComponent(serviceKey), resultType: 'json',
-      startX: params.start_x, startY: params.start_y, endX: params.end_x, endY: params.end_y,
-    });
-    const response = await fetchFn(`${ENDPOINT}?${query}`, { redirect: 'error', signal: AbortSignal.timeout(5000) });
+  const request = async (operation, query, origin, destination) => {
+    const response = await fetchFn(`${ENDPOINT}/${operation}?${query}`, { redirect: 'error', signal: AbortSignal.timeout(5000) });
     if (response.status === 429) throw providerError(429, '서울시 경로 조회 한도에 도달했어요.');
     if (!response.ok) throw providerError(502, '서울시 경로 서비스가 요청을 처리하지 못했어요.');
     const { msgHeader, msgBody } = await response.json();
-    const origin = [params.start_x, params.start_y];
-    const destination = [params.end_x, params.end_y];
     const code = String(msgHeader?.headerCd);
     if (code === '4' || (code === '1' && metersBetween(origin, destination) < 100)) {
-      return { status: 'NO_RESULTS', routes: [], source: 'seoul' };
+      return [];
     }
     if (code !== '0') {
       if (/limit|traffic|quota|초과/i.test(msgHeader?.headerMsg ?? '')) {
@@ -111,6 +105,30 @@ export function createSeoulTransit({ serviceKey, fetchFn = fetch }) {
     const rows = Array.isArray(items) ? items : items ? [items] : [];
     const routes = rows.map(item => normalizeRoute(item, origin, destination)).filter(Boolean);
     if (rows.length && !routes.length) throw providerError(502, '서울시 경로 응답을 처리하지 못했어요.');
+    return routes;
+  };
+
+  const lookup = async (params) => {
+    if (!serviceKey) throw providerError(503, '서울시 경로 API 키가 설정되지 않았어요.');
+    const origin = [params.start_x, params.start_y];
+    const destination = [params.end_x, params.end_y];
+    const query = new URLSearchParams({
+      serviceKey: decodeURIComponent(serviceKey), resultType: 'json',
+      startX: origin[0], startY: origin[1], endX: destination[0], endY: destination[1],
+    });
+    const results = await Promise.allSettled(OPERATIONS.map(operation => request(operation, query, origin, destination)));
+    const unique = new Map();
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue;
+      for (const route of result.value) {
+        const key = JSON.stringify(route.steps.map(({ properties, path }) =>
+          [properties.type, properties.vehicles?.[0]?.name, properties.seoulBusRouteId, path.points]));
+        if (!unique.has(key) || route.properties.totalTime < unique.get(key).properties.totalTime) unique.set(key, route);
+      }
+    }
+    const routes = [...unique.values()];
+    const failure = results.find(result => result.status === 'rejected');
+    if (!routes.length && failure) throw failure.reason;
     return { status: routes.length ? 'OK' : 'NO_RESULTS', routes, source: 'seoul' };
   };
   return (params) => {
