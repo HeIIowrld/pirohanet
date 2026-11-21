@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 
 const center = {latitude:37.5665, longitude:126.978};
+const authFailure = 'modo:naver-map-auth-failure';
 const modeColors = {BUS:'--state-success', SUBWAY:'--brand-sky-deep', WALKING:'--walk'};
 const lineColors = {'2호선':'--line-2','5호선':'--line-5'};
 
@@ -9,25 +10,37 @@ function strokeToken(step) {
 }
 let sdkPromise;
 
-function loadKakaoMaps() {
+function loadNaverMaps() {
   sdkPromise ??= (async () => {
     const response = await fetch('/assets/map-config.json', {signal:AbortSignal.timeout(5000)});
-    if (!response.ok) throw new Error('Map configuration unavailable');
-    const {kakaoJavaScriptKey} = await response.json();
-    if (!kakaoJavaScriptKey) throw new Error('Map key unavailable');
-    const url = new URL('https://dapi.kakao.com/v2/maps/sdk.js');
-    url.search = new URLSearchParams({appkey:kakaoJavaScriptKey, autoload:'false'});
-    await new Promise((resolve, reject) => {
+    if (!response.ok) throw new Error('지도 설정을 가져오지 못했어요.');
+    const {naverClientId} = await response.json();
+    if (!naverClientId) throw new Error('네이버 지도 클라이언트 ID가 없어요.');
+    const url = new URL('https://oapi.map.naver.com/openapi/v3/maps.js');
+    url.searchParams.set('ncpKeyId',naverClientId);
+    const existing = window.navermap_authFailure;
+    window.navermap_authFailure = (...args) => {
+      window.dispatchEvent(new Event(authFailure));
+      existing?.(...args);
+    };
+    return new Promise((resolve,reject) => {
       const script = document.createElement('script');
       script.src = url;
-      const timer = setTimeout(reject, 7000);
-      script.onload = () => {clearTimeout(timer); resolve()};
-      script.onerror = () => {clearTimeout(timer); reject()};
+      function finish(error) {
+        clearTimeout(timer);
+        script.onload = null;
+        script.onerror = null;
+        if (error) {
+          script.remove();
+          reject(error);
+        } else {
+          resolve(window.naver.maps);
+        }
+      }
+      const timer = setTimeout(() => finish(new Error('네이버 지도 응답이 지연됐어요.')),7000);
+      script.onload = () => finish(window.naver?.maps?.Map ? null : new Error('네이버 지도 SDK를 초기화하지 못했어요.'));
+      script.onerror = () => finish(new Error('네이버 지도 SDK를 불러오지 못했어요.'));
       document.head.append(script);
-    });
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(reject, 7000);
-      window.kakao.maps.load(() => {clearTimeout(timer); resolve(window.kakao.maps)});
     });
   })();
   return sdkPromise;
@@ -109,51 +122,111 @@ function StreetMap({data}) {
   </>;
 }
 
-export default function LiveMap({points,route,candidate}) {
+export default function LiveMap({points,route,candidate,state}) {
   const host = useRef(null);
-  const [sdk,setSdk] = useState(null);
   const map = useRef(null);
+  const [sdk,setSdk] = useState(null);
+  const [ready,setReady] = useState(false);
   const [unavailable,setUnavailable] = useState(false);
   const data = useMemo(() => mapData(points,route,candidate), [points,route,candidate]);
+
   useEffect(() => {
     let active = true;
-    void loadKakaoMaps().then(value => {if(active)setSdk(value)})
+    const onFailure = () => setUnavailable(true);
+    window.addEventListener(authFailure,onFailure);
+    void loadNaverMaps().then(value => {if(active)setSdk(value)})
       .catch(() => {if(active)setUnavailable(true)});
-    return () => {active = false};
+    return () => {
+      active = false;
+      window.removeEventListener(authFailure,onFailure);
+    };
   }, []);
+
   useEffect(() => {
-    if (!sdk) return;
-    const position = ([x,y]) => new sdk.LatLng(y,x);
+    if (!sdk || unavailable) return;
+    const node = host.current;
+    const timer = setTimeout(() => setUnavailable(true),9000);
     try {
-      map.current ??= new sdk.Map(host.current,{center:position([center.longitude,center.latitude]),level:6,draggable:false,scrollwheel:false});
-      const canvas = map.current;
-      const bounds = new sdk.LatLngBounds();
-      const overlays = [];
-      for (const {point,label} of data.markers) {
-        const pin = document.createElement('span');
-        pin.className = 'live-map-pin';
-        pin.dataset.kind = label;
-        pin.textContent = label;
-        const latLng = position(point);
-        bounds.extend(latLng);
-        overlays.push(new sdk.CustomOverlay({map:canvas,position:latLng,content:pin,yAnchor:1}));
-      }
-      const palette = getComputedStyle(host.current);
-      for (const line of data.lines) {
-        const path = line.points.map(position);
-        path.forEach(point => bounds.extend(point));
-        overlays.push(new sdk.Polyline({map:canvas,path,strokeWeight:5,strokeColor:palette.getPropertyValue(line.color).trim(),
-          strokeOpacity:.9,strokeStyle:line.walk?'shortdash':'solid'}));
-      }
-      if (data.lines.length || data.markers.length > 1) canvas.setBounds(bounds,110,30,Math.round(host.current.clientHeight*.62),30);
-      else if (data.markers.length === 1) canvas.setCenter(position(data.markers[0].point));
-      return () => overlays.forEach(overlay => overlay.setMap(null));
+      const canvas = new sdk.Map(node, {
+        center:new sdk.LatLng(center.latitude,center.longitude),
+        zoom:13, scrollWheel:false, zoomControl:false,
+      });
+      map.current = canvas;
+      const listener = sdk.Event.addListener(canvas,'tilesloaded',() => {
+        clearTimeout(timer);
+        setReady(true);
+      });
+      return () => {
+        clearTimeout(timer);
+        sdk.Event.removeListener(listener);
+        canvas.destroy();
+        map.current = null;
+      };
     } catch {
+      clearTimeout(timer);
       setUnavailable(true);
     }
-  }, [sdk,data]);
+  }, [sdk,unavailable]);
+
+  useEffect(() => {
+    if (!sdk || unavailable) return;
+    const node = host.current;
+    const canvas = map.current;
+    const screen = node.closest('.screen');
+    if (!canvas || !screen) return;
+    const sheet = screen.querySelector('.sheet');
+    const fitMap = () => {
+      const height = sheet
+        ? sheet.getBoundingClientRect().top - node.getBoundingClientRect().top
+        : screen.clientHeight;
+      if (height > 0 && node.clientHeight !== Math.round(height)) {
+        node.style.height = Math.round(height) + 'px';
+      }
+      canvas.autoResize();
+      const coordinates = [
+        ...data.markers.map(({point}) => point),
+        ...data.lines.flatMap(({points}) => points),
+      ].map(([longitude,latitude]) => new sdk.LatLng(latitude,longitude));
+      if (coordinates.length > 1) {
+        canvas.fitBounds(coordinates,{top:40,right:30,bottom:26,left:30,maxZoom:16});
+      } else if (coordinates.length === 1) {
+        canvas.setCenter(coordinates[0]);
+      }
+    };
+    fitMap();
+    const resize = new ResizeObserver(fitMap);
+    resize.observe(screen);
+    if (sheet) resize.observe(sheet);
+    return () => resize.disconnect();
+  }, [sdk,data,state,unavailable]);
+
+  useEffect(() => {
+    if (!sdk || unavailable || !map.current) return;
+    const canvas = map.current;
+    const position = ([longitude,latitude]) => new sdk.LatLng(latitude,longitude);
+    const palette = getComputedStyle(host.current);
+    const overlays = data.lines.map(line => new sdk.Polyline({
+      map:canvas, path:line.points.map(position), strokeWeight:5,
+      strokeColor:palette.getPropertyValue(line.color).trim(), strokeOpacity:.9,
+      strokeStyle:line.walk?'shortdash':'solid', strokeLineCap:'round', strokeLineJoin:'round',
+    }));
+    for (const {point,label} of data.markers) {
+      const pin = document.createElement('span');
+      pin.className = 'live-map-pin';
+      pin.dataset.kind = label;
+      pin.textContent = label;
+      overlays.push(new sdk.Marker({
+        map:canvas, position:position(point), title:label,
+        icon:{content:pin, anchor:new sdk.Point(19,28)},
+      }));
+    }
+    return () => {
+      if (map.current === canvas) overlays.forEach(overlay => overlay.setMap(null));
+    };
+  }, [sdk,data,unavailable]);
+
   return <div className="map-placeholder live-map" aria-label="이동 지도">
-    <div ref={host} className="live-map-canvas" hidden={unavailable}/>
+    <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!unavailable?'naver':undefined} hidden={unavailable}/>
     {!sdk && !unavailable && <RouteSketch data={data}/>}
     {unavailable && <StreetMap data={data}/>}
   </div>;

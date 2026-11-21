@@ -253,7 +253,7 @@ export default function App(){
   else go('details');
  };
  return <div className={`app ${mapScreen?'has-map':''} ${navScreen?'has-nav':''}`}><main className={`screen screen-${screen}`}>
- {mapScreen&&(designDemo?<MapSurface routes={screen!=='home'} demo={demo} state={screen}/>:<LiveMap points={points} route={['loading','route-error','home'].includes(screen)?null:screen==='waypoint'?activeStop:route} candidate={screen==='stops'?activeStop?.place:null}/>)}
+ {mapScreen&&(designDemo?<MapSurface routes={screen!=='home'} demo={demo} state={screen}/>:<LiveMap state={screen} points={points} route={['loading','route-error','home'].includes(screen)?null:screen==='waypoint'?activeStop:route} candidate={screen==='stops'?activeStop?.place:null}/>)}
  {!mapScreen&&screen!=='welcome'&&screen!=='onboarding'&&!(screen==='search'&&picker==='destination')&&<AppBar title={title} back={()=>go(screen==='calendar'?'welcome':screen==='settings'?'my':returnTo)}/>}
  {screen==='welcome'&&<Welcome login={calendar} busy={busy}/>}
  {screen==='onboarding'&&linked&&<Onboarding initial={onboarding.preferences} onComplete={finishOnboarding}/>}
