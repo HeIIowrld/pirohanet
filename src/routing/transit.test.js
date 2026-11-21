@@ -45,3 +45,31 @@ test('a short walking leg keeps a saved stop eligible only when there is time to
     assert.ok(result.some((route) => !route.viaStop));
   }
 });
+
+test('a deadline gives each stop only the whole minutes left after both legs', async () => {
+  const departAt = new Date('2026-11-21T16:00:00+09:00');
+  const places = {
+    origin:{latitude:37.50,longitude:127.02},
+    stop:{name:'중간 카페',latitude:37.53,longitude:127.00},
+    destination:{latitude:37.57,longitude:126.98},
+  };
+  const fetchFn = async url => {
+    if (url instanceof URL) return new Response(null,{status:404});
+    const first = new URL(url,'http://localhost').searchParams.get('start_y') === '37.5';
+    const seconds = first ? 780 : 1320;
+    return Response.json({status:'OK',routes:[{
+      properties:{type:'BUS',totalTime:seconds,transfers:0,totalDistance:4000},
+      steps:[{properties:{type:'BUS',time:seconds,distance:4000}}],
+    }]});
+  };
+  const query = minutes => queryTransit({
+    places,departAt,detourOnly:true,stopArriveBy:new Date(+departAt+minutes*60_000),
+    preferences:{savedStop:{stayMinutes:20}},
+  },fetchFn);
+  const [stop] = await query(60);
+  assert.equal(stop.travelMinutes,35);
+  assert.equal(stop.stayMinutes,25);
+  assert.equal(new Date(stop.stopArrivalAt).toISOString(),'2026-11-21T07:13:00.000Z');
+  assert.equal(new Date(stop.stopDepartureAt).toISOString(),'2026-11-21T07:38:00.000Z');
+  assert.deepEqual(await query(39),[]);
+});

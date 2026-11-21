@@ -266,3 +266,12 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 }
 .event-fold .icon { width: 16px; height: 16px; transform: rotate(90deg); }
 .event-fold[aria-expanded="true"] .icon { transform: rotate(-90deg); }
+
+.gap-options{display:grid;gap:8px;margin-top:12px}
+.gap-options:empty{display:none}
+.gap-option{display:grid;gap:2px;width:100%;padding:10px 12px;text-align:left;border:1px solid var(--border-default,#dce3eb);border-radius:12px}
+.gap-option strong{font-weight:600}
+.gap-option span,.gap-direct{font-size:13px;color:var(--fg-muted)}
+.gap-direct{margin-top:10px}
+
+.gap-hours{display:block;margin-top:8px}

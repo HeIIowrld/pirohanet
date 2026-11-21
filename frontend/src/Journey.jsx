@@ -14,7 +14,9 @@ export default function Journey({route,trip,progress,advance,finish,openDetails,
   const next = steps[index+1];
   const nextRide = steps.slice(index+1).find(item => item.ride || item.stay);
   const notice = journeyNotice(step,nextRide?.ride ? nextRide : null,position,startsAt,now);
-  const remaining = step?.duration && Math.ceil((startsAt + step.duration - now) / 60_000);
+  const stopDeparture=step?.stay && trip.arriveBy ? route.stopDepartureAt : null;
+  const stepEnds=stopDeparture ?? (step?.duration ? startsAt+step.duration : null);
+  const remaining=stepEnds == null ? null : Math.ceil((stepEnds-now)/60_000);
   const last = index >= steps.length - 1;
   const door = doors[index];
 
@@ -65,8 +67,11 @@ export default function Journey({route,trip,progress,advance,finish,openDetails,
       {step && <div className="journey-current">
         <strong>{step.line && step.to ? `${step.line} · ${step.to} 하차` : step.label}</strong>
         {step.instruction && <p>{step.instruction}</p>}
-        {now < startsAt ? <small>{clock(startsAt)} 출발 예정</small> :
-          remaining > 0 && <small>현재 단계 약 {remaining}분</small>}
+        {stopDeparture != null ? <small aria-live="polite">{remaining > 0
+          ? `${clock(stopDeparture)} 경유지 출발 · 체류 약 ${remaining}분 남음`
+          : '약속 장소로 출발할 시간이에요.'}</small> : now < startsAt
+          ? <small>{clock(startsAt)} 출발 예정</small>
+          : remaining > 0 && <small>현재 단계 약 {remaining}분</small>}
       </div>}
       <div aria-live="polite" aria-atomic="true">
         {notice && <div className="journey-alert">
