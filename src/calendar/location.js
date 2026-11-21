@@ -49,6 +49,16 @@ export async function locate(text, fetchFn = fetch) {
   return null;
 }
 
+// 여러 위치 글자를 한꺼번에 바꾼다. 같은 글자는 한 번만 찾고, 빈 값은 건너뛴다.
+// 결과는 Map(위치 글자 → locate 결과)이라 places.get(event.location)으로 꺼낸다.
+// 사용 예: const places = await locateAll(items.map((e) => e.location));
+export async function locateAll(texts, fetchFn = fetch) {
+  const unique = [...new Set(texts.map((text) => text?.trim()).filter(Boolean))];
+  // ponytail: 전부 동시에 요청한다. 일주일 치 일정 수준이면 충분하고, 위치가 수십 곳을 넘으면 동시 요청 수를 제한한다
+  const places = await Promise.all(unique.map((text) => locate(text, fetchFn)));
+  return new Map(unique.map((text, i) => [text, places[i]]));
+}
+
 // 좌표들에 마커를 찍은 지도 이미지 주소. <img src>에 그대로 넣는다.
 // keyId는 네이버 클라우드 Application의 키 ID(공개돼도 되는 값)이고,
 // 그 Application의 Web 서비스 URL에 이 페이지 주소가 등록돼 있어야 이미지가 나온다.

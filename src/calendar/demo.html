@@ -16,62 +16,61 @@
   </select>
 </label>
 <pre id="out">버튼을 누르면 결과가 여기에 나옵니다.</pre>
-<pre id="place"></pre>
-<img id="map" alt="약속 장소 지도" hidden>
+<img id="map" alt="다음 약속 장소 지도" hidden>
 <script type="module">
   import { fetchGoogleEvents, summarize } from './calendar.js';
   import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
-  import { locate, staticMapUrl } from './location.js';
+  import { locateAll, staticMapUrl } from './location.js';
 
-  const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 지도 이미지가 나온다
+  const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 다음 약속의 지도 이미지가 나온다
 
   const out = document.getElementById('out');
+  const map = document.getElementById('map');
   const level = document.getElementById('level');
-  let loaded = null; // { title, items, now }
+  let loaded = null; // { title, items, now, places, placeError }
+
+  // 일정 한 줄 옆에 붙이는 위치 변환 결과
+  const placeText = (location) => {
+    if (!location) return '';
+    if (loaded.placeError) return ` → 위치 변환 실패: ${loaded.placeError}`;
+    if (!loaded.places) return ' → 위치 찾는 중…';
+    const place = loaded.places.get(location.trim());
+    return place ? ` → ${place.name} | ${place.address} | ${place.lon}, ${place.lat}` : ' → 위치를 찾지 못함';
+  };
 
   const render = () => {
     if (!loaded) return;
     // 결과가 null일 때 원인을 볼 수 있게 받은 일정을 그대로 나열한다
-    const list = loaded.items.map((e) => `- ${e.summary ?? '(제목 없음)'} | ${e.start?.dateTime ?? `${e.start?.date} 종일`} | ${e.location ?? '장소 없음'}`);
+    const list = loaded.items.map(
+      (e) => `- ${e.summary ?? '(제목 없음)'} | ${e.start?.dateTime ?? `${e.start?.date} 종일`} | ${e.location ?? '장소 없음'}${placeText(e.location)}`,
+    );
     const result = summarize(loaded.items, loaded.now, level.value === '' ? null : Number(level.value));
     out.textContent = `${loaded.title} ${loaded.items.length}건\n${list.join('\n')}\n${JSON.stringify(result, null, 2)}`;
-    showPlace(result.nextAppointment?.location);
+
+    const nextPlace = loaded.places?.get(result.nextAppointment?.location);
+    map.hidden = !(nextPlace && NAVER_MAP_KEY_ID);
+    if (!map.hidden) map.src = staticMapUrl([nextPlace], NAVER_MAP_KEY_ID);
   };
 
-  const placeOut = document.getElementById('place');
-  const map = document.getElementById('map');
-  let shownLocation; // 같은 위치를 다시 검색하지 않는다
-  const showPlace = async (location) => {
-    if (location === shownLocation) return;
-    shownLocation = location;
-    map.hidden = true;
-    placeOut.textContent = location ? `"${location}" 위치 찾는 중…` : '';
-    if (!location) return;
-    try {
-      const place = await locate(location);
-      if (location !== shownLocation) return; // 그사이 다른 일정으로 바뀜
-      placeOut.textContent = place ? `위치 변환\n${JSON.stringify(place, null, 2)}` : `"${location}"의 위치를 찾지 못했습니다. 직접 입력이 필요합니다.`;
-      if (place && NAVER_MAP_KEY_ID) {
-        map.src = staticMapUrl([place], NAVER_MAP_KEY_ID);
-        map.hidden = false;
-      }
-    } catch (err) {
-      placeOut.textContent = `위치 변환 실패: ${err.message}`;
-    }
-  };
-  const useSample = (title) => {
-    loaded = { title, items: SAMPLE_EVENTS, now: SAMPLE_NOW };
+  // 일정을 보여 준 뒤, 장소가 적힌 모든 일정의 위치를 한꺼번에 변환해 다시 그린다
+  const show = async (title, items, now) => {
+    const current = (loaded = { title, items, now });
     render();
+    try {
+      current.places = await locateAll(items.map((e) => e.location));
+    } catch (err) {
+      current.placeError = err.message;
+    }
+    if (loaded === current) render(); // 그사이 다른 일정을 불러왔으면 그리지 않는다
   };
 
   level.onchange = render;
-  document.getElementById('sample').onclick = () => useSample('샘플 일정');
+  document.getElementById('sample').onclick = () => show('샘플 일정', SAMPLE_EVENTS, SAMPLE_NOW);
   document.getElementById('connect').onclick = async () => {
     try {
-      loaded = { title: 'Google 일정', items: await fetchGoogleEvents(), now: new Date() };
-      render();
+      show('Google 일정', await fetchGoogleEvents(), new Date());
     } catch (err) {
-      useSample(`연동 실패(${err.message}) → 샘플 일정`);
+      show(`연동 실패(${err.message}) → 샘플 일정`, SAMPLE_EVENTS, SAMPLE_NOW);
     }
   };
 </script>
