@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {addRailGeometry,addWalkingGeometry} from './route-geometry.js';
+import {addRailGeometry,addStreetGeometry,mapStepPoints} from './route-geometry.js';
 
 const center = {latitude:37.5665, longitude:126.978};
 const authFailure = 'modo:naver-map-auth-failure';
@@ -70,7 +70,7 @@ function mapData(points, route, candidate, position) {
       return isCoordinate(point) ? [{point,label}] : [];
     });
   const lines = (route?.steps ?? []).flatMap(step => {
-    const points = (step.points ?? []).filter(isCoordinate);
+    const points = mapStepPoints(step).filter(isCoordinate);
     return points.length > 1 ? [{points,color:strokeToken(step),dashed:step.approximate ?? step.type === 'WALKING'}] : [];
   });
   return {markers,lines};
@@ -111,16 +111,16 @@ export default function LiveMap({points,route,candidate,state,position}) {
   const [ready,setReady] = useState(false);
   const [loadError,setLoadError] = useState('');
   const [attempt,setAttempt] = useState(0);
-  const [walkGeometry,setWalkGeometry] = useState(null);
+  const [streetGeometry,setStreetGeometry] = useState(null);
   const railGeometry = useMemo(() => addRailGeometry(route),[route]);
-  const mapRoute = walkGeometry?.original === railGeometry ? walkGeometry?.route : railGeometry;
+  const mapRoute = streetGeometry?.original === railGeometry ? streetGeometry?.route : railGeometry;
   const data = useMemo(() => mapData(points,mapRoute,candidate,position), [points,mapRoute,candidate,position]);
 
   useEffect(() => {
-    if (!railGeometry?.steps?.some(step => step.approximate && step.type === 'WALKING')) return;
+    if (!railGeometry?.steps?.some(step => step.approximate && (step.type === 'WALKING' || step.type === 'BUS'))) return;
     const controller = new AbortController();
-    void addWalkingGeometry(railGeometry,controller.signal).then(result => {
-      if (!controller.signal.aborted) setWalkGeometry({original:railGeometry,route:result});
+    void addStreetGeometry(railGeometry,controller.signal).then(result => {
+      if (!controller.signal.aborted) setStreetGeometry({original:railGeometry,route:result});
     });
     return () => controller.abort();
   }, [railGeometry]);
