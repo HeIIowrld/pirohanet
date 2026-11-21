@@ -45,16 +45,18 @@ export default function HomeEvents({expanded,nearEvents,laterEvents,event,now,on
     <p className="subheading">다가오는 일정</p>
     {expanded&&<button type="button" onClick={onCollapse}>일정 접기</button>}
    </div>
-   <EventRows events={visibleEvents} selected={event} today={today} onSelect={expanded?onSelect:onPreview}/>
-   {laterEvents.length>0&&(expanded||!preview)&&<>
-    <button type="button" className="event-fold" aria-expanded={laterOpen} aria-controls={expanded?laterId:undefined}
-      onClick={toggleLater}>
-     <span>24시간 이후 일정 {laterEvents.length}개</span><Icon name="chevronRight"/>
-    </button>
-    {expanded&&<div id={laterId} hidden={!laterOpen}>
-     {laterOpen&&<EventRows events={laterEvents} selected={event} today={today} onSelect={onSelect} later/>}
-    </div>}
-   </>}
+   <div className="event-list">
+    <EventRows events={visibleEvents} selected={event} today={today} onSelect={expanded?onSelect:onPreview}/>
+    {laterEvents.length>0&&(expanded||!preview)&&<>
+     <button type="button" className="event-fold" aria-expanded={laterOpen} aria-controls={expanded?laterId:undefined}
+       onClick={toggleLater}>
+      <span>24시간 이후 일정 {laterEvents.length}개</span><Icon name="chevronRight"/>
+     </button>
+     {expanded&&<div id={laterId} hidden={!laterOpen}>
+      {laterOpen&&<EventRows events={laterEvents} selected={event} today={today} onSelect={onSelect} later/>}
+     </div>}
+    </>}
+   </div>
   </div>
   <Actions><Button disabled={!visibleDestination&&!canRouteLater} onClick={findRoute}>길 찾기</Button></Actions>
  </>;
