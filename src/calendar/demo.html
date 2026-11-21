@@ -8,12 +8,7 @@
 <button id="connect">Google 캘린더 불러오기</button>
 <button id="sample">샘플 일정으로 보기</button>
 <label>지금 컨디션
-  <select id="level">
-    <option value="">선택 안 함</option>
-    <option value="0">괜찮아요</option>
-    <option value="1">조금 피곤해요</option>
-    <option value="2">많이 피곤해요</option>
-  </select>
+  <select id="level"><option value="">선택 안 함</option></select>
 </label>
 <p id="account"></p>
 <pre id="out">버튼을 누르면 결과가 여기에 나옵니다.</pre>
@@ -35,7 +30,7 @@
   // 시연 서버 앞의 Cloudflare가 JS를 4시간 캐시해서, 배포 직후에는 새 HTML이 옛 JS를 불러와 깨진다.
   // 확인 페이지는 항상 최신 코드를 봐야 하므로 주소에 시각을 붙여 캐시를 피한다.
   const fresh = `?t=${Date.now()}`;
-  const [{ fetchGoogleEvents, requestGoogleToken, summarize }, { SAMPLE_EVENTS, SAMPLE_NOW }, places] = await Promise.all([
+  const [{ fetchGoogleEvents, requestGoogleToken, summarize, LABELS }, { SAMPLE_EVENTS, SAMPLE_NOW }, places] = await Promise.all([
     import(`./calendar.js${fresh}`),
     import(`./sample.js${fresh}`),
     import(`./location.js${fresh}`),
@@ -48,6 +43,7 @@
   const out = $('out');
   const dest = $('dest');
   const level = $('level');
+  level.append(...LABELS.map((label, i) => new Option(`${i + 1}점 · ${label}`, i + 1)));
   let loaded = null; // { title, items, now, places, placeError }
   let googleToken = null; // 로그인했을 때만 내 장소를 계정에 저장한다
   let destFor = null; // 후보를 채워 둔 약속의 위치 글자

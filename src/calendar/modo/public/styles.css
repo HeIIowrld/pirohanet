@@ -65,12 +65,14 @@ legend { margin-bottom: 9px; padding: 0; font-size: .91rem; font-weight: 800; }
 .node.end { background: var(--green); }
 .time-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 9px; padding: 0 9px; }
 .departure { color: var(--muted); font-size: .75rem; margin-top: 5px; }
-.fatigue { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.fatigue { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
 .fatigue label, .place-chip { display: grid; position: relative; cursor: pointer; }
 .fatigue input, .place-chip input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 .fatigue span, .place-chip span { display: grid; place-items: center; padding: 6px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: .77rem; font-weight: 700; }
 .fatigue input:checked + span, .place-chip input:checked + span { color: var(--blue-dark); border-color: #aebfee; background: var(--soft-blue); }
 .fatigue input:focus-visible + span, .place-chip input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: 2px; }
+.fatigue span { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.fatigue-scale { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; color: var(--muted); font-size: .72rem; font-weight: 600; }
 .allowance { display: grid; gap: 2px; margin-bottom: 18px; }
 .allowance > span { display: flex; justify-content: space-between; font-weight: 800; font-size: .9rem; }
 .allowance output { color: var(--blue); font-variant-numeric: tabular-nums; }
