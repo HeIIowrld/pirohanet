@@ -2,7 +2,7 @@ import { prepareTrip } from '../../src/main/trip.js';
 import { addBusObservations } from '../../src/routing/bus-observations.js';
 import { queryTransit } from '../../src/routing/transit.js';
 import { loadRecommendedStops, resolveRecommendedStop } from '../../src/places/recommended-stops.js';
-import { compareRoutes, isDirect } from '../../src/routing/compare.js';
+import { compareRoutes, comfortReasons, isDirect } from '../../src/routing/compare.js';
 import { summarize } from '../../src/calendar/calendar.js';
 import { api } from '../../src/preferences/account-api.js';
 export { api };
@@ -90,16 +90,18 @@ export function routeResult(candidates, trip, places) {
     maxExtraTravelMinutes:trip.preferences.maxExtraTravelMinutes});
   const direct = eligible.filter(isDirect);
   const fastest = direct.reduce((best, item) => !best || item.arrivalAt < best.arrivalAt ? item : best, null);
-  const easier = fastest && direct.find(item => item.id !== fastest.id &&
-    item.comfortScore < fastest.comfortScore - 0.01);
+  const easier = fastest && direct
+    .filter(item => item.id !== fastest.id && item.comfortScore < fastest.comfortScore - 0.01)
+    .map(item => ({item,reasons:comfortReasons(item,fastest,trip.preferences)}))
+    .find(choice => choice.reasons.length > 0);
   const tradeoff = fastest && !easier && direct.find(item => item.id !== fastest.id &&
     (item.walkMinutes < fastest.walkMinutes || item.transfers < fastest.transfers));
-  const second = easier || tradeoff;
+  const second = easier?.item ?? tradeoff;
   const recommended = [fastest,second].filter(Boolean);
   const secondLabel = easier ? '편한 길' : tradeoff?.transfers < fastest?.transfers ? '환승 적은 길' : '도보 적은 길';
   return {
     all, eligible,
-    direct:recommended,secondLabel,
+    direct:recommended,secondLabel,comfortReasons:easier?.reasons,
     alternatives:alternateRoutes(direct,recommended),
     stops:eligible.filter(item => item.viaStop),
   };

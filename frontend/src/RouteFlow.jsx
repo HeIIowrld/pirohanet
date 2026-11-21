@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {addBusInformation} from '../../src/main/bus-information.js';
 import {isDirect} from '../../src/routing/compare.js';
+import {stationName} from '../../src/routing/crowding.js';
 import {clock, routeCategory, hasLateNightBusLeg} from './services.js';
 import {loadRailDoorData, railDoorHints} from './rail-doors.js';
 import {Actions, Art, Badge, Button, Sheet, Summary} from './design.jsx';
@@ -25,17 +26,36 @@ function summarizeBoarding(lines) {
   return `${lines[0]} 외 ${lines.length-1}개 노선`;
 }
 
-function comfortReason(item,fastest) {
-  if (item.transfers < fastest?.transfers) return '갈아타는 횟수가 적어요.';
-  if (item.walkMinutes < fastest?.walkMinutes) return '걷는 시간이 짧아요.';
-  const seats = item.steps?.find(step => step.busComfort?.remainingSeats > 0)?.busComfort;
-  if (seats && item.rideLoad?.seats < fastest?.rideLoad?.seats) {
-    return `${seats.name} · 조회 기준 잔여 ${seats.remainingSeats}석`;
+function busLabel(name) {
+  return name ? `${name}번 버스` : '버스';
+}
+
+function segmentLabel(step) {
+  const rail = step.type === 'SUBWAY';
+  const endpoints = [step.stops?.[0],step.stops?.at(-1)]
+    .filter(stop => stop?.name)
+    .map(stop => rail ? stationName(stop.name) : stop.name);
+  const name = rail ? step.vehicles?.[0]?.name || '지하철' : busLabel(step.busComfort?.name);
+  return [name,endpoints.length === 2 ? endpoints.join(' → ') : null].filter(Boolean).join(' ');
+}
+
+function comfortReason({kind,step,scope}, route) {
+  const isFastest = scope === 'fastest';
+  if (kind === 'seats') {
+    const {name,remainingSeats,checkedAt} = step.busComfort;
+    const checked = Number.isFinite(checkedAt) ? ` (${clock(checkedAt)} 조회)` : '';
+    return `${isFastest ? '빠른 길 · ' : ''}${busLabel(name)} 잔여 ${remainingSeats}석${checked}`;
   }
-  if (item.rideLoad?.knownMinutes > 0 && item.rideLoad.crowding < fastest?.rideLoad?.crowding) {
-    return '확인된 혼잡도를 반영한 탑승 부담이 낮아요.';
+  const segment = segmentLabel(step);
+  if (step.type === 'SUBWAY') {
+    const average = `평균 혼잡도 ${Math.round(step.railComfort.average)}%`;
+    const skipsLine = isFastest && !route.steps.some(leg => leg.type === 'SUBWAY' &&
+      leg.vehicles?.[0]?.name === step.vehicles?.[0]?.name);
+    return skipsLine ? `${segment} 우회 · ${average}` :
+      `${isFastest ? '빠른 길 · ' : ''}${segment} · ${average}`;
   }
-  return '탑승 시간과 노선 유형을 반영한 이동 부담이 낮아요.';
+  const {congestion,congestionSource} = step.busComfort;
+  return `${isFastest ? '빠른 길 · ' : ''}${segment} · ${congestionSource} 차내 ${congestion}`;
 }
 
 function RideEvidence({step}) {
@@ -57,7 +77,7 @@ function RideEvidence({step}) {
   return <small className="ride-evidence">{facts.join(' · ')}</small>;
 }
 
-function RouteCard({item,label,reason,selected,onSelect}) {
+function RouteCard({item,label,reasons,selected,onSelect}) {
   const category = routeCategory(item);
   const lines = (item.steps ?? []).flatMap(step => summarizeBoarding(boardingLines(step)) ?? []);
   return <button className={`route-card ${selected ? 'selected' : ''}`}
@@ -67,7 +87,9 @@ function RouteCard({item,label,reason,selected,onSelect}) {
     <div><strong>{minutes(item.travelMinutes)}분</strong><span>{clock(item.arrivalAt)} 도착</span></div>
     {!!lines.length && <div className="route-line-summary">{lines.join(' → ')}</div>}
     <p>도보 {minutes(item.walkMinutes)}분 · 환승 {item.transfers ?? 0}회 · {crowding(item)}</p>
-    {reason && <small className="ride-evidence">{reason}</small>}
+    {!!reasons?.length && <ul className="comfort-reasons" aria-label="편한 길 추천 이유">
+      {reasons.map(reason => <li key={reason.kind}>{comfortReason(reason,item)}</li>)}
+    </ul>}
     {hasLateNightBusLeg(item) && <small className="status">심야 노선 포함 · 운행 시간 확인</small>}
   </button>;
 }
@@ -96,7 +118,7 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
       <div className="heading-row"><h2>어떤 길로 갈까요?</h2>{demo && <Badge/>}</div>
       {result.direct.map((item,index) => <RouteCard key={item.id} item={item}
         label={index === 0 ? '빠른 길' : (result.secondLabel ?? '편한 길')}
-        reason={index === 1 && result.secondLabel === '편한 길' ? comfortReason(item,result.direct[0]) : null}
+        reasons={index === 1 ? result.comfortReasons : null}
         selected={route?.id === item.id} onSelect={() => select(item)}/>)}
       {alternatives.length > 0 && <>
         <button type="button" className="route-alternatives-toggle" aria-expanded={expanded}
