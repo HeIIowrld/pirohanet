@@ -4,7 +4,9 @@
 .map-asset{position:absolute;display:block;max-width:none}.route-artwork{position:absolute;inset:0}.origin-marker:after,.destination-marker:after{display:none}.line-badge{position:absolute;width:22px;height:22px;border-radius:11px;color:white;display:grid;place-items:center;font-size:12px;font-weight:600;line-height:normal}.line-two{left:99px;top:194px;background:#00a84d}.line-five{left:241px;top:159px;background:#996cac}.line-five.detour{left:195px}
 
 /* Button labels use SemiBold throughout the app. */
-button,.button,.gsi-material-button,.gsi-material-button .gsi-material-button-contents{font-weight:600}
+/* 굵기: 버튼 전체에 600을 주지 않는다. 줄 전체가 버튼인 목록에서 작은 보조 글자까지 굵어졌기 때문.
+   CTA(.button)는 500, 글자형 버튼은 500, 보조 글자는 본문 400을 따른다. 굵어야 할 글자는 각 규칙에서 지정한다. */
+.pill,.event-heading button,.event-fold,.journey-tools button,.recent-routes .heading-row button,.chips button,.map-back{font-weight:500}
 
 /* Keep endpoint thumbs inside the slider's paint area. */
 .fatigue,.slider{overflow:visible}
@@ -310,3 +312,23 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .gap-notice strong{font-weight:600}
 .gap-notice p{margin-top:3px}
 .gap-notice-expired{background:var(--bg-muted,#f3f4f6)}
+
+/* 이동 정보 확인: 장소(출발→도착)는 한 카드에 경로처럼 묶어 1순위, 시간은 작은 두 칸으로 2순위 */
+.trip-route { position: relative; display: flex; flex-direction: column; background: var(--bg-surface); border-radius: var(--radius-16); padding: 4px 0; flex-shrink: 0; }
+.trip-route::before { content: ''; position: absolute; left: 25px; top: 38px; bottom: 38px; width: 2px; background: var(--border-strong, #dadfe5); }
+.trip-stop { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; min-height: 68px; padding: 10px 16px 10px 20px; text-align: left; }
+.trip-stop + .trip-stop::before { content: ''; position: absolute; top: 0; left: 48px; right: 16px; height: 1px; background: var(--border-hairline); }
+.trip-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; position: relative; z-index: 1; }
+.trip-stop.origin .trip-dot { background: white; border: 3px solid var(--brand-sky-deep, #168bb8); }
+.trip-stop.destination .trip-dot { background: var(--brand-sky-deep, #168bb8); }
+.trip-stop > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trip-stop small { font-size: 12px; line-height: 1.4; color: var(--fg-muted); }
+.trip-stop strong { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-stop > .icon { width: 20px; height: 20px; color: var(--fg-muted); }
+.trip-times { margin-top: 16px; }
+.trip-stop small b { font-weight: 600; color: var(--fg-secondary); }
+.trip-time-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.trip-time-fields .field { padding: 8px 14px; min-height: 56px; gap: 6px; }
+.trip-time-fields .field strong { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.trip-time-fields .field > .icon { width: 16px; height: 16px; color: var(--fg-muted); }
+.confirm-page .field-error { margin-top: 8px; padding-left: 4px; }
