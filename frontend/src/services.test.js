@@ -129,3 +129,22 @@ test('line avoidance can surface an equally walkable route as the preferred opti
   assert.deepEqual(result.comfortReasons,[{kind:'avoidedLine',line:'2',entirely:true}]);
   assert.equal(routeResult([direct,avoids],{...trip,arriveBy:new Date(+trip.departAt+31*60000)}).direct.length,1);
 });
+
+test('the higher-scoring overall route appears without crowding or seat observations', () => {
+  const fast = {id:'fast',mode:'BUS',travelMinutes:23,walkMinutes:3,transfers:0,
+    steps:[{type:'BUS',time:1200,vehicles:[{name:'마포01',type:'마을'}]}]};
+  const recommended = {id:'recommended',mode:'SUBWAY',travelMinutes:25,walkMinutes:3,transfers:0,
+    steps:[{type:'SUBWAY',time:1320,vehicles:[{name:'2호선'}]}]};
+  const trip = makeTrip({...form,arrival:''},null,5);
+  const result = routeResult([fast,recommended],trip);
+  assert.equal(result.eligible[0].id,'recommended');
+  assert.deepEqual(result.direct.map(route=>route.id),['fast','recommended']);
+  assert.equal(result.secondLabel,'종합 추천');
+  assert.equal(result.comfortReasons,undefined);
+  assert.equal(result.direct[1].rideLoad.knownMinutes,0);
+  assert.equal(result.direct[1].rideLoad.seatsKnown,0);
+  const lowFatigue = routeResult([fast,recommended],{...trip,preferences:{fatigueLevel:1}});
+  assert.deepEqual(lowFatigue.direct.map(route=>route.id),['fast']);
+  const strict = routeResult([fast,recommended],{...trip,arriveBy:new Date(+trip.departAt+24*60000)});
+  assert.deepEqual(strict.direct.map(route=>route.id),['fast']);
+});
