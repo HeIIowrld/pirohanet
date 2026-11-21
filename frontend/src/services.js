@@ -1,7 +1,7 @@
 import { prepareTrip } from '../../src/main/trip.js';
 import { addBusObservations } from '../../src/routing/bus-observations.js';
 import { queryTransit } from '../../src/routing/transit.js';
-import { loadRecommendedStops, resolveRecommendedStop } from '../../src/places/recommended-stops.js';
+import { gapPlaces } from './gap-places.js';
 import { compareRoutes, comfortReasons, isDirect } from '../../src/routing/compare.js';
 import { summarize } from '../../src/calendar/calendar.js';
 import { api } from '../../src/preferences/account-api.js';
@@ -27,34 +27,6 @@ export function makeTrip(form, event, level, now=new Date()) {
 }
 function routeKey(route) {
   return JSON.stringify(route.steps.map(step => [step.guidance, step.type, step.time]));
-}
-
-function stopDistance(place, destination) {
-  const latitude = destination.latitude * Math.PI / 180;
-  return Math.hypot(place.latitude - destination.latitude,
-    (place.longitude - destination.longitude) * Math.cos(latitude));
-}
-
-function accessibilityDistance(item, destination) {
-  const {lat,lng} = item.location;
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return stopDistance({latitude:lat,longitude:lng},destination);
-  }
-  return item.location.route_address?.includes(destination.address) ? .01 : .02;
-}
-
-async function nearbyStops(destination, saved) {
-  const usable = saved.filter(place => Number.isFinite(place.longitude) && Number.isFinite(place.latitude));
-  const ranked = places => places.sort((a,b) => stopDistance(a, destination) - stopDistance(b, destination));
-  const personal = ranked(usable).slice(0, 2);
-  const catalog = await loadRecommendedStops().catch(() => null);
-  const district = destination.address?.match(/(?:^|\s)([^\s]+구)(?:\s|$)/)?.[1];
-  const nearby = (catalog?.places ?? []).filter(item => district && item.location.district === district)
-    .sort((a,b) => accessibilityDistance(a, destination) - accessibilityDistance(b, destination))
-    .slice(0, 4);
-  const publicPlaces = await Promise.allSettled(nearby.map(item => resolveRecommendedStop(item)));
-  return [...personal, ...publicPlaces.flatMap(result => result.status === 'fulfilled' && result.value ? [result.value] : [])]
-    .filter(place => stopDistance(place, destination) <= 0.045);
 }
 
 export function routeCategory(route) {
@@ -120,18 +92,23 @@ export async function queryRoutes(trip, {places, previous, stops=false, saved=[]
     const byId = new Map(withData.map(item => [item.id,item]));
     return routeResult(candidates.map(item => byId.get(item.id) ?? item),trip,places);
   }
-  const results = await Promise.allSettled((await nearbyStops(places.destination, saved)).map(async place => {
+  const baseline = previous?.direct[0];
+  const freeMinutes = baseline && trip.arriveBy
+    ? Math.max(0, Math.floor((trip.arriveBy - trip.departAt) / 60_000 - baseline.travelMinutes))
+    : null;
+  if (freeMinutes !== null && freeMinutes < 5) return {...previous, stops:[], freeMinutes};
+  const stopPlaces = await gapPlaces(places, baseline, saved);
+  const results = await Promise.allSettled(stopPlaces.map(async place => {
     const preferences = {...trip.preferences, savedStop:{query:place.name || place.alias, stayMinutes}};
-    const candidates = await queryTransit({...trip, places:{...places, stop:place}, preferences, detourOnly:true});
+    const candidates = await queryTransit({...trip, places:{...places, stop:place}, preferences, detourOnly:true, stopArriveBy:trip.arriveBy});
     return candidates.filter(item => item.viaStop).map(item => ({...item, place,
       id:JSON.stringify([place.latitude, place.longitude, routeKey(item)])}));
   }));
   const candidates = results.flatMap(item => item.status === 'fulfilled' ? item.value : []);
-  if (!candidates.length && results.length && results.every(item => item.status === 'rejected')) {
-    throw new Error('경유 경로를 불러오지 못했어요. 다시 시도해 주세요.');
-  }
   const compared = routeResult([...(previous?.all ?? []).filter(isDirect), ...candidates], trip, places);
-  return {...compared,
+  return {...compared, freeMinutes,
+    stopLookupFailed:results.some(item => item.status === 'rejected'),
+    stops:compared.stops.sort((a,b) => b.stayMinutes-a.stayMinutes || a.travelMinutes-b.travelMinutes),
     direct:previous?.direct ?? compared.direct,
     secondLabel:previous?.secondLabel ?? compared.secondLabel,
     alternatives:previous?.alternatives ?? compared.alternatives,

@@ -217,15 +217,19 @@ async function reboardRoute(base, places, departAt, data, fetchFn) {
   };
 }
 
-async function savedStopRoute(places, departAt, stayMinutes, data, fetchFn) {
+async function savedStopRoute(places, departAt, requestedStay, data, fetchFn, arriveBy) {
   const [firstRoute, secondRoute] = await Promise.all([
     fastestStopLeg(places.origin, places.stop, fetchFn),
     fastestStopLeg(places.stop, places.destination, fetchFn),
   ]);
   if (!firstRoute || !secondRoute) return null;
 
+  const travelMinutes = firstRoute.travelMinutes + secondRoute.travelMinutes;
+  const stayMinutes = arriveBy == null ? requestedStay : Math.floor((arriveBy - departAt) / MINUTE - travelMinutes + 1e-9);
+  if (arriveBy != null && stayMinutes < 5) return null;
   const first = profile(firstRoute, departAt, data);
-  const nextDeparture = new Date(+departAt + (first.travelMinutes + stayMinutes) * MINUTE);
+  const stopArrivalAt = +departAt + first.travelMinutes * MINUTE;
+  const nextDeparture = new Date(stopArrivalAt + stayMinutes * MINUTE);
   const second = profile(secondRoute, nextDeparture, data);
   const stopName = places.stop.name || places.stop.address || '저장 장소';
   return {
@@ -234,7 +238,9 @@ async function savedStopRoute(places, departAt, stayMinutes, data, fetchFn) {
       ? first.mode : 'BUS_AND_SUBWAY',
     viaStop: true,
     stayMinutes,
-    travelMinutes: first.travelMinutes + second.travelMinutes,
+    travelMinutes,
+    stopArrivalAt,
+    stopDepartureAt:+nextDeparture,
     walkMinutes: first.walkMinutes + second.walkMinutes,
     transfers: first.transfers + second.transfers,
     fare: first.fare === null || second.fare === null ? null : first.fare + second.fare,
@@ -253,7 +259,7 @@ async function savedStopRoute(places, departAt, stayMinutes, data, fetchFn) {
   };
 }
 
-export async function queryTransit({ places, departAt, preferences, detourOnly = false }, fetchFn = fetch) {
+export async function queryTransit({ places, departAt, preferences, detourOnly = false, stopArriveBy }, fetchFn = fetch) {
   const [rawRoutes, data] = await Promise.all([
     detourOnly ? [] : requestRoutes(places.origin, places.destination, fetchFn),
     fetchFn(new URL('./seoul-crowding.json', import.meta.url)).then((response) =>
@@ -262,7 +268,7 @@ export async function queryTransit({ places, departAt, preferences, detourOnly =
   ]);
   if (detourOnly) {
     const route = places.stop && preferences?.savedStop
-      ? await savedStopRoute(places, departAt, preferences.savedStop.stayMinutes, data, fetchFn) : null;
+      ? await savedStopRoute(places, departAt, preferences.savedStop.stayMinutes, data, fetchFn, stopArriveBy) : null;
     return route ? [route] : [];
   }
   // 대중교통 결과가 없는 가까운 거리는 걸어가는 길을 돌려준다. 없으면 '경로를 찾지 못했어요'에서 막힌다.

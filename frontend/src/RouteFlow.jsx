@@ -134,7 +134,7 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
     </div>
     <Actions>
       <Button kind="text" onClick={changeCondition}>컨디션 변경</Button>
-      <Button disabled={!route} onClick={choose}>이 경로로 가기</Button>
+      <Button disabled={!route} onClick={choose}>{trip.arriveBy ? '여유 시간 확인' : '이 경로로 가기'}</Button>
     </Actions>
   </Sheet>;
 }
