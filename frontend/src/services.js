@@ -62,19 +62,21 @@ export function routeResult(candidates, trip, places) {
     maxExtraTravelMinutes:trip.preferences.maxExtraTravelMinutes});
   const direct = eligible.filter(isDirect);
   const fastest = direct.reduce((best, item) => !best || item.arrivalAt < best.arrivalAt ? item : best, null);
+  const improvesEffort = item => Math.ceil(item.walkMinutes ?? 0) < Math.ceil(fastest.walkMinutes ?? 0) ||
+    (item.transfers ?? 0) < (fastest.transfers ?? 0);
   const easier = fastest && direct
     .filter(item => item.id !== fastest.id && item.comfortScore < fastest.comfortScore - 0.01)
     .map(item => ({item,reasons:comfortReasons(item,fastest,trip.preferences)}))
-    .find(({item,reasons}) => reasons.length > 0 || (trip.preferences.mobility &&
-      (item.walkMinutes < fastest.walkMinutes || item.transfers < fastest.transfers)));
-  const tradeoff = fastest && !easier && direct.find(item => item.id !== fastest.id &&
-    (item.walkMinutes < fastest.walkMinutes || item.transfers < fastest.transfers));
+    .find(({item,reasons}) => reasons.length > 0 || improvesEffort(item));
+  const tradeoff = fastest && !easier && direct.find(item => item.id !== fastest.id && improvesEffort(item));
   const second = easier?.item ?? tradeoff;
   const recommended = [fastest,second].filter(Boolean);
-  const secondLabel = easier ? '편한 길' : tradeoff?.transfers < fastest?.transfers ? '환승 적은 길' : '도보 적은 길';
+  const hasComfortReasons = Boolean(easier?.reasons.length);
+  const secondLabel = hasComfortReasons || (easier && trip.preferences.mobility) ? '편한 길' :
+    (second?.transfers ?? 0) < (fastest?.transfers ?? 0) ? '환승 적은 길' : '도보 적은 길';
   return {
     all, eligible,
-    direct:recommended,secondLabel,comfortReasons:easier?.reasons,
+    direct:recommended,secondLabel,comfortReasons:hasComfortReasons ? easier.reasons : undefined,
     alternatives:alternateRoutes(direct,recommended),
     stops:eligible.filter(item => item.viaStop),
   };

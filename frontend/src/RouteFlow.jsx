@@ -39,7 +39,9 @@ function segmentLabel(step) {
   return [name,endpoints.length === 2 ? endpoints.join(' → ') : null].filter(Boolean).join(' ');
 }
 
-function comfortReason({kind,step,scope}, route) {
+function comfortReason({kind,step,scope,line,entirely,period}, route) {
+  if (kind === 'avoidedLine') return entirely ? `${line}호선 우회` : `${line}호선 탑승 시간 감소`;
+  if (kind === 'traffic') return `${period} 버스 정체 부담 감소 예상`;
   const isFastest = scope === 'fastest';
   if (kind === 'seats') {
     const {name,remainingSeats,checkedAt} = step.busComfort;
