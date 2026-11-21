@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
+import { recommend, RouteError } from './src/calendar/modo/lib/routes.js';
 import { parseEnv } from 'node:util';
 import { createPersonalization } from './server/personalization.mjs';
 
@@ -66,6 +67,17 @@ const handlePersonalization = createPersonalization({
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (await handlePersonalization(req, res, url)) return;
+  if (url.pathname === '/api/recommend') {
+    if (req.method !== 'POST') return sendJson(res, 405, {error:'POST 요청만 지원해요.'});
+    if (req.headers.origin !== new URL(config.APP_ORIGIN ?? `http://localhost:${PORT}`).origin) return sendJson(res,403,{error:'잘못된 요청 출처입니다.'});
+    try {
+      let body = '';
+      for await (const chunk of req) { body += chunk; if (body.length > 4096) return sendJson(res,413,{error:'입력이 너무 길어요.'}); }
+      let input; try { input = JSON.parse(body); } catch { return sendJson(res,400,{error:'입력 형식을 확인해 주세요.'}); }
+      res.setHeader('Cache-Control','no-store');
+      return sendJson(res,200,await recommend(input,config));
+    } catch(error) { return sendJson(res,error instanceof RouteError?error.status:502,{error:error.message}); }
+  }
   const upstream = Object.hasOwn(UPSTREAMS, url.pathname) && UPSTREAMS[url.pathname];
   if (url.pathname === '/') {
     res.writeHead(302, { Location: '/src/main/index.html' });

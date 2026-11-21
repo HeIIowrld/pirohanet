@@ -10,7 +10,7 @@ const calendarScope = 'https://www.googleapis.com/auth/calendar.readonly';
 const sessionAge = 30 * 24 * 60 * 60;
 const nonce = () => randomBytes(32).toString('base64url');
 const hash = (value) => createHash('sha256').update(value).digest('hex');
-const mainPage = '/src/main/index.html';
+const mainPage = process.env.REACT_FRONTEND === '1' ? '/' : '/src/main/index.html';
 const placesPage = '/src/main/saved-places.html';
 
 async function readJson(req) {
@@ -164,6 +164,10 @@ export function createPersonalization({ root, origin, clientId, clientSecret, se
       return sendJson(res, 200, {});
     }
     if (!session) return sendJson(res, 401, { error: '로그인이 필요합니다.' });
+    if (route === '/api/calendar' && req.method === 'DELETE') {
+      calendarTokens.delete(sessionId);
+      return sendJson(res,200,{connected:false});
+    }
     if (route === '/api/calendar' && req.method === 'GET') {
       const access = calendarTokens.get(sessionId);
       if (!access || access.expires <= now) {

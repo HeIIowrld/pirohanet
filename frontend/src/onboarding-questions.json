@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "intro": {
+    "title": "평소 편한 길을 알려 주세요",
+    "description": [
+      "자주 쓰는 기준을 알면",
+      "약속 시간에 맞는 길을 먼저 보여 드려요.",
+      "나중에 언제든 바꿀 수 있어요."
+    ],
+    "actions": {
+      "next": "다음",
+      "skip": "건너뛰기"
+    }
+  },
+  "title": "평소 어떤 길이 편해요?",
+  "skippable": true,
+  "questions": [
+    {
+      "id": "routePreference",
+      "type": "singleChoice",
+      "options": [
+        {
+          "value": "fastest",
+          "label": "빠른 길"
+        },
+        {
+          "value": "walking",
+          "label": "덜 걷는 길"
+        },
+        {
+          "value": "transfers",
+          "label": "환승 적은 길"
+        },
+        {
+          "value": "crowding",
+          "label": "덜 붐비는 길"
+        }
+      ]
+    },
+    {
+      "id": "maxExtraTravelMinutes",
+      "title": "그런 길이라면 몇 분 더 걸려도 괜찮아요?",
+      "type": "singleChoice",
+      "showWhen": {
+        "questionId": "routePreference",
+        "values": [
+          "walking",
+          "transfers",
+          "crowding"
+        ]
+      },
+      "options": [
+        {
+          "value": 5,
+          "label": "5분"
+        },
+        {
+          "value": 10,
+          "label": "10분"
+        },
+        {
+          "value": 20,
+          "label": "20분"
+        }
+      ]
+    },
+    {
+      "id": "arrivalBufferMinutes",
+      "title": "약속보다 얼마나 일찍 도착할까요?",
+      "type": "singleChoice",
+      "default": 10,
+      "options": [
+        {
+          "value": 0,
+          "label": "정각에 도착"
+        },
+        {
+          "value": 5,
+          "label": "5분 일찍"
+        },
+        {
+          "value": 10,
+          "label": "10분 일찍"
+        },
+        {
+          "value": 15,
+          "label": "15분 일찍"
+        }
+      ]
+    },
+    {
+      "id": "avoidStairs",
+      "title": "계단은 어떻게 할까요?",
+      "type": "singleChoice",
+      "default": false,
+      "options": [
+        {
+          "value": false,
+          "label": "상관없어요"
+        },
+        {
+          "value": true,
+          "label": "계단 적은 길 우선"
+        }
+      ]
+    }
+  ],
+  "actions": {
+    "next": "다음",
+    "complete": "시작하기",
+    "skip": "건너뛰기"
+  },
+  "departureAlert": {
+    "leadMinutes": 10,
+    "surface": "in-app banner",
+    "note": "설정 질문 없이 모든 사용자에게 출발 10분 전 고정. 앱이 열려 있을 때 화면 위에 배너로 표시 (H01/DepartureAlert)"
+  }
+}
