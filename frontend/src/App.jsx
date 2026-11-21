@@ -152,6 +152,13 @@ export default function App(){
  function choose(place,field=picker){
   if(field==='save'){void save(place);return}
   setDemo(designDemo);
+  // 일정에 적힌 위치 글자(예: '1공')에 대해 실제 장소를 고른 것이면 그 글자로 기억한다.
+  // 다음에 같은 글자가 나오면 검색 없이 이 장소를 쓴다.
+  const alias=event?.location?.trim();
+  if(field==='destination'&&!designDemo&&alias&&form.destination.trim()===alias){
+   setToast(`‘${alias}’은(는) 이 장소로 기억할게요.`);
+   void persistPlace(alias,place);
+  }
   setPoints(previous=>({...previous,[field]:place}));
   update(field,place.name||place.address);
   go(field==='origin'&&!form.destination?'home':'confirm');

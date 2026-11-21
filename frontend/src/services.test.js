@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makeTrip,routeResult,fromInput,localInput } from './services.js';
+import { makeTrip,routeResult,fromInput,localInput,suggestedLevel } from './services.js';
+import { SAMPLE_EVENTS } from '../../src/calendar/sample.js';
 const form={origin:'서울시청',destination:'광화문',departure:'2026-11-21T23:50',arrival:'2026-11-22T00:30'};
 test('Korean times cross midnight regardless of machine timezone',()=>{assert.equal(fromInput(form.departure).toISOString(),'2026-11-21T14:50:00.000Z');assert.equal(localInput(fromInput(form.departure)),form.departure)});
 test('five fatigue levels remain numeric and normalize without breaking old calendar API',()=>{for(let n=1;n<=5;n++){const t=makeTrip(form,null,n);assert.equal(t.preferences.fatigueLevel,n);assert.equal(t.preferences.normalizedFatigue,(n-1)/4)}assert.equal(makeTrip(form,null,null).preferences.normalizedFatigue,null)});
@@ -46,4 +47,15 @@ test('additional modes surface bus transfers and mixed routes without duplicatin
   assert.deepEqual(r.alternatives.map(route=>route.id),['bus-transfer-1','mixed']);
   const strict=routeResult(candidates,{...trip,arriveBy:new Date(+trip.departAt+41*60000)});
   assert.equal(strict.alternatives.length,0);
+});
+
+test('calendar suggestion stays on the 1-5 scale and is accepted by makeTrip',()=>{
+  const at=hhmm=>new Date(`2026-11-20T${hhmm}:00+09:00`);
+  assert.equal(suggestedLevel(SAMPLE_EVENTS,at('08:00')),null);
+  assert.equal(suggestedLevel(SAMPLE_EVENTS,at('18:00')),3);
+  for(let minutes=0;minutes<24*60;minutes+=15){
+    const level=suggestedLevel(SAMPLE_EVENTS,new Date(Date.parse('2026-11-20T00:00:00+09:00')+minutes*60000));
+    assert.ok(level===null||[1,2,3,4,5].includes(level),`level ${level}`);
+    if(level!==null)assert.doesNotThrow(()=>makeTrip(form,null,level));
+  }
 });
