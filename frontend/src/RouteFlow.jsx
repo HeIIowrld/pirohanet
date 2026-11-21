@@ -1,7 +1,8 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {addBusInformation} from '../../src/main/bus-information.js';
 import {isDirect} from '../../src/routing/compare.js';
 import {clock} from './services.js';
+import {loadRailDoorData, railDoorHints} from './rail-doors.js';
 import {Actions, Art, Badge, Button, Sheet, Summary} from './design.jsx';
 
 const minutes = value => Math.ceil(value ?? 0);
@@ -62,6 +63,15 @@ function BusInformation({step}) {
 
 export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell}) {
   const late = trip.arriveBy && route.arrivalAt > trip.arriveBy;
+  const [doorData,setDoorData] = useState(null);
+  const hasSubway = route.steps?.some(step => step.type === 'SUBWAY');
+  useEffect(() => {
+    if (!hasSubway || demo) return;
+    let active = true;
+    void loadRailDoorData().then(data => {if (active) setDoorData(data)});
+    return () => {active = false};
+  }, [hasSubway,demo]);
+  const doors = railDoorHints(route.steps ?? [],doorData);
   return <section className="page details-page">
     <Summary values={[
       ['출발', clock(trip.departAt)],
@@ -81,9 +91,16 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell})
         <div><strong>{step.guidance || step.title}</strong>
           <small>{step.description || (Number.isFinite(step.time) ? `약 ${minutes(step.time / 60)}분` : '')}</small>
           {step.type === 'BUS' && <BusInformation step={step}/>}
+          {doors[index] && <div className="rail-door-hint">
+            <strong>{doors[index].title}</strong>
+            <small>{doors[index].instruction}</small>
+          </div>}
         </div>
       </div>)}
     </div>
+    {doors.some(Boolean) && <p className="route-source">칸·문 위치 자료
+      {' · '}<a href="https://data.seoul.go.kr/dataList/OA-22521/L/1/datasetView.do" target="_blank" rel="noreferrer">서울교통공사 환승정보</a>
+      {' · '}<a href="https://data.seoul.go.kr/dataList/OA-22749/A/1/datasetView.do" target="_blank" rel="noreferrer">빠른하차정보</a></p>}
     <div className="route-navigation" aria-label="구간별 길안내">
       {route.links?.map((link, index) => <div key={link.url}>
         <Button kind={index === 0 ? 'primary' : 'sky'} onClick={() => navigate(link)}>{link.label}</Button>

@@ -113,6 +113,7 @@ function profile(route, departAt, data) {
         if (line) subwayLineMinutes[line] = (subwayLineMinutes[line] ?? 0) + minutes;
       }
       const direction = subwayDirection(step, data);
+      if (direction?.next) step = { ...step, nextSubwayStation: direction.next.name };
       const at = new Date(+departAt + elapsed * MINUTE);
       const averageAt = (name, offset) => direction ? expectedCrowding(
         data, direction, name, new Date(+at + offset * MINUTE),
