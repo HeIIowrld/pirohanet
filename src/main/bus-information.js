@@ -1,13 +1,8 @@
-export function addBusInformation(item, step, timeFormat) {
-  const [lon, lat] = step.boardingPoint ?? [];
-  const [stop, next] = step.stops ?? [];
-  const routes = step.vehicles?.map(({ name }) => name).filter((name) => name && !name.includes(','));
-  if (step.type !== 'BUS' || !Number.isFinite(lon) || !Number.isFinite(lat) ||
-      !stop?.name || !next?.name || !routes?.length || !Number.isFinite(step.boardingAt)) return null;
+import {busInformationParams} from '../routing/bus-observations.js';
 
-  const params = new URLSearchParams({
-    lon, lat, stop: stop.name, next: next.name, routes: routes.slice(0, 12).join(','), at: step.boardingAt,
-  });
+export function addBusInformation(item, step, timeFormat) {
+  const params = busInformationParams(step);
+  if (!params) return null;
   const button = document.createElement('button');
   button.className = 'secondary';
   button.type = 'button';
@@ -22,14 +17,14 @@ export function addBusInformation(item, step, timeFormat) {
     if (button.disabled || !item.isConnected) return;
     button.disabled = true;
     list.replaceChildren();
-    status.textContent = '서울시 버스 정보를 조회 중이에요.';
+    status.textContent = '버스 도착 정보를 조회 중이에요.';
     try {
       const response = await fetch(`/api/bus-information?${params}`, { signal: AbortSignal.timeout(10_000) });
       if (!response.ok) throw new Error('Bus information unavailable');
       const { routes, showLive, checkedAt } = await response.json();
       for (const route of routes) {
-        const lines = route.arrivals.map(({ at, seconds, congestion }) =>
-          `${seconds === 0 ? '곧 도착' : `${timeFormat.format(at)} 정류장 도착 예정`} · 차내 혼잡 ${congestion ?? '정보 없음'}`);
+        const lines = route.arrivals.map(({ at, seconds, congestion, remainingSeats }) =>
+          `${seconds === 0 ? '곧 도착' : `${timeFormat.format(at)} 정류장 도착 예정`} · 차내 혼잡 ${congestion ?? '정보 없음'}${Number.isInteger(remainingSeats) ? ` · 조회 기준 잔여 ${remainingSeats}석` : ''}`);
         if (route.prediction) {
           lines.push(`탑승 시간대 예상 혼잡 ${route.prediction.congestion} · 최근 8주 중 관측 ${route.prediction.sampleDays}일`);
         }
@@ -40,7 +35,7 @@ export function addBusInformation(item, step, timeFormat) {
       }
       const hasLive = routes.some((route) => route.arrivals.length);
       status.textContent = hasLive
-        ? `서울시 버스정보 · ${timeFormat.format(checkedAt)} 조회`
+        ? `${[...new Set(routes.filter(route=>route.arrivals.length).map(route=>route.source??'서울시 버스정보'))].join('·')} · ${timeFormat.format(checkedAt)} 조회`
         : showLive
           ? '현재 시각을 기준으로 확인할 수 있는 버스 도착 정보가 없어요.'
           : routes.length
