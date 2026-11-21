@@ -332,3 +332,11 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .trip-time-fields .field strong { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .trip-time-fields .field > .icon { width: 16px; height: 16px; color: var(--fg-muted); }
 .confirm-page .field-error { margin-top: 8px; padding-left: 4px; }
+/* 내 장소 그룹: 접었다 펼 수 있는 묶음 */
+.place-group>summary{display:flex;align-items:center;gap:8px;padding:14px 20px 6px;font-size:14px;font-weight:600;color:var(--fg-secondary);cursor:pointer;list-style:none}
+.place-group>summary::-webkit-details-marker{display:none}
+.place-group>summary::after{content:'';margin-left:auto;width:8px;height:8px;border-right:2px solid var(--fg-muted);border-bottom:2px solid var(--fg-muted);transform:rotate(-135deg);transition:transform .15s}
+.place-group:not([open])>summary::after{transform:rotate(45deg)}
+.place-group>summary small{font-size:12px;font-weight:400;color:var(--fg-muted)}
+.name-page .group-chips{padding:0;flex-wrap:wrap}
+

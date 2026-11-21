@@ -170,3 +170,18 @@ test('로그아웃: 계정에 다 올라가 있으면 브라우저의 내 장소
   clearSyncedPlaces(store);
   assert.deepEqual(await syncMyPlaces('TOKEN', drive.fetchFn, store), { 회사: OFFICE });
 });
+
+test('그룹: 장소에 그룹을 붙여 저장하면 계정에도 함께 올라가고, 그룹이 없으면 넣지 않는다', async () => {
+  const store = fakeStore();
+  savePlace('회사', { ...OFFICE, group: ' 일 ' }, store);
+  savePlace('집', HOME, store);
+  assert.deepEqual(savedPlace('회사', store), { ...OFFICE, group: '일' });
+  assert.deepEqual(savedPlace('집', store), HOME);
+  const drive = fakeDrive(null);
+  await pushMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.deepEqual(drive.remote, { 회사: { ...OFFICE, group: '일' }, 집: HOME });
+  // 그룹을 지우면 그룹 없이 저장된다
+  savePlace('회사', { ...OFFICE, group: '' }, store);
+  assert.deepEqual(savedPlace('회사', store), OFFICE);
+});
+

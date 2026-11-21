@@ -108,7 +108,9 @@ export function savePlace(text, place, store = defaultStore()) {
   const key = keyOf(text);
   if (!key) return;
   const all = readSaved(store);
-  if (place) all[key] = { name: place.name, address: place.address, latitude: place.latitude, longitude: place.longitude };
+  // group은 내 장소 화면에서 묶어 보기 위한 이름(선택). 없으면 저장하지 않는다.
+  const group = typeof place?.group === 'string' ? place.group.trim() : '';
+  if (place) all[key] = { name: place.name, address: place.address, latitude: place.latitude, longitude: place.longitude, ...(group && { group }) };
   else delete all[key];
   writeSaved(all, store);
   // 계정에 올릴 때까지 기록해 둔다. 그래야 다음에 계정과 맞출 때 계정의 옛 값으로 되돌아가지 않는다.
