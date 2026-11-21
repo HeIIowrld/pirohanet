@@ -16,26 +16,55 @@
   </select>
 </label>
 <pre id="out">버튼을 누르면 결과가 여기에 나옵니다.</pre>
-<img id="map" alt="다음 약속 장소 지도" hidden>
+<form id="research">
+  <p><label>다음 약속 장소 <select id="dest"></select></label></p>
+  <p>
+    <label>여기 없나요? 글자를 고쳐서 <input id="query" size="30"></label>
+    <button>다시 검색</button>
+    <span id="status"></span>
+  </p>
+</form>
+<pre id="chosen"></pre>
+<img id="map" alt="확정한 장소 지도" hidden>
 <script type="module">
   import { fetchGoogleEvents, summarize } from './calendar.js';
   import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
-  import { locateAll, staticMapUrl } from './location.js';
+  import { locateAll, locateCandidates, staticMapUrl } from './location.js';
 
-  const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 다음 약속의 지도 이미지가 나온다
+  const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 확정한 장소의 지도 이미지가 나온다
 
-  const out = document.getElementById('out');
-  const map = document.getElementById('map');
-  const level = document.getElementById('level');
+  const $ = (id) => document.getElementById(id);
+  const out = $('out');
+  const dest = $('dest');
+  const level = $('level');
   let loaded = null; // { title, items, now, places, placeError }
+  let destFor = null; // 후보를 채워 둔 약속의 위치 글자
+  let destCandidates = []; // 선택 목록에 보여 주는 후보
 
-  // 일정 한 줄 옆에 붙이는 위치 변환 결과
+  const candidateLine = (place, i) => `${i + 1}. ${place.name} | ${place.address} | 위도 ${place.latitude}, 경도 ${place.longitude}`;
+
+  // 일정 한 줄 아래에 붙이는 후보 장소 목록
   const placeText = (location) => {
     if (!location) return '';
-    if (loaded.placeError) return ` → 위치 변환 실패: ${loaded.placeError}`;
-    if (!loaded.places) return ' → 위치 찾는 중…';
-    const place = loaded.places.get(location.trim());
-    return place ? ` → ${place.name} | ${place.address} | ${place.lon}, ${place.lat}` : ' → 위치를 찾지 못함';
+    if (loaded.placeError) return `\n    위치 변환 실패: ${loaded.placeError}`;
+    if (!loaded.places) return '\n    위치 찾는 중…';
+    const candidates = loaded.places.get(location.trim()) ?? [];
+    return candidates.length ? candidates.map((place, i) => `\n    ${candidateLine(place, i)}`).join('') : '\n    위치를 찾지 못함';
+  };
+
+  // 사용자가 고른 후보가 확정 장소가 된다. 이 값을 경로 탐색의 목적지로 넘긴다.
+  const showChosen = () => {
+    const place = destCandidates[dest.value];
+    $('chosen').textContent = place ? `확정 장소\n${JSON.stringify(place, null, 2)}` : '';
+    $('map').hidden = !(place && NAVER_MAP_KEY_ID);
+    if (!$('map').hidden) $('map').src = staticMapUrl([place], NAVER_MAP_KEY_ID);
+  };
+
+  const setCandidates = (candidates) => {
+    destCandidates = candidates;
+    dest.replaceChildren(...candidates.map((place, i) => new Option(candidateLine(place, i), i)));
+    $('status').textContent = candidates.length ? '' : '후보가 없습니다. 글자를 고쳐 다시 검색해 주세요.';
+    showChosen();
   };
 
   const render = () => {
@@ -47,14 +76,21 @@
     const result = summarize(loaded.items, loaded.now, level.value === '' ? null : Number(level.value));
     out.textContent = `${loaded.title} ${loaded.items.length}건\n${list.join('\n')}\n${JSON.stringify(result, null, 2)}`;
 
-    const nextPlace = loaded.places?.get(result.nextAppointment?.location);
-    map.hidden = !(nextPlace && NAVER_MAP_KEY_ID);
-    if (!map.hidden) map.src = staticMapUrl([nextPlace], NAVER_MAP_KEY_ID);
+    // 약속이 바뀌었을 때만 후보를 새로 채운다. 그래야 사용자가 다시 검색한 결과와 고른 값이 유지된다.
+    const location = result.nextAppointment?.location ?? '';
+    if (loaded.places && destFor !== location) {
+      destFor = location;
+      $('query').value = location;
+      setCandidates(loaded.places.get(location) ?? []);
+    }
   };
 
   // 일정을 보여 준 뒤, 장소가 적힌 모든 일정의 위치를 한꺼번에 변환해 다시 그린다
   const show = async (title, items, now) => {
     const current = (loaded = { title, items, now });
+    destFor = null;
+    setCandidates([]);
+    $('status').textContent = '';
     render();
     try {
       current.places = await locateAll(items.map((e) => e.location));
@@ -65,12 +101,23 @@
   };
 
   level.onchange = render;
-  document.getElementById('sample').onclick = () => show('샘플 일정', SAMPLE_EVENTS, SAMPLE_NOW);
-  document.getElementById('connect').onclick = async () => {
+  dest.onchange = showChosen;
+  $('sample').onclick = () => show('샘플 일정', SAMPLE_EVENTS, SAMPLE_NOW);
+  $('connect').onclick = async () => {
     try {
       show('Google 일정', await fetchGoogleEvents(), new Date());
     } catch (err) {
       show(`연동 실패(${err.message}) → 샘플 일정`, SAMPLE_EVENTS, SAMPLE_NOW);
+    }
+  };
+  // 후보에 원하는 곳이 없으면 글자를 고쳐 다시 찾는다. 새 후보가 선택 목록을 대신한다.
+  $('research').onsubmit = async (event) => {
+    event.preventDefault();
+    $('status').textContent = '찾는 중…';
+    try {
+      setCandidates(await locateCandidates($('query').value));
+    } catch (err) {
+      $('status').textContent = `위치 변환 실패: ${err.message}`;
     }
   };
 </script>
