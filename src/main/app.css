@@ -89,3 +89,9 @@ dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
 #saved-place-list p { overflow-wrap: anywhere; }
 .saved-place-edit { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
 .saved-place-edit input { flex: 1 1 12rem; min-width: 0; padding: .6rem; border: 1px solid var(--line); border-radius: .7rem; }
+
+.app-header nav { display: flex; align-items: center; }
+.app-header [aria-current="page"] { font-weight: 700; }
+#saved-place-list[hidden] { display: none; }
+#saved-place-list li + li { padding-top: .75rem; border-top: 1px solid var(--line); }
+#saved-place-list .status:empty, #saved-place-list .account-actions:empty, #saved-places-status:empty { margin: 0; }

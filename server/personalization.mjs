@@ -11,6 +11,7 @@ const sessionAge = 30 * 24 * 60 * 60;
 const nonce = () => randomBytes(32).toString('base64url');
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const mainPage = '/src/main/index.html';
+const placesPage = '/src/main/saved-places.html';
 
 async function readJson(req) {
   let size = 0;
@@ -109,7 +110,8 @@ export function createPersonalization({ root, origin, clientId, clientSecret, se
       pending.delete(oldState);
       const state = nonce();
       const { codeVerifier, codeChallenge } = await google.generateCodeVerifierAsync();
-      pending.set(state, { codeVerifier, calendar, sessionId, expires: now + 600_000 });
+      const returnPage = !calendar && url.searchParams.get('return') === 'places' ? placesPage : mainPage;
+      pending.set(state, { codeVerifier, calendar, sessionId, returnPage, expires: now + 600_000 });
       cookie(res, 'oauth_state', state, 600);
       return redirect(res, google.generateAuthUrl({
         scope: calendar ? ['openid', calendarScope] : ['openid'],
@@ -127,10 +129,15 @@ export function createPersonalization({ root, origin, clientId, clientSecret, se
       pending.delete(state);
       cookie(res, 'oauth_state', '', 0);
       const code = url.searchParams.get('code');
-      if (!code) return redirect(res, mainPage + '?auth=failed');
-      const { tokens } = await google.getToken({ code, codeVerifier: flow.codeVerifier });
-      const ticket = await google.verifyIdToken({ idToken: tokens.id_token, audience: clientId });
-      const subject = ticket.getPayload().sub;
+      if (!code) return redirect(res, flow.returnPage + '?auth=failed');
+      let tokens, subject;
+      try {
+        ({ tokens } = await google.getToken({ code, codeVerifier: flow.codeVerifier }));
+        const ticket = await google.verifyIdToken({ idToken: tokens.id_token, audience: clientId });
+        subject = ticket.getPayload().sub;
+      } catch {
+        return redirect(res, flow.returnPage + '?auth=failed');
+      }
       if (flow.calendar) {
         const user = session && db.prepare('SELECT google_sub FROM users WHERE id = ?').get(session.user_id);
         if (user?.google_sub !== subject) return redirect(res, mainPage + '?auth=account');
@@ -147,7 +154,7 @@ export function createPersonalization({ root, origin, clientId, clientSecret, se
       const value = nonce();
       db.prepare('INSERT INTO sessions VALUES (?, ?, ?)').run(hash(value), user.id, now + sessionAge * 1000);
       cookie(res, 'session', value, sessionAge);
-      return redirect(res, mainPage);
+      return redirect(res, flow.returnPage);
     }
     if (route === '/auth/logout' && req.method === 'POST') {
       endSession(sessionId);

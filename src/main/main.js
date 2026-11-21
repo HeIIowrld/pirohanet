@@ -1,6 +1,7 @@
 import { locateCandidates } from '../calendar/location.js';
 import { SAMPLE_EVENTS, SAMPLE_NOW } from '../calendar/sample.js';
 import { resolvePlace, resolveTripPlaces } from '../map/places.js';
+import { api, savePlace } from '../preferences/account-api.js';
 import { placeAliasKey } from '../preferences/place-alias.js';
 import { prepareTrip } from './trip.js';
 
@@ -16,8 +17,6 @@ const calendarButton = document.querySelector('#google-calendar');
 const logout = document.querySelector('#logout');
 const accountStatus = document.querySelector('#account-status');
 const candidates = document.querySelector('#calendar-place-candidates');
-const savedSection = document.querySelector('#saved-places');
-const savedList = document.querySelector('#saved-place-list');
 const timeFormat = new Intl.DateTimeFormat('ko-KR', {
   hour: '2-digit',
   minute: '2-digit',
@@ -29,18 +28,6 @@ let events = [];
 let source = null;
 let scheduleVersion = 0;
 const saved = new Map();
-
-async function api(path, method = 'GET', body) {
-  const response = await fetch(path, {
-    method,
-    ...(body && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(data.error ?? '요청에 실패했어요.'), { status: response.status });
-  }
-  return response.json();
-}
 
 function accountMessage(message) {
   accountStatus.textContent = message;
@@ -62,72 +49,14 @@ function lookup(query) {
 }
 
 async function storePlace(alias, place) {
-  const entry = await api('/api/saved-places', 'PUT', {
-    alias,
-    name: place.name ?? '',
-    address: place.address,
-    latitude: place.latitude,
-    longitude: place.longitude,
-  });
+  const entry = await savePlace(alias, place);
   saved.set(placeAliasKey(entry.alias), entry);
-  renderSaved();
 }
 
-function renderSaved() {
-  savedSection.hidden = !signedIn || saved.size === 0;
-  savedList.replaceChildren();
-  for (const entry of saved.values()) {
-    const item = document.createElement('li');
-    const label = document.createElement('p');
-    label.textContent = `${entry.alias} · ${entry.address}`;
-    const edit = document.createElement('form');
-    edit.className = 'saved-place-edit';
-    const query = document.createElement('input');
-    query.required = true;
-    query.value = entry.address;
-    query.setAttribute('aria-label', `${entry.alias} 주소 변경`);
-    const update = document.createElement('button');
-    update.type = 'submit';
-    update.className = 'secondary';
-    update.textContent = '주소 변경';
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'secondary';
-    remove.textContent = '삭제';
-    edit.append(query, update, remove);
-    item.append(label, edit);
-    savedList.append(item);
-
-    edit.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      update.disabled = remove.disabled = true;
-      try {
-        const place = await resolvePlace(query.value.trim());
-        if (!place?.address) throw new Error('주소를 찾지 못했어요.');
-        await storePlace(entry.alias, place);
-        accountMessage(`‘${entry.alias}’ 주소를 변경했어요.`);
-        void refreshSchedule();
-      } catch (error) {
-        accountMessage(error.message);
-      } finally {
-        update.disabled = remove.disabled = false;
-      }
-    });
-    remove.addEventListener('click', async () => {
-      update.disabled = remove.disabled = true;
-      try {
-        await api('/api/saved-places', 'DELETE', { alias: entry.alias });
-        saved.delete(placeAliasKey(entry.alias));
-        renderSaved();
-        accountMessage(`‘${entry.alias}’을 삭제했어요.`);
-        void refreshSchedule();
-      } catch (error) {
-        accountMessage(error.message);
-      } finally {
-        update.disabled = remove.disabled = false;
-      }
-    });
-  }
+async function loadSaved() {
+  const entries = await api('/api/saved-places');
+  saved.clear();
+  for (const entry of entries) saved.set(placeAliasKey(entry.alias), entry);
 }
 
 function scheduleTrip() {
@@ -283,8 +212,7 @@ async function initializeAccount() {
     if (!account.ready) accountMessage('Google OAuth 설정이 필요해요.');
     if (signedIn) {
       try {
-        for (const entry of await api('/api/saved-places')) saved.set(placeAliasKey(entry.alias), entry);
-        renderSaved();
+        await loadSaved();
       } catch (error) {
         accountMessage(error.message);
       }
@@ -296,5 +224,15 @@ async function initializeAccount() {
     accountMessage(error.message);
   }
 }
+
+window.addEventListener('pageshow', async (event) => {
+  if (!event.persisted) return;
+  try {
+    const account = await api('/api/account');
+    if (account.signedIn !== signedIn || signedIn) window.location.reload();
+  } catch (error) {
+    accountMessage(error.message);
+  }
+});
 
 void initializeAccount();

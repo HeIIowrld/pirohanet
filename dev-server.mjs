@@ -1,8 +1,9 @@
-// 개발용 서버: 정적 파일 + 비밀 키를 붙여 대신 호출해 주는 두 경로.
+// 개발용 서버: 정적 파일 + 비밀 키를 붙여 대신 호출해 주는 API 경로.
 // 실행: node dev-server.mjs  (키는 이 파일 옆의 .env에서 읽는다)
 //   /api/geocode?query=  네이버 클라우드 Maps Geocoding   (.env: X-NCP-APIGW-API-KEY-ID, X-NCP-APIGW-API-KEY)
 //   /api/place?query=    카카오 로컬 키워드 장소 검색     (.env: kakao-rest-api)
-// 키가 없는 경로는 501을 돌려준다. 배포 서버에도 같은 두 경로가 있어야 한다.
+//   /api/reverse-geocode?latitude=&longitude=  카카오 로컬 좌표 → 주소 (.env: kakao-rest-api)
+// 키가 없는 경로는 501을 돌려준다. 배포 서버에도 같은 API 경로가 있어야 한다.
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -19,6 +20,11 @@ const env = existsSync(envFile) ? parseEnv(readFileSync(envFile, 'utf8')) : {};
 const ncpKeyId = env['X-NCP-APIGW-API-KEY-ID'];
 const ncpKey = env['X-NCP-APIGW-API-KEY'];
 const kakaoRestKey = env['kakao-rest-api'];
+const kakaoHeaders = kakaoRestKey && { Authorization: `KakaoAK ${kakaoRestKey}` };
+const reverseGeocode = {
+  url: 'https://dapi.kakao.com/v2/local/geo/coord2address.json',
+  headers: kakaoHeaders,
+};
 const UPSTREAMS = {
   '/api/geocode': {
     url: 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode',
@@ -26,7 +32,7 @@ const UPSTREAMS = {
   },
   '/api/place': {
     url: 'https://dapi.kakao.com/v2/local/search/keyword.json',
-    headers: kakaoRestKey && { Authorization: `KakaoAK ${kakaoRestKey}` },
+    headers: kakaoHeaders,
   },
 };
 
@@ -35,12 +41,10 @@ const sendJson = (res, status, body) => {
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 };
 
-async function proxy(upstream, query, res) {
+async function proxy(upstream, params, res) {
   if (!upstream.headers) return sendJson(res, 501, { error: '이 경로의 키가 설정되지 않았습니다' });
-  // 검색어 하나만 넘긴다. 클라이언트가 보낸 다른 값은 외부 API로 전달하지 않는다.
-  if (!query || query.length > 200) return sendJson(res, 400, { error: 'query는 1~200자여야 합니다' });
   try {
-    const upstreamRes = await fetch(`${upstream.url}?${new URLSearchParams({ query })}`, {
+    const upstreamRes = await fetch(`${upstream.url}?${new URLSearchParams(params)}`, {
       headers: { Accept: 'application/json', ...upstream.headers },
       signal: AbortSignal.timeout(5000),
     });
@@ -67,7 +71,23 @@ createServer(async (req, res) => {
     res.writeHead(302, { Location: '/src/main/index.html' });
     return res.end();
   }
-  if (upstream) return proxy(upstream, url.searchParams.get('query'), res);
+  if (url.pathname === '/api/reverse-geocode') {
+    const latitude = url.searchParams.get('latitude')?.trim();
+    const longitude = url.searchParams.get('longitude')?.trim();
+    if (!latitude || !longitude ||
+        !Number.isFinite(Number(latitude)) || Math.abs(Number(latitude)) > 90 ||
+        !Number.isFinite(Number(longitude)) || Math.abs(Number(longitude)) > 180) {
+      return sendJson(res, 400, { error: '위치 좌표를 확인해 주세요.' });
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return proxy(reverseGeocode, { x: Number(longitude), y: Number(latitude), input_coord: 'WGS84' }, res);
+  }
+  if (upstream) {
+    if (!upstream.headers) return proxy(upstream, {}, res);
+    const query = url.searchParams.get('query');
+    if (!query || query.length > 200) return sendJson(res, 400, { error: 'query는 1~200자여야 합니다' });
+    return proxy(upstream, { query }, res);
+  }
 
   let pathname;
   try {

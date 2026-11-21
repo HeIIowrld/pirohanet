@@ -11,7 +11,10 @@
   <div class="app">
     <header class="app-header">
       <h1>모도</h1>
-      <a href="#schedule">일정</a>
+      <nav aria-label="주 메뉴">
+        <a href="#schedule">일정</a>
+        <a href="./saved-places.html">내 장소</a>
+      </nav>
     </header>
 
     <main>
@@ -55,11 +58,6 @@
           <button id="check-places" class="primary" type="submit">출발지와 목적지 확인</button>
         </div>
       </form>
-
-      <section id="saved-places" class="panel" aria-labelledby="saved-places-heading" hidden>
-        <h2 id="saved-places-heading">저장한 장소</h2>
-        <ul id="saved-place-list"></ul>
-      </section>
 
       <section class="panel" aria-labelledby="results-heading">
         <h2 id="results-heading">이동 결과</h2>
