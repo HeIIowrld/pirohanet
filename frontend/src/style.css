@@ -275,3 +275,27 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .gap-direct{margin-top:10px}
 
 .gap-hours{display:block;margin-top:8px}
+
+/* 내일 이후 일정: 박스 없이 흐리게 */
+.event-row.later:not(.selected) { background: transparent; }
+.event-row.later:not(.selected) strong, .event-row.later:not(.selected) small { color: var(--fg-disabled); }
+
+/* 내 장소 목록: 양쪽 여백을 장소 추가 버튼과 같은 20px로, 수정 > 삭제 위계, 아이콘 배경 없음 */
+.saved-place-row { padding-inline: 20px; gap: 8px; }
+.saved-place-row .place-row { padding: 18px 0; gap: 12px; }
+.saved-place-row .place-icon { width: 24px; height: 24px; background: none; border-radius: 0; color: var(--fg-muted); }
+.saved-place-row > .saved-edit { height: 32px; min-width: 44px; padding: 0 12px; border-radius: 999px; background: var(--bg-background); color: var(--fg-default); font-size: 14px; font-weight: 500; }
+.saved-place-row > .saved-delete { height: 44px; min-width: 40px; padding: 0 0 0 8px; color: var(--fg-muted); font-size: 14px; text-align: right; }
+
+/* 시각 휠: 가운데에서 위아래 끝으로 갈수록 연해진다 */
+.time-wheels .wheel {
+  -webkit-mask-image: linear-gradient(to bottom, #0000 0%, #0003 12%, #000 40%, #000 60%, #0003 88%, #0000 100%);
+  mask-image: linear-gradient(to bottom, #0000 0%, #0003 12%, #000 40%, #000 60%, #0003 88%, #0000 100%);
+}
+
+/* 바텀시트 바깥 빈 곳을 누르면 내려간다: 오버레이는 닫히고, 펼친 일정 시트는 접힌다 */
+.overlay { cursor: pointer; }
+.overlay > .sheet { cursor: auto; }
+.sheet-backdrop { position: absolute; inset: 0; }
+.map-controls { pointer-events: none; }
+.map-controls > * { pointer-events: auto; }
