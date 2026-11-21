@@ -73,3 +73,49 @@ test('a deadline gives each stop only the whole minutes left after both legs', a
   assert.equal(new Date(stop.stopDepartureAt).toISOString(),'2026-11-21T07:38:00.000Z');
   assert.deepEqual(await query(39),[]);
 });
+
+test('a route already fetched in this browser is reused, also after the transit quota runs out', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const data = new Map();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true,
+    value: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
+  let transitCalls = 0;
+  let exhausted = false;
+  globalThis.fetch = (url) => {
+    if (url instanceof URL) return Promise.resolve(new Response(null, { status: 404 }));
+    if (!String(url).startsWith('/api/transit')) return Promise.resolve(new Response(null, { status: 404 }));
+    transitCalls++;
+    if (exhausted) return Promise.resolve(Response.json({ code: -10, msg: 'API limit has been exceeded.' }, { status: 400 }));
+    return Promise.resolve(Response.json({ status: 'OK', routes: [{
+      properties: { type: 'SUBWAY', totalTime: 1200, transfers: 0, totalDistance: 5000 },
+      steps: [{ properties: { type: 'SUBWAY', time: 1200, guidance: '2호선' }, path: { points: [] } }],
+    }] }));
+  };
+  const places = { origin: { latitude: 37.5552, longitude: 126.937 }, destination: { latitude: 37.5777, longitude: 126.986 } };
+  const departAt = new Date('2026-11-21T16:30:00+09:00');
+  try {
+    const first = await queryTransit({ places, departAt, preferences: {} });
+    assert.equal(first.length, 1);
+    assert.equal(transitCalls, 1);
+    await queryTransit({ places, departAt, preferences: {} });
+    assert.equal(transitCalls, 1); // 10분 안에는 다시 묻지 않는다
+
+    // 보관한 지 오래됐고 한도가 끝났으면: 한 번 물어보고, 전에 받아 둔 응답으로 보여 준다
+    const stored = JSON.parse(data.get('modo.transit.v2'));
+    for (const entry of Object.values(stored)) entry.at -= 60 * 60_000;
+    data.set('modo.transit.v2', JSON.stringify(stored));
+    exhausted = true;
+    const reused = await queryTransit({ places, departAt, preferences: {} });
+    assert.equal(transitCalls, 2);
+    assert.equal(reused[0].travelMinutes, 20);
+
+    // 받아 둔 적 없는 구간은 한도 초과를 그대로 알린다
+    const other = { ...places, destination: { latitude: 37.5, longitude: 127.0 } };
+    await assert.rejects(queryTransit({ places: other, departAt, preferences: {} }), /한도가 초과/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+    else delete globalThis.localStorage;
+  }
+});

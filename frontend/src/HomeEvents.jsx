@@ -2,11 +2,11 @@ import React,{useEffect,useId,useState} from 'react';
 import {Actions,Button,Icon} from './design.jsx';
 import {clock,localInput} from './services.js';
 
-function EventRows({events,selected,today,onSelect}){
+function EventRows({events,selected,today,onSelect,later=false}){
  return events.map((event,index)=>{
   const start=event.start.dateTime;
   const date=localInput(start).slice(0,10);
-  return <button type="button" className={`event-row ${event===selected?'selected':''}`} key={event.id||index}
+  return <button type="button" className={`event-row ${event===selected?'selected':''} ${later?'later':''}`} key={event.id||index}
     disabled={!event.location} onClick={()=>onSelect(event)}>
    <span><small>{date===today?'오늘':date.slice(5).replace('-','/')}</small><strong>{clock(start)}</strong></span>
    <span><strong>{event.summary||'다음 약속'}</strong><small>{event.location||'장소가 없어요'}</small></span>
@@ -52,7 +52,7 @@ export default function HomeEvents({expanded,nearEvents,laterEvents,event,now,on
      <span>24시간 이후 일정 {laterEvents.length}개</span><Icon name="chevronRight"/>
     </button>
     {expanded&&<div id={laterId} hidden={!laterOpen}>
-     {laterOpen&&<EventRows events={laterEvents} selected={event} today={today} onSelect={onSelect}/>}
+     {laterOpen&&<EventRows events={laterEvents} selected={event} today={today} onSelect={onSelect} later/>}
     </div>}
    </>}
   </div>
