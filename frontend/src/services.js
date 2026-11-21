@@ -65,7 +65,8 @@ export function routeResult(candidates, trip, places) {
   const easier = fastest && direct
     .filter(item => item.id !== fastest.id && item.comfortScore < fastest.comfortScore - 0.01)
     .map(item => ({item,reasons:comfortReasons(item,fastest,trip.preferences)}))
-    .find(choice => choice.reasons.length > 0);
+    .find(({item,reasons}) => reasons.length > 0 || (trip.preferences.mobility &&
+      (item.walkMinutes < fastest.walkMinutes || item.transfers < fastest.transfers)));
   const tradeoff = fastest && !easier && direct.find(item => item.id !== fastest.id &&
     (item.walkMinutes < fastest.walkMinutes || item.transfers < fastest.transfers));
   const second = easier?.item ?? tradeoff;

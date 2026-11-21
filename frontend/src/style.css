@@ -340,3 +340,13 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .place-group>summary small{font-size:12px;font-weight:400;color:var(--fg-muted)}
 .name-page .group-chips{padding:0;flex-wrap:wrap}
 
+
+.calendar-ai-setting {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 14px 0;
+}
+.calendar-ai-setting small { grid-column: 1 / -1; color: var(--fg-muted, #52576b); }
+.calendar-ai-setting input { width: 20px; height: 20px; }

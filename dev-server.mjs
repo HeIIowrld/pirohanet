@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { recommend, RouteError } from './src/calendar/modo/lib/routes.js';
 import { parseEnv } from 'node:util';
+import { createCalendarCondition } from './server/calendar-condition.mjs';
 import { createPersonalization } from './server/personalization.mjs';
 import { createBusInformation } from './server/bus-information.mjs';
 import { createSeoulTransit } from './server/seoul-transit.mjs';
@@ -67,9 +68,13 @@ const handleBusInformation = createBusInformation({
   gyeonggiServiceKey:config.GYEONGGI_BUS_INFO,
   sendJson,
 });
+const origin = new URL(config.APP_ORIGIN ?? `http://localhost:${PORT}`).origin;
+const handleCalendarCondition = createCalendarCondition({
+  origin, apiKey: config.OPENAI_API_KEY || config['open-ai-API'], model: config.OPENAI_CONDITION_MODEL, sendJson,
+});
 const handlePersonalization = createPersonalization({
   root: ROOT,
-  origin: new URL(config.APP_ORIGIN ?? `http://localhost:${PORT}`).origin,
+  origin,
   clientId: config.GOOGLE_CLIENT_ID,
   clientSecret: config.GOOGLE_CLIENT_SECRET,
   sendJson,
@@ -77,6 +82,7 @@ const handlePersonalization = createPersonalization({
 
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname === '/api/calendar-condition') return handleCalendarCondition(req, res);
   if (url.pathname === '/api/bus-information') return handleBusInformation(req, res, url);
   if (await handlePersonalization(req, res, url)) return;
   if (url.pathname === '/api/recommend') {
