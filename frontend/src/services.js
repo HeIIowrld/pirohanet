@@ -53,6 +53,25 @@ async function nearbyStops(destination, saved) {
     .filter(place => stopDistance(place, destination) <= 0.045);
 }
 
+export function routeCategory(route) {
+  if (route.mode === 'BUS_AND_SUBWAY') return '지하철+버스';
+  if (route.mode === 'BUS') return route.transfers > 0 ? '버스 환승' : '버스 직행';
+  if (route.mode === 'SUBWAY') return '지하철';
+  return null;
+}
+
+function alternateRoutes(direct, recommended) {
+  const shown = new Set(recommended.map(routeCategory));
+  const alternatives = [];
+  for (const route of [...direct].sort((a,b) => a.arrivalAt - b.arrivalAt)) {
+    const category = routeCategory(route);
+    if (!category || shown.has(category)) continue;
+    shown.add(category);
+    alternatives.push(route);
+  }
+  return alternatives;
+}
+
 export function routeResult(candidates, trip, places) {
   const options = {departAt:trip.departAt, preferences:trip.preferences, places};
   const all = compareRoutes(candidates, options);
@@ -64,10 +83,12 @@ export function routeResult(candidates, trip, places) {
     (item.comfortScore < fastest.comfortScore || item.walkMinutes < fastest.walkMinutes ||
       item.transfers < fastest.transfers ||
       (item.crowdingCompared && item.crowdingBurden < fastest.crowdingBurden)));
+  const recommended = [fastest,easier].filter(Boolean);
   return {
     all, eligible,
-    direct: fastest ? [fastest, easier].filter(Boolean) : [],
-    stops: eligible.filter(item => item.viaStop),
+    direct:recommended,
+    alternatives:alternateRoutes(direct,recommended),
+    stops:eligible.filter(item => item.viaStop),
   };
 }
 
@@ -88,7 +109,10 @@ export async function queryRoutes(trip, {places, previous, stops=false, saved=[]
     throw new Error('경유 경로를 불러오지 못했어요. 다시 시도해 주세요.');
   }
   const compared = routeResult([...(previous?.all ?? []).filter(isDirect), ...candidates], trip, places);
-  return {...compared, direct:previous?.direct ?? compared.direct};
+  return {...compared,
+    direct:previous?.direct ?? compared.direct,
+    alternatives:previous?.alternatives ?? compared.alternatives,
+  };
 }
 
 // Keep the existing geocoder contract intact while allowing Kakao-only installs.

@@ -77,3 +77,12 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .rail-door-hint{display:grid;gap:2px;padding:8px 10px;margin:6px 0 0;border-radius:var(--radius-8);background:var(--brand-sky-low)}
 .rail-door-hint strong{font-size:13px;color:var(--fg-link)}
 .rail-door-hint small{font-size:13px}
+
+.comparison-sheet{max-height:78%;min-height:0}
+.comparison-sheet .sheet-body{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.route-card h3{display:inline-block}
+.route-mode{margin-left:8px;color:var(--fg-link);font-size:12px}
+.route-card .route-line-summary{margin-top:5px;color:var(--fg-link);display:block;font-size:13px}
+.route-card:has(.route-line-summary) p{margin-top:5px}
+.route-alternatives-toggle{width:100%;margin:8px 0;text-align:left;background:var(--bg-surface);border-radius:var(--radius-12);padding:10px 12px}
+.route-alternatives-toggle small{display:block;color:var(--fg-secondary)}

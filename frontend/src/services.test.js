@@ -31,3 +31,19 @@ test('time wheel opens at the displayed hour without rolling minute 58 back to z
 test('time wheel arrival crosses midnight and rejects arrival after appointment',async()=>{const {applyTimeDraft}=await import('./services.js');const draft={ampm:'오전',hour:'12',minute:'15'};assert.equal(applyTimeDraft({...form,arrival:''},'arrival',draft,null),'2026-11-22T00:15');assert.throws(()=>applyTimeDraft(form,'arrival',{ampm:'오전',hour:'1',minute:'00'},{start:{dateTime:'2026-11-22T00:30:00+09:00'}}))});
 test('back navigation always has a destination',async()=>{const {backScreen}=await import('./services.js');assert.equal(backScreen('condition'),'confirm');assert.equal(backScreen('search','origin','confirm'),'confirm');assert.equal(backScreen('search','save','confirm'),'saved')});
 test('saved preferences select known walking metrics without inventing congestion',async()=>{const {preferredDirect}=await import('./services.js');const routes=[{id:'fast',travelMinutes:35,walkMinutes:8},{id:'easy',travelMinutes:41,walkMinutes:5}];assert.equal(preferredDirect(routes,{priority:'walking'}).id,'easy');assert.equal(preferredDirect(routes,{priority:'crowding'}).id,'fast')});
+
+test('additional modes surface bus transfers and mixed routes without duplicating recommendations',()=>{
+  const trip=makeTrip({...form,arrival:'2026-11-22T01:30'},null,4);
+  const candidates=[
+    {id:'rail',mode:'SUBWAY',travelMinutes:21,walkMinutes:4,transfers:1},
+    {id:'bus-direct',mode:'BUS',travelMinutes:40,walkMinutes:4,transfers:0},
+    {id:'bus-transfer-1',mode:'BUS',travelMinutes:47,walkMinutes:5,transfers:1},
+    {id:'bus-transfer-2',mode:'BUS',travelMinutes:52,walkMinutes:7,transfers:1},
+    {id:'mixed',mode:'BUS_AND_SUBWAY',travelMinutes:49,walkMinutes:6,transfers:1},
+  ];
+  const r=routeResult(candidates,trip);
+  assert.deepEqual(r.direct.map(route=>route.id),['rail','bus-direct']);
+  assert.deepEqual(r.alternatives.map(route=>route.id),['bus-transfer-1','mixed']);
+  const strict=routeResult(candidates,{...trip,arriveBy:new Date(+trip.departAt+41*60000)});
+  assert.equal(strict.alternatives.length,0);
+});
