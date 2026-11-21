@@ -116,7 +116,7 @@ function load(events, dayStart, until, prefix) {
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly', // 일정 읽기
-  'https://www.googleapis.com/auth/drive.appdata', // 내 장소를 사용자 계정의 앱 전용 숨김 폴더에 저장 (account-places.js)
+  'https://www.googleapis.com/auth/drive.appdata', // 내 장소를 사용자 계정의 앱 전용 숨김 폴더에 저장 (myplaces.js)
 ].join(' ');
 
 // 브라우저 전용. Google 로그인 창을 띄워 액세스 토큰을 받는다. 토큰은 1시간 동안 유효하다.
