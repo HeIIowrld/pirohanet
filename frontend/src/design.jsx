@@ -8,12 +8,14 @@ export function Actions({children}){return <div className="actions">{children}</
 export function AppBar({title='',back}){return <header><button aria-label="뒤로 가기" onClick={back}><Icon name="back"/></button><strong>{title}</strong><span/></header>}
 export function Welcome({login,busy}) {
  return <section className="welcome" data-design-node="17:87">
-  <div className="welcome-brand"><img src="/assets/brand/modo-wordmark.svg" width="206" height="51" alt="MODO"/></div>
-  <p className="welcome-tagline">
-   빠른길도<br/>
-   편한길도<br/>
-   모도
-  </p>
+  <div className="welcome-hero">
+   <img src="/assets/brand/modo-wordmark.svg" width="206" height="51" alt="MODO"/>
+   <p className="welcome-tagline">
+    빠른길도<br/>
+    편한길도<br/>
+    <strong>모도</strong>
+   </p>
+  </div>
   <Actions><GoogleSignInButton onClick={login} disabled={busy}/></Actions>
  </section>
 }
