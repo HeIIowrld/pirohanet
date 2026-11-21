@@ -64,7 +64,7 @@ export default function Journey({route,trip,progress,advance,finish,openDetails,
         {step && <small>{index+1} / {steps.length}단계</small>}
       </div>
       <p>{trip.destination} · 경로 조회 기준 {clock(route.arrivalAt)} 도착</p>
-      {route.source === 'seoul' && <p className="route-source">서울시 환승경로 · 점선은 정류장·역을 이은 경로 개요예요. 좌표가 부족한 탑승 구간은 선을 생략해요.</p>}
+      {route.source === 'seoul' && <p className="route-source">서울시 환승경로 · 흐린 선은 추정 경로예요. 좌표가 부족한 구간은 선을 생략해요.</p>}
       {step && <div className="journey-current">
         <strong>{step.line && step.to ? `${step.line} · ${step.to} 하차` : step.label}</strong>
         {step.instruction && <p>{step.instruction}</p>}

@@ -14,6 +14,7 @@ import { createCalendarCondition } from './server/calendar-condition.mjs';
 import { createPersonalization } from './server/personalization.mjs';
 import { createBusInformation } from './server/bus-information.mjs';
 import { createSeoulTransit } from './server/seoul-transit.mjs';
+import { createGbisShape, isGbisRouteId } from './server/gbis-shape.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT ?? 5173);
@@ -62,6 +63,7 @@ const config = { ...env, ...process.env };
 const getSeoulTransit = createSeoulTransit({
   serviceKey: config.SEOUL_TRANSIT_PATH_INFO || config.DATA_GO_KR_SERVICE_KEY || config.SEOUL_BUSSTATION_INFO,
 });
+const getGbisShape = createGbisShape();
 const handleBusInformation = createBusInformation({
   root: ROOT,
   serviceKey: config.SEOUL_BUSSTATION_INFO || config.DATA_GO_KR_SERVICE_KEY,
@@ -83,7 +85,14 @@ const handlePersonalization = createPersonalization({
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/api/calendar-condition') return handleCalendarCondition(req, res);
-  if (url.pathname === '/api/bus-information') return handleBusInformation(req, res, url);
+  if (url.pathname === '/api/bus-information') {
+    if (req.method === 'GET' && url.searchParams.has('shapeRouteId')) {
+      const routeId = url.searchParams.get('shapeRouteId');
+      if (!isGbisRouteId(routeId)) return sendJson(res, 400, {error:'노선 번호를 확인해 주세요.'});
+      return sendJson(res, 200, {lines:await getGbisShape(routeId)});
+    }
+    return handleBusInformation(req, res, url);
+  }
   if (await handlePersonalization(req, res, url)) return;
   if (url.pathname === '/api/recommend') {
     if (req.method !== 'POST') return sendJson(res, 405, {error:'POST 요청만 지원해요.'});

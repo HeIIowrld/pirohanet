@@ -1,3 +1,4 @@
+import {clipBusShape,distanceBetween,matchBusShape} from './bus-shape.js';
 import {requestWalk} from '../../src/routing/transit.js';
 import {railPath,stationName} from '../../packages/landmark-route-planner/lib/rail-directions.js';
 import stationPoints from '../../src/routing/seoul-station-points.json' with {type:'json'};
@@ -9,47 +10,53 @@ const stationsByLine = new Map(Object.entries(stationPoints).map(([line,stations
 
 const walkingPaths = new Map();
 const maxWalkingPaths = 48;
-const busStopRequests = new Map();
+const geometryRequests = new Map();
 
 function busStopDataUrl(routeId) {
   const region = /^(?:16[0-9]|170)\d{6}$/.test(routeId) ? 'incheon' : 'seoul';
   return `/assets/data/${region}-bus-stops.json`;
 }
 
-function getBusStops(routeId,fetchFn) {
-  const url = busStopDataUrl(routeId);
+function getGeometry(url,field,fetchFn) {
   const load = async () => {
     const response = await fetchFn(url);
-    return response.ok ? (await response.json()).routes : null;
+    return response.ok ? (await response.json())[field] : null;
   };
   if (fetchFn !== globalThis.fetch) return load().catch(() => null);
-  if (!busStopRequests.has(url)) {
-    busStopRequests.set(url,load().catch(() => null).then(routes => {
-      if (!routes) busStopRequests.delete(url);
-      return routes;
+  if (!geometryRequests.has(url)) {
+    geometryRequests.set(url,load().catch(() => null).then(data => {
+      if (!data) geometryRequests.delete(url);
+      return data;
     }));
   }
-  return busStopRequests.get(url);
+  return geometryRequests.get(url);
 }
 
 function location([longitude,latitude]) {
   return {longitude,latitude};
 }
 
-function railGeometry(step) {
+function railGeometry(step,shapes) {
   const line = step.vehicles?.[0]?.name;
   const stations = stationsByLine.get(line);
   if (!stations || !Number.isSafeInteger(step.railSegments) || step.railSegments < 1) return step;
   const path = railPath('100' + line[0],stationName(step.stops?.[0]?.name),
     stationName(step.stops?.at(-1)?.name),step.railSegments);
   if (!path) return step;
+  const tracks = shapes?.[line[0]];
+  const segments = path.slice(1).map((stop,index) => {
+    const previous = path[index];
+    const forward = tracks?.[`${previous}|${stop}`];
+    const backward = tracks?.[`${stop}|${previous}`];
+    return forward ?? backward?.slice().reverse();
+  });
+  const useTracks = segments.every(segment => segment?.length > 1);
+  if (useTracks) {
+    return {...step,points:segments.flat(),approximate:false,osmGeometry:true};
+  }
   const intermediate = path.slice(1,-1).map(name => stations.get(name));
   if (intermediate.some(point => !point)) return step;
   return {...step,knownStops:true,points:[step.points[0],...intermediate,step.points.at(-1)]};
-}
-
-function distanceBetween([x1,y1],[x2,y2]) {
-  return 111_200 * Math.hypot((x2-x1)*Math.cos((y1+y2)*Math.PI/360),y2-y1);
 }
 
 async function walkingGeometry(step,signal,fetchFn) {
@@ -114,13 +121,33 @@ export function mapStepPoints(step) {
   return points;
 }
 
-export async function addStreetGeometry(route,signal,fetchFn = fetch) {
-  const estimated = step => step.approximate && step.points?.length === 2;
+export async function addMapGeometry(route,signal,fetchFn = fetch) {
   const steps = await Promise.all(route.steps.map(async step => {
-    if (!estimated(step)) return step;
+    if (!step.approximate || !step.points || step.points.length < 2) return step;
+    if (step.type === 'SUBWAY') {
+      return railGeometry(step,await getGeometry('/assets/data/osm-subway-shapes.json','lines',fetchFn));
+    }
     if (step.type === 'WALKING') return walkingGeometry(step,signal,fetchFn);
-    if (step.type === 'BUS' && step.seoulBusRouteId) return busGeometry(step,await getBusStops(step.seoulBusRouteId,fetchFn));
-    return step;
+    if (step.type !== 'BUS' || !step.seoulBusRouteId) return step;
+    const [stopLists,busShapes] = await Promise.all([
+      getGeometry(busStopDataUrl(step.seoulBusRouteId),'routes',fetchFn),
+      getGeometry('/assets/data/osm-bus-shapes.json','lines',fetchFn),
+    ]);
+    const withStops = busGeometry(step,stopLists);
+    const points = matchBusShape(withStops,busShapes);
+    if (points) return {...withStops,points,approximate:false,osmGeometry:true};
+    if (/^(?:1[0-2]\d|2\d{2})\d{6}$/.test(step.seoulBusRouteId)) {
+      const url = `/api/bus-information?shapeRouteId=${step.seoulBusRouteId}`;
+      const lines = await getGeometry(url,'lines',fetchFn);
+      const road = clipBusShape(step,lines ?? []);
+      if (road) return {...withStops,points:road,approximate:false,gbisGeometry:true};
+    }
+    if (busStopDataUrl(step.seoulBusRouteId).endsWith('incheon-bus-stops.json')) {
+      const estimates = await getGeometry('/assets/data/osm-bus-road-estimates.json','lines',fetchFn);
+      const road = clipBusShape(withStops,estimates?.[step.seoulBusRouteId]);
+      if (road) return {...withStops,points:road,osmGeometry:true};
+    }
+    return withStops;
   }));
   return {...route,steps};
 }

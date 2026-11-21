@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {addRailGeometry,addStreetGeometry,mapStepPoints} from './route-geometry.js';
+import {addRailGeometry,addMapGeometry,mapStepPoints} from './route-geometry.js';
 
 const center = {latitude:37.5665, longitude:126.978};
 const authFailure = 'modo:naver-map-auth-failure';
@@ -71,9 +71,9 @@ function mapData(points, route, candidate, position) {
     });
   const lines = (route?.steps ?? []).flatMap(step => {
     const points = mapStepPoints(step).filter(isCoordinate);
-    return points.length > 1 ? [{points,color:strokeToken(step),dashed:step.approximate ?? step.type === 'WALKING'}] : [];
+    return points.length > 1 ? [{points,color:strokeToken(step),approximate:step.approximate}] : [];
   });
-  return {markers,lines};
+  return {markers,lines,osmGeometry:route?.steps?.some(step => step.osmGeometry),gbisGeometry:route?.steps?.some(step => step.gbisGeometry)};
 }
 
 function RouteSketch({data}) {
@@ -88,7 +88,7 @@ function RouteSketch({data}) {
   const plot = ([x,y]) => [48+294*(x-minX)/dx, 122+190*(maxY-y)/dy];
   return <svg className="route-sketch" viewBox="0 0 390 360" aria-label="대중교통 경로 개요" role="img">
     {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={`var(${line.color})`} strokeWidth="4"
-      strokeDasharray={line.dashed?'4 5':undefined} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
+      strokeOpacity={line.approximate ? 0.65 : 0.95} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
     {data.markers.map(({point,label}) => {
       const [x,y]=plot(point);
       return <g key={label} transform={`translate(${x},${y})`}>
@@ -117,9 +117,9 @@ export default function LiveMap({points,route,candidate,state,position}) {
   const data = useMemo(() => mapData(points,mapRoute,candidate,position), [points,mapRoute,candidate,position]);
 
   useEffect(() => {
-    if (!railGeometry?.steps?.some(step => step.approximate && (step.type === 'WALKING' || step.type === 'BUS'))) return;
+    if (!railGeometry?.steps?.some(step => step.approximate && ['WALKING','BUS','SUBWAY'].includes(step.type))) return;
     const controller = new AbortController();
-    void addStreetGeometry(railGeometry,controller.signal).then(result => {
+    void addMapGeometry(railGeometry,controller.signal).then(result => {
       if (!controller.signal.aborted) setStreetGeometry({original:railGeometry,route:result});
     });
     return () => controller.abort();
@@ -220,8 +220,8 @@ export default function LiveMap({points,route,candidate,state,position}) {
     const palette = getComputedStyle(node);
     const overlays = data.lines.map(line => new sdk.Polyline({
       map:canvas, path:line.points.map(position), strokeWeight:5,
-      strokeColor:palette.getPropertyValue(line.color).trim(), strokeOpacity:.9,
-      strokeStyle:line.dashed?'shortdash':'solid', strokeLineCap:'round', strokeLineJoin:'round',
+      strokeColor:palette.getPropertyValue(line.color).trim(), strokeOpacity:line.approximate ? 0.65 : 0.95,
+      strokeStyle:'solid', strokeLineCap:'round', strokeLineJoin:'round',
     }));
     for (const {point,label} of data.markers) {
       const pin = document.createElement('span');
@@ -250,6 +250,10 @@ export default function LiveMap({points,route,candidate,state,position}) {
   return <div className="map-placeholder live-map" aria-label="이동 지도">
     <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!loadError?'naver':undefined} hidden={Boolean(loadError)} inert={!ready||Boolean(loadError)}/>
     {!ready && !loadError && <RouteSketch data={data}/>}
+    {(data.osmGeometry || data.gbisGeometry) && !loadError && <div className="route-shape-credit">
+      {data.osmGeometry && <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
+      {data.gbisGeometry && <a href="https://www.gbis.go.kr/" target="_blank" rel="noreferrer">경기버스정보</a>}
+    </div>}
     {loadError && <div className="map-message">
       <p role="status">{loadError}</p>
       <button type="button" onClick={retry}>지도 다시 불러오기</button>

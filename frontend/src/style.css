@@ -104,6 +104,7 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .live-map-pin[data-kind="출발"]{background:var(--brand-sky);color:var(--fg-default)}
 .live-map-pin[data-kind="경유"]{background:var(--brand-lime);color:var(--fg-default)}
 .route-sketch{font-family:var(--font-sans)}
+.route-shape-credit{display:flex;gap:6px;position:absolute;z-index:1;top:12px;right:12px;padding:3px 6px;border-radius:4px;background:var(--bg-canvas);color:var(--fg-secondary);font-size:11px}
 .details-page{padding-bottom:18px}
 
 .rail-door-hint{display:grid;gap:2px;padding:8px 10px;margin:6px 0 0;border-radius:var(--radius-8);background:var(--brand-sky-low)}
