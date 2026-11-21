@@ -1,4 +1,4 @@
-import { requestGoogleToken } from '../calendar/calendar.js';
+import { requireSession, signOut } from './login-session.js';
 import { exportSavedPlaces, pushMyPlaces, savedPlace, savePlace, searchPlaceCandidates, syncMyPlaces } from '../calendar/location.js';
 
 const list = document.querySelector('#saved-place-list');
@@ -11,14 +11,15 @@ const addQuery = addForm.elements.query;
 const addAlias = addForm.elements.alias;
 const addStatus = addPanel.querySelector('[role="status"]');
 const addChoices = addPanel.querySelector('.account-actions');
-let googleToken = null; // 메모리에만 있어서 페이지를 떠나면 사라진다
+const logout = document.querySelector('#saved-places-logout');
 
 // 이 브라우저에 먼저 반영하고, Google에 연결돼 있으면 계정에도 올린다. 사용자에게 보여 줄 안내를 돌려준다.
 // 계정에 올리지 못한 변경은 location.js가 기록해 두었다가 다음에 계정과 맞출 때 반영한다.
 async function applyPlace(alias, place) {
   savePlace(alias, place);
   if (Boolean(savedPlace(alias)) !== Boolean(place)) throw new Error('이 브라우저에 변경 사항을 저장하지 못했어요.');
-  if (!googleToken) return '이 브라우저에만 반영했어요. Google로 로그인하면 다른 기기에도 반영돼요.';
+  const googleToken = requireSession();
+  if (!googleToken) return '이 브라우저에만 반영했어요.';
   try {
     await pushMyPlaces(googleToken);
     return 'Google 계정에도 반영했어요.';
@@ -214,13 +215,11 @@ function loadPlaces(notice = '') {
   status.textContent = entries.length ? notice : `${notice} 저장한 장소가 없어요. 장소 검색으로 추가할 수 있어요.`.trim();
 }
 
-login.addEventListener('click', async () => {
+async function syncPlaces() {
+  const token = requireSession();
+  if (!token) return;
+  login.disabled = true;
   try {
-    // 팝업이 막히지 않게 다른 await보다 먼저 부른다.
-    // 창을 닫아도 응답이 오지 않는 경우가 있어, 버튼은 토큰을 받은 뒤에 잠근다.
-    const token = await requestGoogleToken();
-    login.disabled = true;
-    googleToken = token;
     const count = Object.keys(await syncMyPlaces(token)).length;
     login.textContent = 'Google 계정과 다시 동기화';
     accountStatus.textContent = `Google 계정의 내 장소 ${count}곳과 동기화했어요.`;
@@ -231,10 +230,15 @@ login.addEventListener('click', async () => {
   } finally {
     login.disabled = false;
   }
-});
+}
+
+login.addEventListener('click', syncPlaces);
+logout.addEventListener('click', signOut);
 
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) loadPlaces();
 });
 
 loadPlaces();
+
+void syncPlaces();

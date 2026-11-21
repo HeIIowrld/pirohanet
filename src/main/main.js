@@ -1,4 +1,5 @@
-import { fetchGoogleEvents, requestGoogleToken } from '../calendar/calendar.js';
+import { requireSession, signOut } from './login-session.js';
+import { fetchGoogleEvents } from '../calendar/calendar.js';
 import { exportSavedPlaces, isPersonalLabel, locateCandidates, placeKey, pushMyPlaces, savedPlace, savePlace, syncMyPlaces } from '../calendar/location.js';
 import { SAMPLE_EVENTS, SAMPLE_NOW, SAMPLE_ORIGIN } from '../calendar/sample.js';
 import { resolvePlace } from '../map/places.js';
@@ -27,11 +28,8 @@ const stopSource = document.querySelector('#stop-source');
 const calendarButton = document.querySelector('#google-calendar');
 const logout = document.querySelector('#logout');
 const accountStatus = document.querySelector('#account-status');
-const signInMessage = accountStatus.textContent;
 const candidates = document.querySelector('#calendar-place-candidates');
 const previewDeparture = document.querySelector('#preview-departure');
-const emptySummary = summary.textContent;
-const emptyRouteStatus = routeStatus.textContent;
 const timeFormat = new Intl.DateTimeFormat('ko-KR', {
   hour: '2-digit',
   minute: '2-digit',
@@ -39,8 +37,6 @@ const timeFormat = new Intl.DateTimeFormat('ko-KR', {
 });
 const departureReminder = createDepartureReminder(timeFormat);
 
-// Google 액세스 토큰. 메모리에만 두고, 연결돼 있을 때만 내 장소를 계정에도 저장한다.
-let token = null;
 let events = [];
 let source = null;
 let scheduleVersion = 0;
@@ -53,7 +49,7 @@ const sampleTrip = prepareTrip({}, SAMPLE_EVENTS, SAMPLE_NOW);
 const sampleArrival = seoulTimeField(sampleTrip.arriveBy);
 
 function accountMessage(message) {
-  accountStatus.textContent = message || (token ? 'Google 계정이 연결됐어요.' : signInMessage);
+  accountStatus.textContent = message || 'Google 계정이 연결됐어요.';
 }
 
 // ‘회사’가 / ‘집’이 — 받침에 맞춰 조사를 붙인다.
@@ -92,6 +88,7 @@ async function storePlace(alias, place) {
   // 저장소가 막힌 브라우저에서는 기억되지 않는다. 그대로 계정에 올리면 계정의 내 장소가 빈 목록으로 덮인다.
   if (!savedPlace(alias)) throw new Error('이 브라우저에 장소를 기억하지 못했어요.');
   updateStopOptions();
+  const token = requireSession();
   if (token) {
     try {
       await pushMyPlaces(token);
@@ -255,19 +252,8 @@ function showSchedule(items, kind) {
 }
 
 async function importCalendar() {
-  let granted;
-  try {
-    // 로그인 창이 막히지 않도록 다른 await보다 먼저 부른다.
-    // 창을 닫아도 응답이 오지 않는 경우가 있어, 버튼은 토큰을 받은 뒤에 잠근다.
-    granted = token ?? await requestGoogleToken();
-  } catch {
-    accountMessage('Google 연결을 완료하지 못했어요. 다시 시도해 주세요.');
-    return;
-  }
-
-  token = granted;
-  logout.hidden = false;
-  calendarButton.textContent = 'Google 일정 다시 불러오기';
+  const granted = requireSession();
+  if (!granted) return;
   calendarButton.disabled = true;
   try {
     const items = await fetchGoogleEvents(granted);
@@ -279,21 +265,14 @@ async function importCalendar() {
       console.warn(error);
       message = 'Google 계정의 내 장소를 불러오지 못했어요. 이 브라우저에 기억한 장소만 써요.';
     }
-    if (token !== granted) return; // 그사이 연결을 끊었거나 다시 연결했다
+    if (requireSession() !== granted) return;
     updateStopOptions();
     accountMessage(message);
     showSchedule(items, 'google');
   } catch (error) {
     console.warn(error);
-    if (token === granted) {
-      const expired = error.status === 401 || /401/.test(error.message);
-      if (expired) {
-        token = null;
-        logout.hidden = true;
-        calendarButton.textContent = 'Google로 로그인';
-      }
-      accountMessage(expired ? 'Google 연결이 만료됐어요. 다시 로그인해 주세요.' : 'Google 일정을 불러오지 못했어요. 다시 시도해 주세요.');
-    }
+    if (error.message === 'Calendar API 401') signOut();
+    else accountMessage('Google 일정을 불러오지 못했어요. 다시 시도해 주세요.');
   } finally {
     calendarButton.disabled = false;
   }
@@ -311,23 +290,7 @@ previewDeparture.addEventListener('click', () => {
   departureReminder.preview(reminder, previewDeparture);
 });
 calendarButton.addEventListener('click', () => importCalendar());
-// 연결 끊기: 토큰과 불러온 일정을 버리고 처음 화면으로 돌린다. 이 브라우저에 기억한 내 장소는 남는다.
-logout.addEventListener('click', () => {
-  token = null;
-  events = [];
-  source = null;
-  scheduleVersion += 1; // 진행 중이던 조회 결과를 버린다
-  logout.hidden = true;
-  calendarButton.textContent = 'Google로 로그인';
-  form.reset();
-  candidates.replaceChildren();
-  clearRouteResults();
-  previewDeparture.hidden = true;
-  showStopInfo();
-  summary.textContent = emptySummary;
-  routeStatus.textContent = emptyRouteStatus;
-  accountMessage('');
-});
+logout.addEventListener('click', signOut);
 
 form.addEventListener('input', clearRouteResults);
 stopSelect.addEventListener('change', () => {

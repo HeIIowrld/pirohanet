@@ -6,9 +6,8 @@
   <meta name="theme-color" content="#f3f5f1">
   <title>모도</title>
   <link rel="stylesheet" href="./app.css">
-  <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
-<body>
+<body hidden>
   <div class="app">
     <header class="app-header">
       <h1>모도</h1>
@@ -20,10 +19,10 @@
 
     <main>
       <section class="panel" aria-label="Google 계정">
-        <p id="account-status" class="status" role="status">일정과 내 장소를 연결하려면 Google로 로그인하세요.</p>
+        <p id="account-status" class="status" role="status">Google 계정이 연결됐어요.</p>
         <div class="account-actions">
-          <button id="google-calendar" class="secondary" type="button">Google로 로그인</button>
-          <button id="logout" class="secondary" type="button" hidden>연결 끊기</button>
+          <button id="google-calendar" class="secondary" type="button">Google 일정 불러오기</button>
+          <button id="logout" class="secondary" type="button">로그아웃</button>
         </div>
       </section>
       <form id="trip-form">
@@ -133,7 +132,7 @@
     {
       // main.js가 직접·간접으로 import 하는 모든 파일. 모듈을 추가로 import 하면 여기에도 넣는다.
       const modules = [
-        '/src/main/main.js',
+        '/src/main/main.js', '/src/main/login-session.js',
         '/src/main/route-results.js',
         '/src/main/bus-information.js',
         '/src/main/departure-reminder.js',
@@ -153,7 +152,11 @@
       importMap.type = 'importmap';
       importMap.textContent = JSON.stringify({ imports: Object.fromEntries(modules.map((path) => [path, path + fresh])) });
       document.currentScript.after(importMap); // 모듈을 하나라도 불러오기 전에 문서에 있어야 한다
-      import('/src/main/main.js');
+      import('/src/main/login-session.js').then(({ guardSession }) => {
+        if (!guardSession()) return;
+        document.body.hidden = false;
+        return import('/src/main/main.js');
+      });
     }
   </script>
 </body>

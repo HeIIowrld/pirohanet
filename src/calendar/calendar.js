@@ -122,17 +122,21 @@ const GOOGLE_SCOPES = [
 // 브라우저 전용. Google 로그인 창을 띄워 액세스 토큰을 받는다. 토큰은 1시간 동안 유효하다.
 // 페이지에 <script src="https://accounts.google.com/gsi/client"></script>가 있어야 하고,
 // 팝업이 막히지 않도록 버튼 클릭 핸들러 안에서 호출한다. 실패하면 reject한다.
-export function requestGoogleToken(clientId = GOOGLE_CLIENT_ID) {
+export function requestGoogleAuthorization(clientId = GOOGLE_CLIENT_ID) {
   return new Promise((resolve, reject) => {
     google.accounts.oauth2
       .initTokenClient({
         client_id: clientId,
         scope: GOOGLE_SCOPES,
         error_callback: (err) => reject(new Error(err.type ?? 'Google 로그인 실패')),
-        callback: (token) => (token.error ? reject(new Error(token.error)) : resolve(token.access_token)),
+        callback: (token) => (token.error ? reject(new Error(token.error)) : resolve(token)),
       })
       .requestAccessToken();
   });
+}
+
+export async function requestGoogleToken(clientId = GOOGLE_CLIENT_ID) {
+  return (await requestGoogleAuthorization(clientId)).access_token;
 }
 
 export function calendarEventParams(now = new Date()) {
