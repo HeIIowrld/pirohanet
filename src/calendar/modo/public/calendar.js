@@ -6,10 +6,19 @@ const dayStart = time => Math.floor((time + kst) / day) * day - kst;
 const clientId = '858151438743-d9vem00hl0k18po3mjvimmfaf3mo2614.apps.googleusercontent.com';
 const scope = 'https://www.googleapis.com/auth/calendar.events.owned.readonly';
 
-export const FATIGUE_LABELS = { relaxed: '괜찮아요', normal: '조금 피곤해요', tired: '많이 피곤해요' };
-const fatigueLevels = Object.keys(FATIGUE_LABELS);
+// Fatigue is an integer score from 1 to 5 and a higher score means more tired. Read a label with FATIGUE_LABELS[score].
+export const FATIGUE_LABELS = { 1: '괜찮아요', 2: '조금 피곤해요', 3: '피곤해요', 4: '많이 피곤해요', 5: '녹초예요' };
+// Each value the schedule score reaches raises the level by one: score 0-1 -> 1, 2 -> 2, 3 -> 3, 4 -> 4, 5 -> 5.
+const levelScores = [2, 3, 4, 5];
+const maxFatigue = levelScores.length + 1;
 
 export function summarize(items, now = Date.now(), { currentFatigue, arriveBy } = {}) {
+  // currentFatigue is the score the user chose: an integer from 1 to 5, or undefined/null when nothing is chosen.
+  // Every other value (0, '', '3', 2.5, 6) is rejected, not ignored: Number('') is 0, so a caller that
+  // forgot to turn an empty choice into null must fail loudly and never count as a real score.
+  if (currentFatigue != null && !(Number.isInteger(currentFatigue) && currentFatigue >= 1 && currentFatigue <= maxFatigue)) {
+    throw new RangeError('currentFatigue는 1~5의 정수여야 합니다.');
+  }
   const time = Number(now);
   const startOfDay = dayStart(time);
   const events = items.flatMap(event => {
@@ -33,13 +42,13 @@ export function summarize(items, now = Date.now(), { currentFatigue, arriveBy } 
   const targetDay = dayStart(until);
   const soFar = load(events, startOfDay, time, '오늘');
   const byThen = until === time ? soFar : load(events, targetDay, until, '약속 전');
-  const userLevel = fatigueLevels.indexOf(currentFatigue);
   let projectedFatigue = describe(byThen);
-  if (userLevel >= 0) {
+  if (currentFatigue != null) {
     const elapsed = targetDay === startOfDay ? soFar : null;
-    const extraLoad = Math.max(0, (byThen?.level ?? 0) - (elapsed?.level ?? 0));
-    const level = Math.min(fatigueLevels.length - 1, userLevel + extraLoad);
-    const reasons = [`지금 컨디션 ‘${FATIGUE_LABELS[currentFatigue]}’`];
+    // No schedule counts as level 1, so a morning with nothing behind it adds only what the schedule adds above 1.
+    const extraLoad = Math.max(0, (byThen?.level ?? 1) - (elapsed?.level ?? 1));
+    const level = Math.min(maxFatigue, currentFatigue + extraLoad);
+    const reasons = [`지금 컨디션 ${currentFatigue}점 ‘${FATIGUE_LABELS[currentFatigue]}’`];
     if (extraLoad) reasons.push(`약속 전 남은 일정 ${formatDuration(byThen.busy - (elapsed?.busy ?? 0))}`);
     projectedFatigue = describe({ level, reasons });
   }
@@ -47,7 +56,7 @@ export function summarize(items, now = Date.now(), { currentFatigue, arriveBy } 
 }
 
 function describe(load) {
-  return load && { value: fatigueLevels[load.level], reasons: load.reasons };
+  return load && { value: load.level, reasons: load.reasons };
 }
 
 function formatDuration(ms) {
@@ -74,7 +83,7 @@ function load(events, startOfDay, time, label) {
   const located = today.filter(event => event.location).length;
   const score = (busy >= 6 * hour ? 2 : Number(busy >= 4 * hour)) +
     Number(maxChain >= 3) + Number(early || late) + Number(located >= 3);
-  const level = score >= 4 ? 2 : Number(score >= 2);
+  const level = 1 + levelScores.filter(min => score >= min).length;
   return {
     level, busy,
     reasons: [

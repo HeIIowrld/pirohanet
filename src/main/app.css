@@ -15,7 +15,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { opacity: .65; cursor: wait; }
@@ -47,7 +47,7 @@ main { padding: 0 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
 
 .fields { display: grid; gap: .4rem; margin-top: .85rem; }
 .fields label { font-size: .875rem; font-weight: 650; }
-.fields input {
+.fields input, .fields select, #priority {
   min-width: 0;
   min-height: 48px;
   padding: .7rem .8rem;
@@ -57,6 +57,8 @@ main { padding: 0 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
   background: var(--canvas);
 }
 .fields input + label { margin-top: .35rem; }
+#stop-info { padding: 0 .15rem .4rem; }
+.stop-source { display: inline-block; margin-top: .4rem; font-size: .875rem; }
 
 .section-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem; }
 .status { margin-top: .55rem; color: var(--muted); font-size: .875rem; line-height: 1.55; overflow-wrap: anywhere; }
@@ -95,3 +97,62 @@ dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
 #saved-place-list[hidden] { display: none; }
 #saved-place-list li + li { padding-top: .75rem; border-top: 1px solid var(--line); }
 #saved-place-list .status:empty, #saved-place-list .account-actions:empty, #saved-places-status:empty { margin: 0; }
+
+
+.route-card { margin-top: .85rem; padding-top: .75rem; border-top: 1px solid var(--line); }
+.route-card h3 { margin: 0; font-size: 1rem; }
+.route-card details { margin-top: .55rem; font-size: .875rem; }
+.route-card ol { padding-inline-start: 1.4rem; }
+
+.route-links { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .55rem; font-size: .875rem; }
+
+.departure-preview { margin-top: .7rem; }
+.departure-card {
+  position: fixed;
+  z-index: 10;
+  inset-block-start: calc(.75rem + env(safe-area-inset-top));
+  inset-inline-end: max(.75rem, calc((100% - 32rem) / 2));
+  width: min(25rem, calc(100% - 1.5rem));
+  max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow: auto;
+  padding: .85rem 1rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 .75rem 2.5rem #18241d26;
+  overflow-wrap: anywhere;
+}
+.departure-header { display: flex; align-items: center; gap: .6rem; color: var(--accent); font-size: .85rem; font-weight: 700; }
+.departure-icon {
+  position: relative;
+  flex: 0 0 1.2rem;
+  height: 1.2rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.departure-icon::after {
+  content: '';
+  position: absolute;
+  top: .19rem;
+  left: .43rem;
+  width: .29rem;
+  height: .39rem;
+  border: solid currentColor;
+  border-width: 0 0 2px 2px;
+}
+.departure-close {
+  margin-inline: auto -.25rem;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: .7rem;
+  color: var(--muted);
+  background: var(--canvas);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+.departure-card h2 { margin-top: .45rem; font-size: 1.2rem; }
+.departure-appointment { margin-top: .65rem; font-weight: 650; }
+.departure-card .status { margin-top: .15rem; }
+.departure-timing { margin-block: .8rem; padding: .7rem .8rem; border-radius: .7rem; color: var(--accent); background: var(--accent-soft); font-size: .85rem; line-height: 1.5; }
+.departure-action { display: grid; place-items: center; text-decoration: none; }

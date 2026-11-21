@@ -21,6 +21,16 @@
         <h1 id="saved-places-heading">내 장소</h1>
         <p id="saved-places-status" class="status" role="status">저장한 장소를 불러오는 중이에요.</p>
         <a id="saved-places-login" href="/auth/google?return=places" hidden>Google 로그인</a>
+        <div id="saved-place-add" hidden>
+          <h2>장소 추가</h2>
+          <form class="saved-place-edit">
+            <input name="alias" aria-label="저장할 이름" placeholder="저장할 이름" maxlength="200" required>
+            <input name="query" aria-label="장소 또는 주소" placeholder="장소 또는 주소" maxlength="200" required>
+            <button class="secondary" type="submit">장소 검색</button>
+          </form>
+          <p class="status" role="status"></p>
+          <div class="account-actions"></div>
+        </div>
         <ul id="saved-place-list" hidden></ul>
       </section>
     </main>

@@ -96,7 +96,7 @@ async function geocode(query, fetchFn) {
   }));
 }
 
-async function searchPlaces(query, fetchFn) {
+export async function searchPlaces(query, fetchFn = fetch) {
   const res = await get('/api/place', query, fetchFn);
   if (!res.ok) return []; // 장소 검색 키가 없는 서버에서는 주소로 찾는 단계까지만 동작한다
   return ((await res.json()).documents ?? []).map((hit) => ({

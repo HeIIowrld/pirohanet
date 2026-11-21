@@ -1,7 +1,7 @@
 import { summarize } from '../calendar/calendar.js';
 import { resolveTripPlaces } from '../map/places.js';
 import { createPreferences } from '../preferences/preferences.js';
-import { compareRoutes } from '../routing/compare.js';
+import { compareRoutes, isDirect } from '../routing/compare.js';
 
 export function prepareTrip(input, events = [], now = new Date()) {
   const preferences = createPreferences(input.preferences);
@@ -19,28 +19,38 @@ export function prepareTrip(input, events = [], now = new Date()) {
       : null),
     preferences: {
       ...preferences,
-      fatigueLevel: calendar.fatigue?.level ?? null,
+      fatigueLevel: preferences.fatigueLevel ?? calendar.fatigue?.level ?? null,
     },
   };
 }
 
-// resolvePlace를 생략하면 지도 모듈의 기본 위치 검색을 사용한다.
-export async function planTrip(trip, { resolvePlace, queryRoutes }) {
+// resolveStop은 선택한 지점을 별도로 조회한다. 확인하지 못하면 직행을 비교한다.
+export async function planTrip(trip, { resolvePlace, resolveStop, queryRoutes }) {
   if (!trip.origin || !trip.destination) {
     throw new Error('출발지와 목적지를 입력해 주세요.');
   }
 
-  const places = await resolveTripPlaces({
-    origin: trip.origin,
-    destination: trip.destination,
-    stop: trip.preferences.savedStop?.query,
-  }, resolvePlace);
+  const stopQuery = trip.preferences.savedStop?.query;
+  const [places, selectedStop] = await Promise.all([
+    resolveTripPlaces({
+      origin: trip.origin,
+      destination: trip.destination,
+      stop: resolveStop ? undefined : stopQuery,
+    }, resolvePlace),
+    stopQuery && resolveStop ? resolveStop() : null,
+  ]);
+  if (selectedStop) places.stop = selectedStop;
   const candidates = await queryRoutes({ ...trip, places });
 
+  const options = { departAt: trip.departAt, preferences: trip.preferences, places };
+  const unfiltered = compareRoutes(candidates, options)
+    .sort((a, b) => a.arrivalAt - b.arrivalAt);
   return {
     places,
+    fastestDirect: unfiltered.find(isDirect),
+    fastestVia: unfiltered.find((route) => route.viaStop),
     routes: compareRoutes(candidates, {
-      departAt: trip.departAt,
+      ...options,
       arriveBy: trip.arriveBy,
       maxExtraTravelMinutes: trip.preferences.maxExtraTravelMinutes,
     }),

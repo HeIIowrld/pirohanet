@@ -4,6 +4,12 @@ import { api, savePlace } from '../preferences/account-api.js';
 const list = document.querySelector('#saved-place-list');
 const status = document.querySelector('#saved-places-status');
 const login = document.querySelector('#saved-places-login');
+const addPanel = document.querySelector('#saved-place-add');
+const addForm = addPanel.querySelector('form');
+const addQuery = addForm.elements.query;
+const addAlias = addForm.elements.alias;
+const addStatus = addPanel.querySelector('[role="status"]');
+const addChoices = addPanel.querySelector('.account-actions');
 const authFailed = new URLSearchParams(window.location.search).get('auth') === 'failed';
 if (authFailed) window.history.replaceState(null, '', window.location.pathname);
 
@@ -131,10 +137,66 @@ function button(label, type = 'button') {
   return element;
 }
 
+addQuery.addEventListener('input', () => {
+  addChoices.replaceChildren();
+  addStatus.textContent = '';
+});
+addForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const query = addQuery.value.trim();
+  if (!query) {
+    addStatus.textContent = '장소 이름 또는 주소를 입력해 주세요.';
+    return;
+  }
+  const search = addForm.querySelector('button');
+  search.disabled = true;
+  addChoices.replaceChildren();
+  addStatus.textContent = '장소를 찾는 중이에요.';
+  try {
+    const places = await searchPlaceCandidates(query);
+    if (query !== addQuery.value.trim()) return;
+    for (const place of places) {
+      if (!place.address || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) continue;
+      const choice = button(`${place.name ? place.name + ' · ' : ''}${place.address} 저장`);
+      choice.addEventListener('click', async () => {
+        const alias = addAlias.value.trim();
+        if (!alias) {
+          addStatus.textContent = '저장할 이름을 입력해 주세요.';
+          addAlias.focus();
+          return;
+        }
+        const controls = [...addForm.elements, ...addChoices.children];
+        for (const control of controls) control.disabled = true;
+        try {
+          const entry = await savePlace(alias, place, 'POST');
+          list.append(renderPlace(entry));
+          list.hidden = false;
+          status.textContent = '';
+          addStatus.textContent = `‘${entry.alias}’ 장소를 저장했어요.`;
+          addForm.reset();
+          addChoices.replaceChildren();
+        } catch (error) {
+          addStatus.textContent = error.message;
+        } finally {
+          for (const control of controls) control.disabled = false;
+          if (!choice.isConnected) addAlias.focus();
+        }
+      });
+      addChoices.append(choice);
+    }
+    addStatus.textContent = addChoices.children.length ? '저장할 검색 결과를 선택해 주세요.' : '장소를 찾지 못했어요.';
+  } catch (error) {
+    if (query === addQuery.value.trim()) addStatus.textContent = error.message;
+  } finally {
+    search.disabled = false;
+  }
+});
+
 async function loadPlaces() {
   try {
     const account = await api('/api/account');
     if (!account.signedIn) {
+      addPanel.hidden = true;
       list.hidden = true;
       list.replaceChildren();
       status.textContent = !account.ready ? 'Google OAuth 설정이 필요해요.' : authFailed
@@ -147,7 +209,8 @@ async function loadPlaces() {
     const entries = await api('/api/saved-places');
     list.replaceChildren(...entries.map(renderPlace));
     list.hidden = !entries.length;
-    status.textContent = entries.length ? '' : '저장한 장소가 없어요. 일정에서 주소를 확인하면 여기에 표시돼요.';
+    addPanel.hidden = false;
+    status.textContent = entries.length ? '' : '저장한 장소가 없어요.';
   } catch (error) {
     status.textContent = error.message;
   }

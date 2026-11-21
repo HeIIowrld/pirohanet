@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { createPersonalization } from './server/personalization.mjs';
+import { createBusInformation } from './server/bus-information.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT ?? 5173);
@@ -25,6 +26,10 @@ const reverseGeocode = {
   url: 'https://dapi.kakao.com/v2/local/geo/coord2address.json',
   headers: kakaoHeaders,
 };
+const ROUTING_PATHS = new Map([
+  ['/api/transit', 'publictraffic'],
+  ['/api/walk', 'walk'],
+]);
 const UPSTREAMS = {
   '/api/geocode': {
     url: 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode',
@@ -55,6 +60,11 @@ async function proxy(upstream, params, res) {
 }
 
 const config = { ...env, ...process.env };
+const handleBusInformation = createBusInformation({
+  root: ROOT,
+  serviceKey: config.SEOUL_BUSSTATION_INFO || config.DATA_GO_KR_SERVICE_KEY,
+  sendJson,
+});
 const handlePersonalization = createPersonalization({
   root: ROOT,
   origin: new URL(config.APP_ORIGIN ?? `http://localhost:${PORT}`).origin,
@@ -65,6 +75,7 @@ const handlePersonalization = createPersonalization({
 
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname === '/api/bus-information') return handleBusInformation(req, res, url);
   if (await handlePersonalization(req, res, url)) return;
   const upstream = Object.hasOwn(UPSTREAMS, url.pathname) && UPSTREAMS[url.pathname];
   if (url.pathname === '/') {
@@ -82,11 +93,26 @@ createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     return proxy(reverseGeocode, { x: Number(longitude), y: Number(latitude), input_coord: 'WGS84' }, res);
   }
+  const routingPath = ROUTING_PATHS.get(url.pathname);
+  if (routingPath) {
+    if (req.method !== 'GET') return sendJson(res, 405, { error: 'GET 요청이 필요합니다.' });
+    const params = {};
+    for (const key of ['start_x', 'start_y', 'end_x', 'end_y']) {
+      const value = url.searchParams.get(key)?.trim();
+      if (!value || !Number.isFinite(Number(value)) || Math.abs(Number(value)) > (key.endsWith('_x') ? 180 : 90)) {
+        return sendJson(res, 400, { error: '출발지와 목적지 좌표를 확인해 주세요.' });
+      }
+      params[key] = Number(value);
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return proxy({ url: `https://dapi.kakao.com/v2/routing/${routingPath}`, headers: kakaoHeaders }, params, res);
+  }
   if (upstream) {
     if (!upstream.headers) return proxy(upstream, {}, res);
     const query = url.searchParams.get('query');
     if (!query || query.length > 200) return sendJson(res, 400, { error: 'query는 1~200자여야 합니다' });
-    return proxy(upstream, { query }, res);
+    return proxy(upstream, url.pathname === '/api/place' && url.searchParams.get('category_group_code') === 'SW8'
+      ? { query, category_group_code: 'SW8' } : { query }, res);
   }
 
   let pathname;

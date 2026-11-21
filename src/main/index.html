@@ -26,6 +26,22 @@
             <input id="origin" name="origin" type="text" required placeholder="장소 또는 주소">
             <label for="destination">목적지</label>
             <input id="destination" name="destination" type="text" required placeholder="장소 또는 주소">
+            <label for="depart-at">출발 시각 (한국 시간)</label>
+            <input id="depart-at" name="departAt" type="datetime-local">
+            <label for="arrive-by">도착 목표 (한국 시간)</label>
+            <input id="arrive-by" name="arriveBy" type="datetime-local">
+            <label for="max-extra">추가 이동 허용 시간 (분)</label>
+            <input id="max-extra" name="maxExtra" type="number" min="0" value="20" required>
+            <label for="saved-stop">들를 장소</label>
+            <select id="saved-stop" name="savedStop" aria-describedby="stop-description"><option value="">선택 안 함</option></select>
+            <p id="stop-catalog-status" class="status" role="status" hidden></p>
+            <div id="stop-info" hidden>
+              <p id="stop-description" class="status"></p>
+              <p id="stop-visit-note" class="status"></p>
+              <a id="stop-source" class="stop-source" target="_blank" rel="noopener noreferrer">장소 안내</a>
+            </div>
+            <label for="stay-minutes">경유지 체류 시간 (분)</label>
+            <input id="stay-minutes" name="stayMinutes" type="number" min="0" value="10" required>
           </div>
         </section>
 
@@ -41,34 +57,74 @@
           </div>
           <p id="account-status" class="status" role="status" hidden></p>
           <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
+          <p id="departure-status" class="status" role="status" tabindex="-1" hidden></p>
           <div id="calendar-place-candidates" class="account-actions"></div>
+          <button id="preview-departure" type="button" class="secondary departure-preview" hidden>출발 알림 미리보기</button>
         </section>
 
         <fieldset class="panel">
           <legend class="sr-only">오늘 컨디션</legend>
           <h2>오늘 컨디션</h2>
           <div class="options">
-            <label><input type="radio" name="fatigue" value="0"><span>괜찮아요</span></label>
-            <label><input type="radio" name="fatigue" value="1"><span>조금 피곤해요</span></label>
-            <label><input type="radio" name="fatigue" value="2"><span>많이 피곤해요</span></label>
+            <label><input type="radio" name="fatigue" value="1"><span>1점 · 괜찮아요</span></label>
+            <label><input type="radio" name="fatigue" value="2"><span>2점 · 조금 피곤해요</span></label>
+            <label><input type="radio" name="fatigue" value="3"><span>3점 · 피곤해요</span></label>
+            <label><input type="radio" name="fatigue" value="4"><span>4점 · 많이 피곤해요</span></label>
+            <label><input type="radio" name="fatigue" value="5"><span>5점 · 녹초예요</span></label>
           </div>
-        </fieldset>
+        <div class="fields">
+          <label for="priority">이동 우선순위</label>
+          <select id="priority" name="priority">
+            <option value="">컨디션 기준</option>
+            <option value="walking">덜 걷기</option>
+            <option value="transfers">환승 줄이기</option>
+            <option value="crowding">혼잡 피하기</option>
+          </select>
+          <label for="avoid-line">가능하면 피할 지하철 노선</label>
+          <select id="avoid-line" name="avoidLine">
+            <option value="">선택 안 함</option>
+            <option value="1">1호선</option>
+            <option value="2">2호선</option>
+            <option value="3">3호선</option>
+            <option value="4">4호선</option>
+            <option value="5">5호선</option>
+            <option value="6">6호선</option>
+            <option value="7">7호선</option>
+            <option value="8">8호선</option>
+            <option value="9">9호선</option>
+          </select>
+        </div>
+      </fieldset>
 
         <div class="form-actions">
-          <button id="check-places" class="primary" type="submit">출발지와 목적지 확인</button>
+          <button id="check-places" class="primary" type="submit">경로 찾기</button>
         </div>
       </form>
 
       <section class="panel" aria-labelledby="results-heading">
-        <h2 id="results-heading">이동 결과</h2>
-        <p id="route-status" class="status" role="status">출발지와 목적지를 확인하면 검색 결과가 표시돼요.</p>
+        <h2 id="results-heading" tabindex="-1">이동 결과</h2>
+        <p id="route-status" class="status" role="status">출발지와 목적지를 입력하고 경로를 찾아보세요.</p>
         <dl id="confirmed-places" hidden>
           <dt>출발지</dt><dd id="origin-result"></dd>
           <dt>목적지</dt><dd id="destination-result"></dd>
         </dl>
+        <div id="route-results"></div>
       </section>
     </main>
   </div>
+  <div id="departure-announcement" class="sr-only" role="status"></div>
+  <aside id="departure-card" class="departure-card" aria-labelledby="departure-heading" tabindex="-1" hidden>
+    <div class="departure-header">
+      <span class="departure-icon" aria-hidden="true"></span>
+      <p id="departure-label">출발 알림</p>
+      <button type="button" class="departure-close" aria-label="출발 알림 닫기">×</button>
+    </div>
+    <h2 id="departure-heading">지금 출발할 시간이에요</h2>
+    <p id="departure-appointment" class="departure-appointment"></p>
+    <p id="departure-location" class="status"></p>
+    <p id="departure-timing" class="departure-timing"></p>
+    <a class="primary departure-action" href="#results-heading" rel="noopener noreferrer">경로 보기</a>
+  </aside>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

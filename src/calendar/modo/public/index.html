@@ -61,10 +61,13 @@
             <fieldset>
               <legend>오늘의 컨디션</legend>
               <div class="fatigue">
-                <label><input type="radio" name="fatigue" value="relaxed"><span>괜찮아요</span></label>
-                <label><input type="radio" name="fatigue" value="normal"><span>조금 피곤해요</span></label>
-                <label><input type="radio" name="fatigue" value="tired"><span>많이 피곤해요</span></label>
+                <label><input type="radio" name="fatigue" value="1" aria-label="1점 괜찮아요"><span>1</span></label>
+                <label><input type="radio" name="fatigue" value="2" aria-label="2점 조금 피곤해요"><span>2</span></label>
+                <label><input type="radio" name="fatigue" value="3" aria-label="3점 피곤해요"><span>3</span></label>
+                <label><input type="radio" name="fatigue" value="4" aria-label="4점 많이 피곤해요"><span>4</span></label>
+                <label><input type="radio" name="fatigue" value="5" aria-label="5점 녹초예요"><span>5</span></label>
               </div>
+              <p class="fatigue-scale" aria-hidden="true"><span>1 괜찮아요</span><span>5 녹초예요</span></p>
               <p class="departure" id="fatigue-note"></p>
               <p class="departure" id="route-fatigue"></p>
             </fieldset>

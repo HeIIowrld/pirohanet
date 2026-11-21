@@ -205,11 +205,17 @@ export function createPersonalization({ root, origin, clientId, clientSecret, se
       return sendJson(res, 200, {});
     }
     const { name, address, latitude, longitude } = body;
-    if (req.method !== 'PUT' || typeof name !== 'string' || name.length > 500 ||
+    if (!['POST', 'PUT'].includes(req.method) || typeof name !== 'string' || name.length > 500 ||
         typeof address !== 'string' || !address.trim() || address.length > 500 ||
         !Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
         !Number.isFinite(longitude) || Math.abs(longitude) > 180) {
       return sendJson(res, 400, { error: '장소 정보를 확인해 주세요.' });
+    }
+    if (req.method === 'POST') {
+      const result = db.prepare('INSERT INTO places VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, key) DO NOTHING')
+        .run(userId, key, alias, name, address, latitude, longitude);
+      if (!result.changes) return sendJson(res, 409, { error: '같은 이름의 장소가 있어요. 다른 이름을 입력해 주세요.' });
+      return sendJson(res, 201, { alias, name, address, latitude, longitude });
     }
     db.prepare(`
       INSERT INTO places VALUES (?, ?, ?, ?, ?, ?, ?)

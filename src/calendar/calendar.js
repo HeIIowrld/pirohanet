@@ -4,7 +4,7 @@
 // OAuth 클라이언트 ID는 비밀값이 아니다. 브라우저에 그대로 노출돼도 된다.
 export const GOOGLE_CLIENT_ID = '858151438743-d9vem00hl0k18po3mjvimmfaf3mo2614.apps.googleusercontent.com';
 
-export const LABELS = ['괜찮아요', '조금 피곤해요', '많이 피곤해요'];
+export const LABELS = ['괜찮아요', '조금 피곤해요', '피곤해요', '많이 피곤해요', '녹초예요']; // 1~5점, 인덱스 = 점수 - 1
 
 // 임의로 잡은 출발값. 시연 일정을 넣어 보고 여기만 조정한다.
 export const TUNING = {
@@ -14,7 +14,7 @@ export const TUNING = {
   earlyHour: 8, // 그날 첫 일정이 이 시각 전이면 +1 (늦은 밤과 합쳐 최대 +1)
   lateHour: 22, // 전날 일정이 이 시각 넘어 끝나면 +1
   locatedCount: 3, // 장소가 있는 일정이 이 개수 이상이면 +1
-  levelScores: [2, 4], // 이 점수 이상이면 '조금 피곤해요', '많이 피곤해요'
+  levelScores: [2, 3, 4, 5], // 일정 점수가 이 값 이상이면 2점, 3점, 4점, 5점 (미만이면 1점)
 };
 
 const HOUR = 3600e3;
@@ -34,13 +34,13 @@ const formatDuration = (ms) => {
   return [min >= 60 && `${Math.floor(min / 60)}시간`, min % 60 && `${min % 60}분`].filter(Boolean).join(' ');
 };
 
-// userLevel: 사용자가 고른 지금 컨디션(0, 1, 2). 고르지 않았으면 null.
+// userLevel: 사용자가 고른 지금 컨디션(1~5점, 높을수록 피곤). 고르지 않았으면 null.
 // 반환값
 //   nextAppointment  지금 이후 장소가 있는 가장 빠른 일정. 없으면 null.
 //   suggestedFatigue 오늘 지금까지의 일정으로 추정한 지금 컨디션. 선택 화면의 기본값으로 쓴다. 근거가 없으면 null.
 //   fatigue          경로 추천에 넘기는 최종값. 사용자 입력도 일정도 없으면 null.
 export function summarize(items, now = new Date(), userLevel = null) {
-  if (userLevel !== null && ![0, 1, 2].includes(userLevel)) throw new RangeError('userLevel은 0, 1, 2 또는 null이어야 합니다');
+  if (userLevel !== null && !(Number.isInteger(userLevel) && userLevel >= 1 && userLevel <= LABELS.length)) throw new RangeError('userLevel은 1~5의 정수 또는 null이어야 합니다');
   const t = +now;
   const events = items
     .filter(usable)
@@ -65,17 +65,17 @@ export function summarize(items, now = new Date(), userLevel = null) {
   };
 }
 
-const describe = (level, reasons) => ({ level, label: LABELS[level], reasons }); // level은 LABELS의 인덱스
+const describe = (level, reasons) => ({ level, label: LABELS[level - 1], reasons }); // level은 1~5점
 
 // 사용자가 말한 지금 컨디션은 지금까지의 일정을 이미 반영한다고 보고,
 // 달력으로는 지금부터 약속까지 남은 일정이 올리는 만큼만 더한다.
 // 사용자가 기본값(suggestedFatigue)을 그대로 고르면 달력만으로 계산한 값과 같아진다.
 // ponytail: 약속이 다른 날이면 오늘 컨디션에 그날 일정 부담을 그대로 더한다. 하루 지나면 회복한다고 볼 근거가 생기면 여기서 줄인다
 function combine(userLevel, byThen, soFar) {
-  const bump = Math.max(0, (byThen?.level ?? 0) - (soFar?.level ?? 0));
-  const reasons = [`지금 컨디션 '${LABELS[userLevel]}'`];
+  const bump = Math.max(0, (byThen?.level ?? 1) - (soFar?.level ?? 1));
+  const reasons = [`지금 컨디션 ${userLevel}점 '${LABELS[userLevel - 1]}'`];
   if (bump) reasons.push(`약속 전 남은 일정 ${formatDuration(byThen.busy - (soFar?.busy ?? 0))}`);
-  return describe(Math.min(LABELS.length - 1, userLevel + bump), reasons);
+  return describe(Math.min(LABELS.length, userLevel + bump), reasons);
 }
 
 // dayStart부터 until까지 시작한 일정의 부담. 해당 일정이 없으면 null.
@@ -108,7 +108,7 @@ function load(events, dayStart, until, prefix) {
   ];
   const score = signals.reduce((sum, [points]) => sum + Number(points), 0);
   return {
-    level: TUNING.levelScores.filter((min) => score >= min).length,
+    level: 1 + TUNING.levelScores.filter((min) => score >= min).length,
     busy,
     reasons: signals.filter(([points, , always]) => points || always).map(([, reason]) => reason),
   };
