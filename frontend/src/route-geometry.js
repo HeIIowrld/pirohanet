@@ -1,4 +1,5 @@
 import {clipBusShape,distanceBetween,matchBusShape} from './bus-shape.js';
+import {busRideRange} from '../../src/routing/bus-ride-range.js';
 import {requestWalk} from '../../src/routing/transit.js';
 import {railPath,stationName} from '../../packages/landmark-route-planner/lib/rail-directions.js';
 import stationPoints from '../../src/routing/seoul-station-points.json' with {type:'json'};
@@ -85,39 +86,10 @@ export function addRailGeometry(route) {
   return {...route,steps:route.steps.map(step => step.approximate && step.type === 'SUBWAY' && step.points?.length === 2 ? railGeometry(step) : step)};
 }
 
-function busGeometry(step, routes) {
-  const stops = routes?.[step.seoulBusRouteId];
-  if (!stops?.length) return step;
-  const [from, to] = step.points;
-  const boarding = Number(step.seoulBusStopId);
-  let start = -1;
-  let end = -1;
-  let nearest = 75;
-  for (let index = 0; index < stops.length; index++) {
-    const [id,lon,lat] = stops[index];
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
-    const point = [lon,lat];
-    if (start >= 0 && id !== boarding) {
-      const distance = distanceBetween(point,to);
-      if (distance < nearest) {
-        nearest = distance;
-        end = index;
-      }
-    }
-    if (id === boarding && distanceBetween(point,from) <= 75) {
-      if (end >= 0) break;
-      start = index;
-    }
-  }
-  if (start < 0 || end <= start) return step;
-  const intermediate = stops.slice(start+1,end).map(([,lon,lat]) => [lon,lat]);
-  if (intermediate.some(point => !point.every(Number.isFinite))) return step;
-  return {...step,knownStops:true,points:[from,...intermediate,to]};
-}
-
 export function mapStepPoints(step) {
   const points = step.points ?? [];
-  if (step.approximate && !step.knownStops && (step.type === 'BUS' || step.type === 'SUBWAY') && points.length < 3) return [];
+  if (step.type === 'BUS' && step.approximate) return [];
+  if (step.approximate && !step.knownStops && step.type === 'SUBWAY' && points.length < 3) return [];
   return points;
 }
 
@@ -129,25 +101,33 @@ export async function addMapGeometry(route,signal,fetchFn = fetch) {
     }
     if (step.type === 'WALKING') return walkingGeometry(step,signal,fetchFn);
     if (step.type !== 'BUS' || !step.seoulBusRouteId) return step;
-    const [stopLists,busShapes] = await Promise.all([
-      getGeometry(busStopDataUrl(step.seoulBusRouteId),'routes',fetchFn),
-      getGeometry('/assets/data/osm-bus-shapes.json','lines',fetchFn),
-    ]);
-    const withStops = busGeometry(step,stopLists);
+    const id = step.seoulBusRouteId;
+    const stopDataUrl = busStopDataUrl(id);
+    const stopLists = await getGeometry(stopDataUrl,'routes',fetchFn);
+    const stops = stopLists?.[id];
+    const range = busRideRange(step,stops);
+    if (range === null || (stops?.length && !range)) return step;
+    const intermediate = range ? stops.slice(range.start+1,range.end).map(([,lon,lat]) => [lon,lat]) : [];
+    if (intermediate.some(point => !point.every(Number.isFinite))) return step;
+    const withStops = {...step,points:[step.points[0],...intermediate,step.points.at(-1)]};
+
+    if (stopDataUrl.endsWith('incheon-bus-stops.json')) {
+      const official = await getGeometry('/assets/data/incheon-bus-shapes.json','lines',fetchFn);
+      if (official?.[id]) {
+        const line = official[id][range?.direction];
+        const road = line && clipBusShape(withStops,[line],{forwardOnly:true});
+        return road ? {...step,points:road,approximate:false,incheonGeometry:true} : step;
+      }
+    }
+    if (/^(?:1[0-2]\d|2\d{2})\d{6}$/.test(id)) {
+      const lines = await getGeometry(`/api/bus-information?shapeRouteId=${id}`,'lines',fetchFn);
+      const road = clipBusShape(withStops,lines ?? [],{forwardOnly:true});
+      if (road) return {...step,points:road,approximate:false,gbisGeometry:true};
+    }
+    if (!range) return step;
+    const busShapes = await getGeometry('/assets/data/osm-bus-shapes.json','lines',fetchFn);
     const points = matchBusShape(withStops,busShapes);
-    if (points) return {...withStops,points,approximate:false,osmGeometry:true};
-    if (/^(?:1[0-2]\d|2\d{2})\d{6}$/.test(step.seoulBusRouteId)) {
-      const url = `/api/bus-information?shapeRouteId=${step.seoulBusRouteId}`;
-      const lines = await getGeometry(url,'lines',fetchFn);
-      const road = clipBusShape(step,lines ?? []);
-      if (road) return {...withStops,points:road,approximate:false,gbisGeometry:true};
-    }
-    if (busStopDataUrl(step.seoulBusRouteId).endsWith('incheon-bus-stops.json')) {
-      const estimates = await getGeometry('/assets/data/osm-bus-road-estimates.json','lines',fetchFn);
-      const road = clipBusShape(withStops,estimates?.[step.seoulBusRouteId]);
-      if (road) return {...withStops,points:road,osmGeometry:true};
-    }
-    return withStops;
+    return points ? {...step,points,approximate:false,osmGeometry:true} : step;
   }));
   return {...route,steps};
 }

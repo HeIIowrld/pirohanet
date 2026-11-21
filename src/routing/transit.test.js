@@ -102,9 +102,9 @@ test('a route already fetched in this browser is reused, also after the transit 
     assert.equal(transitCalls, 1); // 10분 안에는 다시 묻지 않는다
 
     // 보관한 지 오래됐고 한도가 끝났으면: 한 번 물어보고, 전에 받아 둔 응답으로 보여 준다
-    const stored = JSON.parse(data.get('modo.transit.v4'));
+    const stored = JSON.parse(data.get('modo.transit.v5'));
     for (const entry of Object.values(stored)) entry.at -= 60 * 60_000;
-    data.set('modo.transit.v4', JSON.stringify(stored));
+    data.set('modo.transit.v5', JSON.stringify(stored));
     exhausted = true;
     const reused = await queryTransit({ places, departAt, preferences: {} });
     assert.equal(transitCalls, 2);

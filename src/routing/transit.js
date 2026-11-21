@@ -21,7 +21,7 @@ function routeParams(origin, destination) {
 
 // 대중교통 조회는 하루 한도가 작다. 성공한 응답을 이 브라우저에 보관해 같은 구간은 10분 동안 다시 묻지 않고,
 // 한도가 끝났을 때는 전에 받아 둔 응답으로 보여 준다. 테스트처럼 fetch를 바꿔 넣으면 보관하지 않는다.
-const TRANSIT_CACHE_KEY = 'modo.transit.v4';
+const TRANSIT_CACHE_KEY = 'modo.transit.v5';
 const TRANSIT_FRESH_MS = 10 * 60_000;
 const TRANSIT_CACHE_ENTRIES = 12;
 const transitInFlight = new Map();
