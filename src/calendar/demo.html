@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>캘린더 연동 확인</title>
+<!-- 캘린더 파트만 따로 확인하는 페이지. 저장소 루트에서 서버를 띄우고 /src/calendar/demo.html 로 연다. -->
+<script src="https://accounts.google.com/gsi/client"></script>
+<button id="connect">Google 캘린더 불러오기</button>
+<pre id="out">버튼을 누르면 결과가 여기에 나옵니다.</pre>
+<script type="module">
+  import { fetchGoogleEvents, summarize } from './calendar.js';
+  import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
+
+  const out = document.getElementById('out');
+  const show = (title, data) => (out.textContent = `${title}\n${JSON.stringify(data, null, 2)}`);
+
+  document.getElementById('connect').onclick = async () => {
+    try {
+      const items = await fetchGoogleEvents();
+      // 결과가 null일 때 원인을 볼 수 있게 받은 일정을 그대로 나열한다
+      const list = items.map((e) => `- ${e.summary ?? '(제목 없음)'} | ${e.start?.dateTime ?? `${e.start?.date} 종일`} | ${e.location ?? '장소 없음'}`);
+      show(`Google 일정 ${items.length}건\n${list.join('\n')}`, summarize(items));
+    } catch (err) {
+      show(`연동 실패(${err.message}) → 샘플 일정`, summarize(SAMPLE_EVENTS, SAMPLE_NOW));
+    }
+  };
+</script>
