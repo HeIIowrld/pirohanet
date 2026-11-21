@@ -88,3 +88,8 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .route-alternatives-toggle small{display:block;color:var(--fg-secondary)}
 
 .naver-map-canvas{bottom:auto;height:100%}
+
+.ride-evidence{display:block;color:var(--fg-link);font-size:13px;line-height:1.45;word-break:keep-all}
+.route-card .ride-evidence{margin-top:4px}
+.avoid-line{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:20px;font-size:14px;color:var(--fg-secondary)}
+.avoid-line select{padding:8px;color:var(--fg-default);background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius-8)}

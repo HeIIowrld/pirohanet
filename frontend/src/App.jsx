@@ -24,6 +24,7 @@ export default function App(){
  const retry=useRef(null);
  const [expiresAt,setExpiresAt]=useState(null);
  const [conditionChanged,setConditionChanged]=useState(false);
+ const [avoidLine,setAvoidLine]=useState('');
  const [directChoice,setDirectChoice]=useState(null);
  const [departureAlert,setDepartureAlert]=useState(null);
  const alerted=useRef(new Set());
@@ -43,6 +44,7 @@ export default function App(){
   setPoints({});
   setForm(emptyForm());
   setLevel(null);
+  setAvoidLine('');
   setTrip(null);
   setResult(null);
   setRoute(null);
@@ -191,7 +193,7 @@ export default function App(){
  async function condition(){
   const id=++request.current;
   try {
-   makeTrip({...form,preferences:onboarding.preferences},event,level);
+   makeTrip({...form,preferences:{...onboarding.preferences,avoidLine:avoidLine||null}},event,level);
    if(!designDemo){
     setBusy(true);
     for(const field of ['origin','destination']) {
@@ -215,7 +217,7 @@ export default function App(){
   setDwell(false);
   setScreen('loading');
   try {
-   const t=makeTrip({...form,preferences:onboarding.preferences},event,overrideLevel);
+   const t=makeTrip({...form,preferences:{...onboarding.preferences,avoidLine:avoidLine||null}},event,overrideLevel);
    setTrip(t);
    if(!withStops){setDepartureAlert(null);setRoute(null)}
    const r=designDemo?designRoutes(t,stay):await queryRoutes(t,{places:points,previous:result,stops:withStops,saved,stayMinutes:stay});
@@ -261,7 +263,13 @@ export default function App(){
  {screen==='home'&&<><div className="map-controls"><button className="search-bar" onClick={()=>{setEvent(null);setLevel(null);setConditionChanged(false);update('arrival','');openSearch()}}><Icon name="search"/>목적지를 검색하세요</button><button className="pill" onClick={()=>go('saved')}><Icon name="bookmark"/>내 장소</button></div><button className={`locate ${!linked?'unlinked':upcoming.length?'with-event':'no-events'}`} aria-label="현재 위치로 설정" onClick={currentLocation}><Icon name="locate"/></button><Sheet className={!linked?'home-unlinked':upcoming.length?'home-event':'home-empty'}>{!linked?<><div className="sheet-body"><h2>다음 약속을 불러올까요?</h2><p>캘린더를 연결하면 일정으로 바로 길을 찾아요.</p><Button kind="sky" onClick={()=>go('calendar')}>캘린더 연결하기</Button></div></>:upcoming.length?<div className="sheet-body"><p className="subheading">다가오는 일정</p>{(expanded?upcoming:upcoming.filter(item=>item.location).slice(0,1)).map((e,i)=><button className={`event-row ${event===e?'selected':''}`} key={e.id||i} disabled={!e.location} onClick={()=>{setEvent(e);if(expanded)selectEvent(e);else setExpanded(true)}}><span><small>{e.start.dateTime.slice(0,10)===kstNow().slice(0,10)?'오늘':e.start.dateTime.slice(5,10).replace('-','/')}</small><strong>{clock(e.start.dateTime)}</strong></span><span><strong>{e.summary||'다음 약속'}</strong><small>{e.location||'장소가 없어요'}</small></span></button>)}<Button disabled={!upcoming.some(item=>item.location)} onClick={()=>expanded?selectEvent(event?.location?event:upcoming.find(item=>item.location)):setExpanded(true)}>길 찾기</Button></div>:<div className="sheet-body"><Art name="no-events"/><h2>다가오는 일정이 없어요.</h2><p>목적지를 검색해 길을 찾아보세요.</p><Button onClick={()=>openSearch()}>목적지 검색</Button></div>}</Sheet></>}
  {screen==='search'&&<section className={`search-page ${picker==='origin'?'origin-picker':''}`}><form onSubmit={search} className="search-form"><Icon name="search"/><input aria-label="장소 이름 또는 주소" placeholder={picker==='origin'?'출발지를 검색하세요':'목적지를 검색하세요'} autoFocus value={query} onChange={e=>{request.current++;setBusy(false);setQuery(e.target.value);setHits(null)}}/><button type="button" aria-label="검색 닫기" onClick={()=>go(returnTo)}><Icon name="close"/></button></form>{picker==='origin'&&<><button className="origin-current" disabled={busy} onClick={currentLocation}><Icon name="locate"/>현재 위치로 설정</button><p className="search-label">내 장소</p></>}{(hits??saved).map((p,i)=><PlaceRow key={i} place={p} onClick={()=>choose(p)} tail={p.distance}/>)}{hits?.length===0&&<p className="search-message">검색 결과가 없어요. 지역명이나 주소를 함께 입력해 주세요.</p>}{busy&&<p className="search-message" role="status">장소를 확인하고 있어요…</p>}</section>}
  {screen==='confirm'&&<section className="page confirm-page"><h1>이동 정보를 확인해 주세요.</h1><div className="field-list"><Field label="출발" value={form.origin||'출발 위치 선택'} onClick={()=>openSearch('origin')}/><Field label="도착" value={form.destination||'목적지 선택'} onClick={()=>openSearch('destination')}/>{event&&<Field label="약속 시간" value={clock(event.start.dateTime)}/>}<Field label="출발 시간" value={clock(fromInput(form.departure)??new Date())} onClick={()=>openTime('departure')}/><Field label="도착 목표" value={form.arrival?clock(fromInput(form.arrival)):'도착 목표 없음'} error={Boolean(timeError)} onClick={()=>openTime('arrival')}/>{(error||timeError)&&<p className="field-error">{error||timeError}</p>}</div><Actions><Button disabled={busy||Boolean(timeError)||!form.origin||!form.destination} onClick={condition}>컨디션 확인</Button></Actions></section>}
- {screen==='condition'&&<section className="page condition-page"><h1>{scale.title}</h1>{!conditionChanged&&<p>{level!==null?'일정을 참고해 미리 골랐어요.':'지금 컨디션을 골라 주세요.'}</p>}<FatigueScale value={level} onChange={value=>{setLevel(value);setConditionChanged(true)}}/><Actions><Button disabled={busy||level===null} onClick={()=>routes(false)}>경로 보기</Button><Button kind="text" disabled={busy} onClick={()=>{setLevel(null);setConditionChanged(true);routes(false,null)}}>건너뛰기</Button></Actions></section>}
+ {screen==='condition'&&<section className="page condition-page"><h1>{scale.title}</h1>{!conditionChanged&&<p>{level!==null?'일정을 참고해 미리 골랐어요.':'지금 컨디션을 골라 주세요.'}</p>}<FatigueScale value={level} onChange={value=>{setLevel(value);setConditionChanged(true)}}/>
+ <label className="avoid-line">가능하면 피할 지하철 노선
+  <select value={avoidLine} onChange={event=>setAvoidLine(event.target.value)}>
+   <option value="">선택 안 함</option>
+   {[1,2,3,4,5,6,7,8,9].map(line=><option key={line} value={line}>{line}호선</option>)}
+  </select>
+ </label><Actions><Button disabled={busy||level===null} onClick={()=>routes(false)}>경로 보기</Button><Button kind="text" disabled={busy} onClick={()=>{setLevel(null);setConditionChanged(true);routes(false,null)}}>건너뛰기</Button></Actions></section>}
  {screen==='loading'&&<Sheet className="loading-sheet"><div className="sheet-body"><h2>경로를 찾고 있어요.</h2><div className="skeleton"/><div className="skeleton"/></div><Actions><Button disabled><Icon name="refresh"/></Button></Actions></Sheet>}
  {screen==='routes'&&<RouteComparison result={result} route={route} trip={trip} demo={demo} select={item=>{setRoute(item);setDirectChoice(item)}} choose={chooseRoute} changeCondition={()=>go('condition')} changeTrip={()=>go('confirm')} showLate={item=>{setRoute(item);go('details')}}/>}
  {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button></Actions></Sheet>}

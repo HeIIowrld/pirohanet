@@ -1,4 +1,5 @@
 import { prepareTrip } from '../../src/main/trip.js';
+import { addBusObservations } from '../../src/routing/bus-observations.js';
 import { queryTransit } from '../../src/routing/transit.js';
 import { loadRecommendedStops, resolveRecommendedStop } from '../../src/places/recommended-stops.js';
 import { compareRoutes, isDirect } from '../../src/routing/compare.js';
@@ -86,14 +87,16 @@ export function routeResult(candidates, trip, places) {
     maxExtraTravelMinutes:trip.preferences.maxExtraTravelMinutes});
   const direct = eligible.filter(isDirect);
   const fastest = direct.reduce((best, item) => !best || item.arrivalAt < best.arrivalAt ? item : best, null);
-  const easier = direct.find(item => item.id !== fastest?.id &&
-    (item.comfortScore < fastest.comfortScore || item.walkMinutes < fastest.walkMinutes ||
-      item.transfers < fastest.transfers ||
-      (item.crowdingCompared && item.crowdingBurden < fastest.crowdingBurden)));
-  const recommended = [fastest,easier].filter(Boolean);
+  const easier = fastest && direct.find(item => item.id !== fastest.id &&
+    item.comfortScore < fastest.comfortScore - 0.01);
+  const tradeoff = fastest && !easier && direct.find(item => item.id !== fastest.id &&
+    (item.walkMinutes < fastest.walkMinutes || item.transfers < fastest.transfers));
+  const second = easier || tradeoff;
+  const recommended = [fastest,second].filter(Boolean);
+  const secondLabel = easier ? '편한 길' : tradeoff?.transfers < fastest?.transfers ? '환승 적은 길' : '도보 적은 길';
   return {
     all, eligible,
-    direct:recommended,
+    direct:recommended,secondLabel,
     alternatives:alternateRoutes(direct,recommended),
     stops:eligible.filter(item => item.viaStop),
   };
@@ -103,7 +106,14 @@ export async function queryRoutes(trip, {places, previous, stops=false, saved=[]
   if (!places?.origin || !places?.destination) throw new Error('출발지와 목적지를 다시 선택해 주세요.');
   if (!stops) {
     const all = await queryTransit({...trip, places});
-    return routeResult(all.map(item => ({...item, id:routeKey(item), stayMinutes:0})), trip, places);
+    const candidates = all.map(item => ({...item,id:routeKey(item),stayMinutes:0}));
+    const initial = routeResult(candidates,trip,places);
+    const fastest = initial.direct[0];
+    const ordered = initial.eligible.filter(route => isDirect(route) && route.id !== fastest?.id);
+    const candidatesWithData = [fastest,...ordered].filter(Boolean);
+    const withData = await addBusObservations(candidatesWithData);
+    const byId = new Map(withData.map(item => [item.id,item]));
+    return routeResult(candidates.map(item => byId.get(item.id) ?? item),trip,places);
   }
   const results = await Promise.allSettled((await nearbyStops(places.destination, saved)).map(async place => {
     const preferences = {...trip.preferences, savedStop:{query:place.name || place.alias, stayMinutes}};
@@ -118,6 +128,7 @@ export async function queryRoutes(trip, {places, previous, stops=false, saved=[]
   const compared = routeResult([...(previous?.all ?? []).filter(isDirect), ...candidates], trip, places);
   return {...compared,
     direct:previous?.direct ?? compared.direct,
+    secondLabel:previous?.secondLabel ?? compared.secondLabel,
     alternatives:previous?.alternatives ?? compared.alternatives,
   };
 }
