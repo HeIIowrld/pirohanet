@@ -1,0 +1,91 @@
+/* 모도 디자인 토큰. Figma 컬렉션 "MODO / Color", "MODO / Space and Radius" 기준.
+   Figma의 "MODO (이전 버전, 사용 안 함)" 컬렉션 2개는 사용하지 않는다. */
+:root {
+  /* brand */
+  --brand-sky: #ADDFF9;
+  --brand-sky-low: #E8F5FC;
+  --brand-sky-deep: #168BB8;
+  --brand-lime: #DDF3C4;
+  --brand-lime-pressed: #CCEAB0;
+  --brand-lime-low: #F2FAE6;
+
+  /* background */
+  --bg-canvas: #FFFFFF;
+  --bg-surface: #F7F8FA;
+  --bg-background: #F2F3F6;
+  --bg-map: #E6E9ED;
+  --bg-map-block: #DADFE5;
+  --bg-disabled: #F1F2F5;
+  --bg-inverse: #1A1C20;
+
+  /* foreground */
+  --fg-default: #212124;
+  --fg-secondary: #555D6D;
+  --fg-muted: #868B94;
+  --fg-disabled: #B8BDC4;
+  --fg-inverse: #FFFFFF;
+  --fg-link: #0F6F96;
+
+  /* state */
+  --state-error: #FA2314;
+  --state-error-low: #FFF1F0;
+  --state-info: #009CEB;
+  --state-success: #1AA174;
+
+  /* 노선색 (지도 경로선과 경로 단계 점) */
+  --line-2: #00A84D;
+  --line-5: #996CAC;
+  --walk: #ADB1BA;
+
+  /* space */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+
+  /* radius */
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-20: 20px;
+  --radius-full: 9999px;
+
+  /* border 토큰은 구분선이 꼭 필요한 곳에만 쓴다. 선택 표시에는 쓰지 않는다. */
+  --border-hairline: #EAEBEE;
+  --border-strong: #DCDEE3;
+
+  /* 그림자는 지도 위 떠 있는 요소(검색창, 마커)에만 쓴다 */
+  --shadow-float: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+  /* typography */
+  --font-sans: "Pretendard Variable", "Pretendard", system-ui, sans-serif;
+
+  /* layout */
+  --cta-height: 52px;
+  --cta-gap: 8px;
+  --cta-bottom: 54px;
+  --cta-secondary-slot: 60px;
+  --screen-w: 390px;
+  --screen-h: 844px;
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --page-x: 20px;
+  --cta-bottom: 54px; /* safe-bottom 34 + 20 */
+}
+
+.t-title-24 { font: 600 24px/1.35 var(--font-sans); }
+.t-title-20 { font: 600 20px/1.35 var(--font-sans); }
+.t-title-18 { font: 600 18px/1.35 var(--font-sans); }
+.t-body-16 { font: 400 16px/1.5 var(--font-sans); letter-spacing: -0.02em; }
+.t-body-16-m { font: 500 16px/1.5 var(--font-sans); letter-spacing: -0.02em; }
+.t-body-16-b { font: 600 16px/1.5 var(--font-sans); letter-spacing: -0.02em; }
+.t-body-14 { font: 400 14px/1.5 var(--font-sans); letter-spacing: -0.02em; }
+.t-body-14-m { font: 500 14px/1.5 var(--font-sans); letter-spacing: -0.02em; }
+.t-body-14-b { font: 600 14px/1.5 var(--font-sans); letter-spacing: -0.02em; }
+.t-caption-12 { font: 400 12px/1.4 var(--font-sans); letter-spacing: -0.02em; }
+.t-caption-12-m { font: 500 12px/1.4 var(--font-sans); letter-spacing: -0.02em; }

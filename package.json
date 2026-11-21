@@ -2,7 +2,20 @@
   "name": "pirohanet",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13" },
-  "scripts": { "start": "node dev-server.mjs", "test": "node --test" },
-  "dependencies": { "google-auth-library": "^10.0.0" }
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node dev-server.mjs",
+    "test": "node --test",
+    "dev": "node dev.mjs",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "google-auth-library": "^10.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.3.8"
+  }
 }

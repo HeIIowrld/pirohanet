@@ -61,7 +61,7 @@ function input(raw) {
       locations[field] = { coordinate: place.coordinate, address: place.address.slice(0, 100) };
     }
   }
-  return { mode, fatigue, allowance, origin, destination, departAt, arriveBy, places, calendar, locations };
+  return { mode, fatigue, allowance, origin, destination, departAt, arriveBy, places, calendar, locations, includeStops: raw.includeStops !== false };
 }
 
 function fixture(id, walk, distance, place, stopIndex) {
@@ -185,14 +185,14 @@ async function liveRoutes(request, env) {
     if (start.every((value, index) => value === end[index])) throw new RouteError(422, '출발지와 목적지를 서로 다르게 입력해 주세요.');
     const direct = await directions('fast', [start, end], 'fastest', key);
     const shortest = directions('easy', [start, end], 'shortest', key).catch(() => null);
-    const open = request.fatigue !== 'tired' && request.allowance >= stay &&
+    const open = request.includeStops && request.fatigue !== 'tired' && request.allowance >= stay &&
       direct.walk + stay + arrivalBuffer <= (request.arriveBy - request.departAt) / minute;
     const nearby = request.calendar && open
       ? await (search ? nearbyPlaces(search, origin, end) : { places: [], unavailable: true })
       : { places: [], unavailable: false };
     const candidates = [...request.places, ...nearby.places.filter(place =>
       !request.places.some(saved => saved.name === place.name))];
-    const stops = (!request.calendar || open) && request.fatigue !== 'tired' && request.allowance >= stay
+    const stops = request.includeStops && (!request.calendar || open) && request.fatigue !== 'tired' && request.allowance >= stay
       ? candidates.map(async (place, index) => {
         const coordinate = place.coordinate ?? (await locate(place.name, key, true)).coordinate;
         if ([start, end].some(point => point.every((value, i) => value === coordinate[i]))) return null;
@@ -274,7 +274,8 @@ export async function recommend(raw, env = process.env) {
   const result = request.mode === 'demo' ? { routes: sampleRoutes(request), failedStops: 0 } : await liveRoutes(request, env);
   const [direct, ...others] = result.routes;
   const baseline = metrics(direct, direct, request);
-  const eligible = others.map(route => metrics(route, direct, request)).filter(route =>
+  const directCandidates = result.routes.filter(route => !route.place).map(route => metrics(route, direct, request));
+  const eligible = others.filter(route => request.includeStops || !route.place).map(route => metrics(route, direct, request)).filter(route =>
     !route.late && route.extra <= request.allowance &&
     (route.place ? request.fatigue !== 'tired' && (!request.calendar || route.maxStay >= stay) : route.distance < baseline.distance));
   const rule = choose(baseline, eligible, request.fatigue);
@@ -286,6 +287,7 @@ export async function recommend(raw, env = process.env) {
     mode: request.mode,
     method: ai ? 'ai' : 'rules',
     baseline,
+    direct: directCandidates,
     recommended: selected,
     ...(request.calendar && {
       stops: eligible.filter(route => route.place).sort((a, b) => a.extra - b.extra),

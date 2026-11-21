@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {completeOnboarding,readOnboarding,DEFAULT_TRAVEL_PREFERENCES,normalizeTravelPreferences} from './onboarding.js';
+const memory=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)}};
+test('first visit shows onboarding; completion persists for return visits',()=>{const store=memory();assert.equal(readOnboarding(false,store).completed,false);completeOnboarding({priority:'walking',maxExtraTravelMinutes:20,arrivalBufferMinutes:15,avoidStairs:true},false,store);const result=readOnboarding(false,store);assert.equal(result.completed,true);assert.deepEqual(result.preferences,{priority:'walking',maxExtraTravelMinutes:20,arrivalBufferMinutes:15,avoidStairs:true})});
+test('skip stores defaults and demo completion cannot suppress real onboarding',()=>{const store=memory();completeOnboarding(DEFAULT_TRAVEL_PREFERENCES,true,store);assert.equal(readOnboarding(true,store).completed,true);assert.equal(readOnboarding(false,store).completed,false)});
+test('blocked or malformed storage falls back without crashing',()=>{assert.equal(readOnboarding(false,{getItem:()=>'{'}).completed,false);assert.equal(completeOnboarding({},false,{setItem:()=>{throw Error()}}),false);assert.deepEqual(normalizeTravelPreferences({priority:'invalid',arrivalBufferMinutes:-10}),DEFAULT_TRAVEL_PREFERENCES)});
