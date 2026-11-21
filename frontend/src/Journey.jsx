@@ -71,7 +71,7 @@ export default function Journey({route,trip,progress,advance,finish,openDetails,
       <div aria-live="polite" aria-atomic="true">
         {notice && <div className="journey-alert">
           <strong>{notice.heading}{notice.stop ? ` · ${notice.stop}` : ''}</strong>
-          <p>{notice.next ? `내린 뒤 ${notice.next}로 갈아타세요.` : '내릴 준비를 해 주세요.'} <small>{notice.basis}</small></p>
+          <p>{notice.next ? `다음 탑승 · ${notice.next}` : '내릴 준비를 해 주세요.'} <small>{notice.basis}</small></p>
         </div>}
       </div>
       {door && <p className="journey-door">{door.title} · {door.instruction}</p>}
