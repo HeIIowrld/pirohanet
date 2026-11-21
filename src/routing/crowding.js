@@ -25,6 +25,24 @@ function lineStations(data, line) {
   return codes.map((code) => ({ code, name: stationName(stations[code]?.name) }));
 }
 
+export function expandSubwayStops(step, data) {
+  const line = step.vehicles?.[0]?.name.match(/^([1-8])호선$/)?.[1];
+  if (step.type !== 'SUBWAY' || !line || !step.railSegments || !data) return step;
+  const stations = lineStations(data, line);
+  const from = stations.findIndex(station => station.name === stationName(step.stops[0].name));
+  const to = stations.findIndex(station => station.name === stationName(step.stops.at(-1).name));
+  if (from < 0 || to < 0 || from === to || step.railSegments >= stations.length) return step;
+  const length = step.railSegments;
+  const paths = [-1, 1].map(direction => Array.from({ length: length + 1 }, (_, index) => {
+    const offset = from + index * direction;
+    return line === '2' ? (offset + stations.length) % stations.length : offset;
+  })).filter(path => path.at(-1) === to);
+  if (paths.length !== 1) return step;
+  return { ...step, stops: [step.stops[0], ...paths[0].slice(1, -1).map(index => ({
+    name: stations[index].name,
+  })), step.stops.at(-1)] };
+}
+
 export function subwayDirection(step, data) {
   const line = step.vehicles?.[0]?.name.match(/^([1-8])호선$/)?.[1];
   const stops = step.stops?.map((stop) => stationName(stop.name)) ?? [];

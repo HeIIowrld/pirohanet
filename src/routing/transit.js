@@ -1,11 +1,11 @@
-import { expectedCrowding, stationName, subwayDirection } from './crowding.js';
+import { expectedCrowding, expandSubwayStops, stationName, subwayDirection } from './crowding.js';
 
 const MINUTE = 60_000;
 const TRANSFER_MINUTES = 3;
 const MAX_REBOARD_PLANS = 2;
 const MAX_WALK_DISTANCE_METERS = 800;
 
-function mapLink(origin, destination, mode = 'traffic') {
+export function mapLink(origin, destination, mode = 'traffic') {
   return `https://map.kakao.com/link/by/${mode}/` + [origin, destination].map((place) =>
     `${encodeURIComponent(place.name || place.address || '장소')},${place.latitude},${place.longitude}`,
   ).join('/');
@@ -20,7 +20,7 @@ function routeParams(origin, destination) {
 
 // 대중교통 조회는 하루 한도가 작다. 성공한 응답을 이 브라우저에 보관해 같은 구간은 10분 동안 다시 묻지 않고,
 // 한도가 끝났을 때는 전에 받아 둔 응답으로 보여 준다. 테스트처럼 fetch를 바꿔 넣으면 보관하지 않는다.
-const TRANSIT_CACHE_KEY = 'modo.transit.v1';
+const TRANSIT_CACHE_KEY = 'modo.transit.v2';
 const TRANSIT_FRESH_MS = 10 * 60_000;
 const TRANSIT_CACHE_ENTRIES = 12;
 const transitInFlight = new Map();
@@ -52,9 +52,9 @@ async function transitResponse(origin, destination, fetchFn) {
       const failure = await response.json().catch(() => null);
       if (response.status === 429 || /api limit has been exceeded/i.test(failure?.msg ?? failure?.error ?? '')) {
         if (cached) return cached.result;
-        throw new Error('대중교통 경로 서비스의 조회 한도가 초과됐어요.');
+        throw new Error(failure?.error?.startsWith?.('서울시') ? failure.error : '대중교통 경로 서비스의 조회 한도가 초과됐어요.');
       }
-      throw new Error('대중교통 경로 서비스에 연결하지 못했어요.');
+      throw new Error(failure?.error?.startsWith?.('서울시') ? failure.error : '대중교통 경로 서비스에 연결하지 못했어요.');
     }
     const result = await response.json();
     if (cacheable && result.status === 'OK') writeTransitCache(key, result);
@@ -73,6 +73,7 @@ async function requestRoutes(origin, destination, fetchFn) {
   if (result.status !== 'OK' || !Array.isArray(result.routes)) throw new Error('대중교통 경로를 조회하지 못했어요.');
   return result.routes.map(({ properties, steps }) => ({
     mode: properties.type,
+    ...(result.source === 'seoul' && { source: 'seoul' }),
     links: [{ label: '카카오맵에서 길찾기', url: mapLink(origin, destination) }],
     travelMinutes: properties.totalTime / 60,
     transfers: properties.transfers,
@@ -80,6 +81,7 @@ async function requestRoutes(origin, destination, fetchFn) {
     totalDistance: properties.totalDistance,
     steps: steps.map(({ properties, path }) => ({
       ...properties, points: path?.points,
+      ...(result.source === 'seoul' && { approximate: true }),
       ...(properties.type === 'BUS' && { boardingPoint: path?.points?.[0] }),
     })),
   })).filter((route) => Number.isFinite(route.travelMinutes) && route.travelMinutes > 0 &&
@@ -106,11 +108,14 @@ async function requestWalk(origin, destination, fetchFn) {
   };
 }
 
-async function fastestStopLeg(origin, destination, fetchFn) {
+function isNearby(origin, destination) {
   const latitude = (origin.latitude + destination.latitude) * Math.PI / 360;
-  const distance = 111_200 * Math.hypot(destination.latitude - origin.latitude,
-    (destination.longitude - origin.longitude) * Math.cos(latitude));
-  const walking = distance <= MAX_WALK_DISTANCE_METERS
+  return 111_200 * Math.hypot(destination.latitude - origin.latitude,
+    (destination.longitude - origin.longitude) * Math.cos(latitude)) <= MAX_WALK_DISTANCE_METERS;
+}
+
+async function fastestStopLeg(origin, destination, fetchFn) {
+  const walking = isNearby(origin, destination)
     ? requestWalk(origin, destination, fetchFn).catch(() => null) : null;
   const [transit, walk] = await Promise.all([
     requestRoutes(origin, destination, fetchFn).catch((error) => ({ error })),
@@ -132,7 +137,7 @@ function profile(route, departAt, data) {
   const stepSeconds = route.steps.reduce((sum, step) => sum + step.time, 0);
   const stepDistance = route.steps.reduce((sum, step) => sum + step.distance, 0);
   // 공급자가 별도 단계로 주지 않은 접근·하차 후 도보를 총 거리 차이로 추정한다.
-  const missingWalk = Math.min(Math.max(0, route.travelMinutes - stepSeconds / 60),
+  const missingWalk = route.source === 'seoul' ? 0 : Math.min(Math.max(0, route.travelMinutes - stepSeconds / 60),
     Math.max(0, route.totalDistance - stepDistance) / 75);
   const wait = Math.max(0, route.travelMinutes - stepSeconds / 60 - missingWalk) / riding.length;
   let elapsed = missingWalk / 2;
@@ -159,6 +164,7 @@ function profile(route, departAt, data) {
         const line = step.vehicles?.[0]?.name?.match(/^([1-9])호선$/)?.[1];
         if (line) subwayLineMinutes[line] = (subwayLineMinutes[line] ?? 0) + minutes;
       }
+      if (step.railSegments) step = expandSubwayStops(step, data);
       const direction = subwayDirection(step, data);
       if (direction?.next) step = { ...step, nextSubwayStation: direction.next.name };
       const at = new Date(+departAt + elapsed * MINUTE);
@@ -221,7 +227,7 @@ async function reboardRoute(base, places, departAt, data, fetchFn) {
   ]);
   const back = reverse.find((route) => {
     const rides = rideSteps(route);
-    const leg = subwayDirection(rides[0], data);
+    const leg = rides[0] && subwayDirection(expandSubwayStops(rides[0], data), data);
     return rides.length === 1 && leg?.line === line && leg.stops.length === 2 &&
       leg.stops[0] === stops[0] && leg.stops[1] === previous.name;
   });
@@ -275,6 +281,7 @@ async function savedStopRoute(places, departAt, requestedStay, data, fetchFn, ar
   const stopName = places.stop.name || places.stop.address || '저장 장소';
   return {
     ...second,
+    ...(first.source === 'seoul' && { source: 'seoul' }),
     mode: first.mode === 'WALKING' ? second.mode : second.mode === 'WALKING' || first.mode === second.mode
       ? first.mode : 'BUS_AND_SUBWAY',
     viaStop: true,
@@ -301,8 +308,12 @@ async function savedStopRoute(places, departAt, requestedStay, data, fetchFn, ar
 }
 
 export async function queryTransit({ places, departAt, preferences, detourOnly = false, stopArriveBy }, fetchFn = fetch) {
+  let transitError;
   const [rawRoutes, data] = await Promise.all([
-    detourOnly ? [] : requestRoutes(places.origin, places.destination, fetchFn),
+    detourOnly ? [] : requestRoutes(places.origin, places.destination, fetchFn).catch(error => {
+      transitError = error;
+      return [];
+    }),
     fetchFn(new URL('./seoul-crowding.json', import.meta.url)).then((response) =>
       response.ok ? response.json() : null,
     ).catch(() => null),
@@ -314,8 +325,10 @@ export async function queryTransit({ places, departAt, preferences, detourOnly =
   }
   // 대중교통 결과가 없는 가까운 거리는 걸어가는 길을 돌려준다. 없으면 '경로를 찾지 못했어요'에서 막힌다.
   if (!rawRoutes.length) {
+    if (transitError && !isNearby(places.origin, places.destination)) throw transitError;
     const walk = await requestWalk(places.origin, places.destination, fetchFn).catch(() => null);
     if (walk) return [{ ...profile(walk, departAt, data), stayMinutes: 0, viaStop: false, links: [{ ...walk.links[0], label: '카카오맵에서 도보 길찾기' }] }];
+    if (transitError) throw transitError;
   }
   const routes = rawRoutes.map((route) => ({ ...profile(route, departAt, data), crowdingAsOf: data?.asOf }));
   const seen = new Set();
