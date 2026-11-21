@@ -222,4 +222,5 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .name-field input{border:0;outline:0;background:transparent;font-size:16px;line-height:24px;padding:0;width:100%}
 .name-field strong{font-size:16px;line-height:24px;font-weight:500}
 .name-page form>p{margin:4px 4px 12px}
-
+.name-field.invalid{background:var(--state-error-low)}
+.name-page .field-error{margin:0 0 4px}

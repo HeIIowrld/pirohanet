@@ -3,7 +3,7 @@ import Onboarding from './Onboarding.jsx';
 import {useScreenHistory} from './screen-history.js';
 import {readOnboarding,completeOnboarding,DEFAULT_TRAVEL_PREFERENCES,normalizeTravelPreferences} from './onboarding.js';
 import React,{useEffect,useRef,useState} from 'react';
-import {locateCandidates,exportSavedPlaces,savedPlace,savePlace as saveLocal,syncMyPlaces,pushMyPlaces} from '../../src/calendar/location.js';
+import {locateCandidates,exportSavedPlaces,placeKey,savedPlace,savePlace as saveLocal,syncMyPlaces,pushMyPlaces} from '../../src/calendar/location.js';
 import {fetchGoogleEvents,requestGoogleAuthorization} from '../../src/calendar/calendar.js';
 import {planDepartureReminder} from '../../src/main/departure-reminder.js';
 import {readSession,saveSession,clearSession} from '../../src/main/login-session.js';
@@ -24,7 +24,7 @@ export default function App(){
  const request=useRef(0);
  // 앱이 '이 글자가 어느 장소인가요?' 하고 후보를 물었을 때만 그 글자로 기억한다. 도착지를 다른 곳으로 바꾸는 것은 기억하지 않는다.
  const teaching=useRef(false);
- // 내 장소 추가: 장소를 고른 뒤 원하는 이름(집, 회사, 1공…)을 붙여 저장한다. {place,name}
+ // 내 장소 추가·이름 바꾸기: 장소에 원하는 이름(집, 회사, 1공…)을 붙여 저장한다. {place,name,from}. from은 바꾸기 전 이름.
  const [naming,setNaming]=useState(null);
  const retry=useRef(null);
  const [expiresAt,setExpiresAt]=useState(null);
@@ -37,6 +37,7 @@ export default function App(){
   request.current++;
   setError('');
   setBusy(false);
+  setNaming(null);
  });
  const view=navigation.view;
  const {screen,picker='destination',expanded=false,overlay,onboardingStep='intro'}=view;
@@ -202,12 +203,22 @@ export default function App(){
   catch{if(readSession()?.token===session.token)setToast('이 브라우저에만 변경 사항을 저장했어요.')}
   return readSession()?.token===session.token;
  }
- async function save(place,name=''){
+ // 저장하려는 이름. 비워 두면 장소 이름을 쓴다.
+ const namingAlias=naming?(naming.name.trim()||naming.place.alias||naming.place.name||naming.place.address):'';
+ const nameUnchanged=naming?.from!=null&&placeKey(namingAlias)===placeKey(naming.from);
+ // 같은 이름이 이미 있으면 덮어쓰지 않고 알려 준다.
+ const nameTaken=Boolean(naming)&&!nameUnchanged&&(designDemo?saved.some(item=>(item.alias||item.name)===namingAlias):Boolean(savedPlace(namingAlias)));
+ async function save(place,name='',from=null){
   const alias=name.trim()||place.alias||place.name||place.address;
-  const done=()=>{setNaming(null);if(screen==='search'&&navigation.previous?.screen==='saved')goBack();else go('saved',{replace:screen==='search'})};
-  if(designDemo){setSaved(items=>[...items,{...place,alias}]);done();return}
+  const done=()=>{setNaming(null);if(screen==='saved')return;if(screen==='search'&&navigation.previous?.screen==='saved')goBack();else go('saved',{replace:screen==='search'})};
+  if(from!=null&&placeKey(alias)===placeKey(from)){done();return}
+  if(designDemo){setSaved(items=>from!=null?items.map(item=>(item.alias||item.name)===from?{...item,alias}:item):[...items,{...place,alias}]);done();return}
   setBusy(true);
-  try{if(await persistPlace(alias,place))done()}
+  try{
+   // 이름 바꾸기: 옛 이름을 지우고 새 이름으로 저장한 뒤 계정에 한 번에 올린다.
+   if(from!=null&&readSession())saveLocal(from,null);
+   if(await persistPlace(alias,place))done();
+  }
   catch(error){setError(error.message)}
   finally{setBusy(false)}
  }
@@ -292,7 +303,7 @@ export default function App(){
  {screen==='onboarding'&&linked&&<Onboarding initial={onboarding.preferences} step={onboardingStep} onStep={onboardingStep=>navigation.move({screen:'onboarding',onboardingStep})} onBack={navigation.previous?goBack:undefined} onComplete={finishOnboarding}/>}
  {screen==='calendar'&&<CalendarIntro state={calendarState} busy={busy} connect={calendar} error={error}/>}
  {screen==='home'&&<><div className="map-controls"><button className="search-bar" onClick={()=>{setEvent(null);setLevel(null);setConditionChanged(false);update('arrival','');openSearch()}}><Icon name="search"/>목적지를 검색하세요</button><button className="pill" onClick={()=>go('saved')}><Icon name="bookmark"/>내 장소</button></div><button className={`locate ${!linked?'unlinked':upcoming.length?'with-event':'no-events'}`} aria-label="현재 위치로 설정" onClick={currentLocation}><Icon name="locate"/></button><Sheet className={!linked?'home-unlinked':upcoming.length?'home-event':'home-empty'}>{!linked?<><div className="sheet-body"><h2>다음 약속을 불러올까요?</h2><p>캘린더를 연결하면 일정으로 바로 길을 찾아요.</p><Button kind="sky" onClick={()=>go('calendar')}>캘린더 연결하기</Button></div></>:upcoming.length?<div className="sheet-body"><div className="event-heading"><p className="subheading">다가오는 일정</p>{expanded&&<button type="button" onClick={goBack}>일정 접기</button>}</div>{(expanded?upcoming:upcoming.filter(item=>item.location).slice(0,1)).map((e,i)=><button className={`event-row ${event===e?'selected':''}`} key={e.id||i} disabled={!e.location} onClick={()=>{setEvent(e);if(expanded)selectEvent(e);else expandEvents()}}><span><small>{e.start.dateTime.slice(0,10)===kstNow().slice(0,10)?'오늘':e.start.dateTime.slice(5,10).replace('-','/')}</small><strong>{clock(e.start.dateTime)}</strong></span><span><strong>{e.summary||'다음 약속'}</strong><small>{e.location||'장소가 없어요'}</small></span></button>)}<Button disabled={!upcoming.some(item=>item.location)} onClick={()=>expanded?selectEvent(event?.location?event:upcoming.find(item=>item.location)):expandEvents()}>길 찾기</Button></div>:<div className="sheet-body"><Art name="no-events"/><h2>다가오는 일정이 없어요.</h2><p>목적지를 검색해 길을 찾아보세요.</p><Button onClick={()=>openSearch()}>목적지 검색</Button></div>}</Sheet></>}
- {screen==='search'&&naming&&<section className="page name-page"><h1>어떤 이름으로 저장할까요?</h1><form onSubmit={e=>{e.preventDefault();void save(naming.place,naming.name)}}><label className="name-field"><small>이름</small><input aria-label="저장할 이름" autoFocus maxLength={30} placeholder="예: 집, 회사, 1공" value={naming.name} onChange={e=>setNaming(n=>({...n,name:e.target.value}))}/></label><div className="name-field"><small>주소</small><strong>{naming.place.name||naming.place.address}</strong>{naming.place.name&&<small>{naming.place.address}</small>}</div><p>일정의 위치에 이 이름을 적어 두면 검색 없이 이 장소로 안내해요. 비워 두면 ‘{naming.place.name||naming.place.address}’(으)로 저장해요.</p><Button type="submit" disabled={busy}>{busy?'저장하고 있어요…':'저장'}</Button><Button type="button" kind="text" disabled={busy} onClick={()=>setNaming(null)}>다른 장소 고르기</Button></form></section>}
+ {naming&&(screen==='search'||screen==='saved')&&<section className="page name-page"><h1>{naming.from!=null?'이름을 어떻게 바꿀까요?':'어떤 이름으로 저장할까요?'}</h1><form onSubmit={e=>{e.preventDefault();if(!nameTaken)void save(naming.place,naming.name,naming.from)}}><label className={`name-field ${nameTaken?'invalid':''}`}><small>이름</small><input aria-label="저장할 이름" aria-invalid={nameTaken} autoFocus maxLength={30} placeholder="예: 집, 회사, 1공" value={naming.name} onChange={e=>setNaming(n=>({...n,name:e.target.value}))}/></label>{nameTaken&&<p className="field-error" role="alert">‘{namingAlias}’은(는) 이미 저장된 이름이에요. 다른 이름을 적어 주세요.</p>}<div className="name-field"><small>주소</small><strong>{naming.place.name||naming.place.address}</strong>{naming.place.name&&<small>{naming.place.address}</small>}</div><p>일정의 위치에 이 이름을 적어 두면 검색 없이 이 장소로 안내해요.{naming.from==null&&` 비워 두면 ‘${naming.place.name||naming.place.address}’(으)로 저장해요.`}</p><Button type="submit" disabled={busy||nameTaken}>{busy?'저장하고 있어요…':'저장'}</Button><Button type="button" kind="text" disabled={busy} onClick={()=>setNaming(null)}>{naming.from!=null?'취소':'다른 장소 고르기'}</Button></form></section>}
  {screen==='search'&&!naming&&<section className={`search-page ${picker==='origin'?'origin-picker':''}`}><form onSubmit={search} className="search-form"><Icon name="search"/><input aria-label="장소 이름 또는 주소" placeholder={picker==='origin'?'출발지를 검색하세요':picker==='save'?'주소나 장소 이름을 검색하세요':'목적지를 검색하세요'} autoFocus value={query} onChange={e=>{request.current++;setBusy(false);setQuery(e.target.value);setHits(null)}}/><button type="button" aria-label="검색 닫기" onClick={goBack}><Icon name="close"/></button></form>{picker==='origin'&&<><button className="origin-current" disabled={busy} onClick={currentLocation}><Icon name="locate"/>현재 위치로 설정</button><p className="search-label">내 장소</p></>}{(hits??saved).map((p,i)=><PlaceRow key={i} place={p} onClick={()=>choose(p)} tail={p.distance}/>)}{hits?.length===0&&<p className="search-message">검색 결과가 없어요. 지역명이나 주소를 함께 입력해 주세요.</p>}{busy&&<p className="search-message" role="status">장소를 확인하고 있어요…</p>}</section>}
  {screen==='confirm'&&<section className="page confirm-page"><h1>이동 정보를 확인해 주세요.</h1><div className="field-list"><Field label="출발" value={form.origin||'출발 위치 선택'} onClick={()=>openSearch('origin')}/><Field label="도착" value={form.destination||'목적지 선택'} onClick={()=>openSearch('destination')}/>{event&&<Field label="약속 시간" value={clock(event.start.dateTime)}/>}<Field label="출발 시간" value={clock(fromInput(form.departure)??new Date())} onClick={()=>openTime('departure')}/><Field label="도착 목표" value={form.arrival?clock(fromInput(form.arrival)):'도착 목표 없음'} error={Boolean(timeError)} onClick={()=>openTime('arrival')}/>{(error||timeError)&&<p className="field-error">{error||timeError}</p>}</div><Actions><Button disabled={busy||Boolean(timeError)||!form.origin||!form.destination} onClick={condition}>컨디션 확인</Button></Actions></section>}
  {screen==='condition'&&<section className="page condition-page"><h1>{scale.title}</h1>{!conditionChanged&&<p>{level!==null?'일정을 참고해 미리 골랐어요.':'지금 컨디션을 골라 주세요.'}</p>}<FatigueScale value={level} onChange={value=>{setLevel(value);setConditionChanged(true)}}/>
@@ -311,7 +322,7 @@ export default function App(){
  {screen==='details'&&route&&<RouteDetails route={route} trip={trip} demo={demo} navigate={navigate} copyLink={copyLink} openDwell={()=>openOverlay('dwell')}/>}
  {screen==='my'&&<section className="page list-page"><ListRow title="내 장소" subtitle="저장한 장소 관리" onClick={()=>go('saved')}/><ListRow title="캘린더 설정" subtitle="Google 캘린더 연결" onClick={()=>go('settings')}/></section>}
  {screen==='settings'&&<section className="page list-page"><ListRow title="Google 캘린더" subtitle="일정은 읽기만 해요." tail={<small>연결됨</small>}/><ListRow title="약속 장소가 있는 일정만 보기" onClick={()=>setLocatedOnly(v=>!v)} tail={<span className={`toggle ${locatedOnly?'on':''}`} role="switch" aria-checked={locatedOnly} aria-label="약속 장소가 있는 일정만 보기"/>}/><Actions><Button kind="danger" onClick={disconnect}>연결 해제 및 로그아웃</Button></Actions></section>}
- {screen==='saved'&&<section className={`page saved-page ${saved.length?'':'empty'}`}>{saved.length?saved.map((p,i)=><div className="saved-place-row" key={p.alias||i}><PlaceRow place={p} onClick={()=>{setEvent(null);update('arrival','');choose(p,'destination')}} tail={p.distance}/><button aria-label={`${p.alias||p.name} 삭제`} disabled={busy} onClick={()=>remove(p)}>삭제</button></div>):<><Art name="empty-saved"/><h2>저장한 장소가 없어요.</h2><p>자주 가는 곳을 저장해 두면 빠르게 찾을 수 있어요.</p></>}<Actions><Button kind="sky" onClick={()=>openSearch('save')}>장소 추가</Button></Actions></section>}
+ {screen==='saved'&&!naming&&<section className={`page saved-page ${saved.length?'':'empty'}`}>{saved.length?saved.map((p,i)=><div className="saved-place-row" key={p.alias||i}><PlaceRow place={p} onClick={()=>{setEvent(null);update('arrival','');choose(p,'destination')}} tail={p.distance}/><button aria-label={`${p.alias||p.name} 이름 바꾸기`} disabled={busy} onClick={()=>setNaming({place:p,name:p.alias||p.name||'',from:p.alias||p.name||''})}>수정</button><button aria-label={`${p.alias||p.name} 삭제`} disabled={busy} onClick={()=>remove(p)}>삭제</button></div>):<><Art name="empty-saved"/><h2>저장한 장소가 없어요.</h2><p>자주 가는 곳을 저장해 두면 빠르게 찾을 수 있어요.</p></>}<Actions><Button kind="sky" onClick={()=>openSearch('save')}>장소 추가</Button></Actions></section>}
  {error&&!['confirm','route-error','calendar'].includes(screen)&&<div className="toast" role="alert">{error}<button onClick={()=>setError('')} aria-label="오류 안내 닫기">×</button></div>}
  </main>{navScreen&&<nav><button className={screen==='home'?'active':''} onClick={screen==='my'?goBack:undefined}><Icon name="map"/>지도</button><button className={screen==='my'?'active':''} onClick={screen==='home'?()=>go('my'):undefined}><Icon name="user"/>마이</button></nav>}
  {toast&&<div className="toast" role="status">{toast}</div>}
