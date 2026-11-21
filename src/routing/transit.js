@@ -20,7 +20,13 @@ function routeParams(origin, destination) {
 
 async function requestRoutes(origin, destination, fetchFn) {
   const response = await fetchFn(`/api/transit?${routeParams(origin, destination)}`);
-  if (!response.ok) throw new Error('대중교통 경로 서비스에 연결하지 못했어요.');
+  if (!response.ok) {
+    const failure = await response.json().catch(() => null);
+    if (response.status === 429 || /api limit has been exceeded/i.test(failure?.msg ?? failure?.error ?? '')) {
+      throw new Error('대중교통 경로 서비스의 조회 한도가 초과됐어요.');
+    }
+    throw new Error('대중교통 경로 서비스에 연결하지 못했어요.');
+  }
   const result = await response.json();
   if (['NO_RESULTS', 'STARTNODES_NULL', 'ENDNODES_NULL', 'EQUAL_POINTS'].includes(result.status)) return [];
   if (result.status !== 'OK' || !Array.isArray(result.routes)) throw new Error('대중교통 경로를 조회하지 못했어요.');
