@@ -8,7 +8,8 @@ export { api };
 export const clock = value => new Intl.DateTimeFormat('ko-KR', {timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
 export const localInput = date => new Date(+new Date(date) + 9*3600000).toISOString().slice(0,16);
 export const fromInput = value => value ? new Date(value + ':00+09:00') : null;
-export function suggestedLevel(events, now) { const f=summarize(events, now).suggestedFatigue; return f ? f.level*2+1 : null; }
+// 달력 모듈의 피로도는 이미 1~5점이다. 환산하지 않고 그대로 쓴다.
+export function suggestedLevel(events, now) { return summarize(events, now).suggestedFatigue?.level ?? null; }
 export function makeTrip(form, event, level, now=new Date()) {
   if(level!==null && ![1,2,3,4,5].includes(level)) throw new Error('피로도는 1에서 5 사이여야 해요.');
   const departAt=fromInput(form.departure) ?? now, arriveBy=fromInput(form.arrival);
@@ -17,7 +18,6 @@ export function makeTrip(form, event, level, now=new Date()) {
   if(!form.origin?.trim() || !form.destination?.trim()) throw new Error('출발지와 목적지를 입력해 주세요.');
   if(arriveBy && arriveBy<=departAt) throw new Error('도착 목표는 출발 시각 이후로 정해 주세요.');
   if(event && arriveBy && +arriveBy>Date.parse(event.start.dateTime)) throw new Error('약속 시각 이전으로 도착 목표를 정해 주세요.');
-  // Keep the calendar module's existing 0–2 API compatible. UI values remain 1–5.
   const trip=prepareTrip({origin:form.origin,destination:form.destination,departAt}, event ? [event] : [], now);
   return {...trip,arriveBy,preferences:{...trip.preferences,...form.preferences,fatigueLevel:level,normalizedFatigue:level===null?null:(level-1)/4,maxExtraTravelMinutes:form.preferences?.maxExtraTravelMinutes??null}};
 }
