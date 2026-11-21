@@ -21,6 +21,8 @@ export default function App(){
  const [searchReturn,setSearchReturn]=useState('home'),[locatedOnly,setLocatedOnly]=useState(true);
  const [onboarding,setOnboarding]=useState(()=>readOnboarding(designDemo));
  const request=useRef(0);
+ // 앱이 '이 글자가 어느 장소인가요?' 하고 후보를 물었을 때만 그 글자로 기억한다. 도착지를 다른 곳으로 바꾸는 것은 기억하지 않는다.
+ const teaching=useRef(false);
  const retry=useRef(null);
  const [expiresAt,setExpiresAt]=useState(null);
  const [conditionChanged,setConditionChanged]=useState(false);
@@ -148,7 +150,7 @@ export default function App(){
    setBusy(false);
   }
  }
- function openSearch(field='destination'){setSearchReturn(screen==='confirm'?'confirm':'home');setPicker(field);setQuery('');setHits(null);go('search')}
+ function openSearch(field='destination'){teaching.current=false;setSearchReturn(screen==='confirm'?'confirm':'home');setPicker(field);setQuery('');setHits(null);go('search')}
  async function search(e){e?.preventDefault();if(!query.trim())return;const id=++request.current;setBusy(true);setError('');try{const matches=saved.filter(p=>[p.alias,p.name,p.address].some(t=>t?.includes(query)));const found=designDemo?[{name:'광화문',subtitle:'관광명소, 종로구',distance:'1.2km',address:'서울 종로구 사직로 161',latitude:37.5759,longitude:126.9768},{name:'광화문역 5호선',subtitle:'지하철역, 종로구',distance:'1.3km',address:'서울 종로구 세종대로',latitude:37.5716,longitude:126.9768}]:[...matches,...(await searchWithFallback(query,locateCandidates).catch(e=>{if(!matches.length)throw e;return[]})).filter(p=>!matches.some(m=>m.latitude===p.latitude&&m.longitude===p.longitude))];if(request.current===id)setHits(found)}catch(e){if(request.current===id)setError('장소 검색을 완료하지 못했어요. 검색 API 설정이나 주소를 확인해 주세요.')}finally{if(request.current===id)setBusy(false)}}
  useEffect(()=>{if(screen!=='search'||!query.trim())return;const timer=setTimeout(()=>void search(),350);return()=>clearTimeout(timer)},[query,screen]);
  function choose(place,field=picker){
@@ -156,7 +158,8 @@ export default function App(){
   setDemo(designDemo);
   // 일정에 적힌 위치 글자(예: '1공')에 대해 실제 장소를 고른 것이면 그 글자로 기억한다.
   // 다음에 같은 글자가 나오면 검색 없이 이 장소를 쓴다.
-  const alias=screen==='search'?event?.location?.trim():'';
+  const alias=teaching.current&&screen==='search'?event?.location?.trim():'';
+  teaching.current=false;
   if(field==='destination'&&!designDemo&&alias&&form.destination.trim()===alias){
    setToast(`‘${alias}’은(는) 이 장소로 기억할게요.`);
    void persistPlace(alias,place);
@@ -201,7 +204,7 @@ export default function App(){
      const known=saved.filter(p=>[p.alias,p.name,p.address].includes(form[field]));
      const candidates=known.length?known:await searchWithFallback(form[field],locateCandidates);
      if(request.current!==id)return;
-     if(candidates.length!==1||!known.length&&!savedPlace(form[field])&&candidates[0].name&&!form[field].includes(candidates[0].name)){setPicker(field);setSearchReturn('confirm');setQuery(form[field]);setHits(candidates);go('search');return}
+     if(candidates.length!==1||!known.length&&!savedPlace(form[field])&&candidates[0].name&&!form[field].includes(candidates[0].name)){teaching.current=field==='destination';setPicker(field);setSearchReturn('confirm');setQuery(form[field]);setHits(candidates);go('search');return}
      setPoints(p=>({...p,[field]:candidates[0]}));
     }
    }
