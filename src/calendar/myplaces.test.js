@@ -1,8 +1,7 @@
 // 실행: node src/calendar/myplaces.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { pushMyPlaces, syncMyPlaces } from './myplaces.js';
-import { exportSavedPlaces, savePlace } from './location.js';
+import { exportSavedPlaces, pushMyPlaces, savePlace, syncMyPlaces } from './location.js';
 
 const OFFICE = { name: '현대자동차 본사 양재사옥', address: '서울 서초구 헌릉로 12', latitude: 37.46, longitude: 127.04 };
 const HOME = { name: '우리 집', address: '서울 마포구 어딘가', latitude: 37.55, longitude: 126.92 };

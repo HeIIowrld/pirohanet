@@ -33,9 +33,8 @@
 <img id="map" alt="확정한 장소 지도" hidden>
 <script type="module">
   import { fetchGoogleEvents, requestGoogleToken, summarize } from './calendar.js';
-  import { pushMyPlaces, syncMyPlaces } from './myplaces.js';
   import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
-  import { isPersonalLabel, locateAll, locateCandidates, savedPlace, savePlace, staticMapUrl } from './location.js';
+  import { isPersonalLabel, locateAll, locateCandidates, pushMyPlaces, savedPlace, savePlace, staticMapUrl, syncMyPlaces } from './location.js';
 
   const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 확정한 장소의 지도 이미지가 나온다
 
