@@ -248,6 +248,7 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .recent-route { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; text-align: left; font-size: 14px; }
 .recent-route span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 다가오는 일정 시트: 손잡이로 펼치고 접기, CTA는 목록 밖에 고정 */
+.screen-home { overflow: clip; }
 .sheet.draggable::after { content: ''; position: absolute; top: 100%; left: 0; right: 0; height: 120px; background: inherit; }
 .sheet-grip { display: block; width: 100%; height: 20px; flex-shrink: 0; touch-action: none; cursor: grab; }
 .sheet-grip .handle { display: block; margin: 8px auto; }
@@ -255,9 +256,14 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .home-event .sheet-body { padding-bottom: 0; }
 .home-event .event-row:last-child { margin-bottom: 0; }
 .home-event .actions { position: relative; padding: 12px 20px 16px; background: white; }
-.app:not(.has-nav) .screen > .home-event.expanded { height: calc(100% - var(--safe-top) - 104px); }
+.app:not(.has-nav) .screen > .home-event.expanded {
+  max-height: min(60%, calc(100% - var(--safe-top) - 104px));
+}
 .home-event.expanded .actions { padding-bottom: var(--cta-bottom); box-shadow: 0 -1px 0 var(--border-hairline); }
 .home-event .sheet-body { flex: 1 1 auto; scrollbar-width: none; }
+.home-event.expanded .sheet-body { display: flex; flex-direction: column; padding-inline: 0; overflow: hidden; }
+.home-event.expanded .event-heading { flex-shrink: 0; padding-inline: 20px; }
+.home-event.expanded .event-list { min-height: 0; padding-inline: 20px; overflow-y: auto; overscroll-behavior: contain; }
 .event-fold {
   display: flex;
   align-items: center;

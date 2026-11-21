@@ -108,6 +108,7 @@ export default function LiveMap({points,route,candidate,state,position}) {
   const [sdk,setSdk] = useState(null);
   const [ready,setReady] = useState(false);
   const [loadError,setLoadError] = useState('');
+  const [retriedTiles,setRetriedTiles] = useState(false);
   const [attempt,setAttempt] = useState(0);
   const [streetGeometry,setStreetGeometry] = useState(null);
   const railGeometry = useMemo(() => addRailGeometry(route),[route]);
@@ -143,23 +144,33 @@ export default function LiveMap({points,route,candidate,state,position}) {
   useEffect(() => {
     if (!sdk || loadError) return;
     const node = host.current;
-    const timer = setTimeout(() => setLoadError('네이버 지도 타일을 불러오지 못했어요.'),9000);
+    const isLoadedTile = image => image instanceof HTMLImageElement && image.complete &&
+      image.naturalWidth >= 256 && image.naturalHeight >= 256;
+    // A fresh map can request tiles again after the SDK discards stalled requests.
+    const timer = retriedTiles ? undefined : setTimeout(() => setRetriedTiles(true),9000);
+    const markReady = () => {
+      clearTimeout(timer);
+      setReady(true);
+    };
+    const checkTiles = () => {
+      // The SDK can emit tilesloaded even when every tile request failed.
+      if (Array.from(node.querySelectorAll('img')).some(isLoadedTile)) markReady();
+    };
+    const onImageLoad = event => {
+      if (isLoadedTile(event.target)) markReady();
+    };
+    node.addEventListener('load',onImageLoad,true);
     try {
       const canvas = new sdk.Map(node, {
         center:new sdk.LatLng(center.latitude,center.longitude),
         zoom:13, scrollWheel:false, zoomControl:false,
       });
       map.current = canvas;
-      const listener = sdk.Event.addListener(canvas,'tilesloaded',() => {
-        // The SDK can emit tilesloaded even when every tile request failed.
-        const hasTile = Array.from(node.querySelectorAll('img')).some(image =>
-          image.complete && image.naturalWidth >= 256 && image.naturalHeight >= 256);
-        if (!hasTile) return;
-        clearTimeout(timer);
-        setReady(true);
-      });
+      const listener = sdk.Event.addListener(canvas,'tilesloaded',checkTiles);
+      checkTiles();
       return () => {
         clearTimeout(timer);
+        node.removeEventListener('load',onImageLoad,true);
         map.current = null;
         if (hasNaverCanvas(sdk,node)) {
           sdk.Event.removeListener(listener);
@@ -168,9 +179,10 @@ export default function LiveMap({points,route,candidate,state,position}) {
       };
     } catch {
       clearTimeout(timer);
+      node.removeEventListener('load',onImageLoad,true);
       setLoadError('네이버 지도를 초기화하지 못했어요.');
     }
-  }, [sdk,loadError]);
+  }, [sdk,loadError,retriedTiles]);
 
   useEffect(() => {
     if (!ready || loadError) return;
@@ -241,9 +253,11 @@ export default function LiveMap({points,route,candidate,state,position}) {
     setSdk(null);
     setReady(false);
     setLoadError('');
+    setRetriedTiles(false);
     setAttempt(number => number+1);
   }
 
+  const mapMessage = loadError || (retriedTiles && !ready ? '네이버 지도 타일을 불러오지 못했어요.' : '');
   return <div className="map-placeholder live-map" aria-label="이동 지도">
     <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!loadError?'naver':undefined} hidden={Boolean(loadError)} inert={!ready||Boolean(loadError)}/>
     {(!ready || loadError) && <RouteSketch data={data}/>}
@@ -254,8 +268,8 @@ export default function LiveMap({points,route,candidate,state,position}) {
       {data.incheonGeometry && <a href="https://bus.incheon.go.kr/" target="_blank" rel="noreferrer">인천 버스정보</a>}
       {data.gbisGeometry && <a href="https://www.gbis.go.kr/" target="_blank" rel="noreferrer">경기버스정보</a>}
     </div>}
-    {loadError && <div className={`map-message${data.lines.length ? ' with-route-sketch' : ''}`}>
-      <p role="status">{loadError}</p>
+    {mapMessage && <div className={`map-message${data.lines.length ? ' with-route-sketch' : ''}`}>
+      <p role="status">{mapMessage}</p>
       <button type="button" onClick={retry}>지도 다시 불러오기</button>
     </div>}
   </div>;
