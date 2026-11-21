@@ -150,7 +150,7 @@ function BusInformation({step}) {
   return <div className="bus-information" ref={host}/>;
 }
 
-export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell}) {
+export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell, resume}) {
   const late = trip.arriveBy && route.arrivalAt > trip.arriveBy;
   const [doorData,setDoorData] = useState(null);
   const hasSubway = route.steps?.some(step => step.type === 'SUBWAY');
@@ -201,6 +201,7 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell})
         <button className="copy-map-link" onClick={() => copyLink(link)}>링크 복사</button>
       </div>)}
     </div>
-    {!trip.arriveBy && !route.viaStop && <Button kind="text" onClick={openDwell}>들를 곳 찾기</Button>}
+    {resume && <Button onClick={resume}>이동 안내로 돌아가기</Button>}
+    {openDwell && !trip.arriveBy && !route.viaStop && <Button kind="text" onClick={openDwell}>들를 곳 찾기</Button>}
   </section>;
 }

@@ -224,3 +224,20 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .name-page form>p{margin:4px 4px 12px}
 .name-field.invalid{background:var(--state-error-low)}
 .name-page .field-error{margin:0 0 4px}
+
+.screen > .journey-sheet { max-height: min(72%, calc(100% - var(--safe-top) - 64px)); }
+.journey-sheet .sheet-body { padding-bottom: 14px; }
+.journey-sheet .actions { padding-bottom: var(--cta-bottom); }
+.journey-current, .journey-alert { margin-top: 10px; padding: 10px 12px; border-radius: var(--radius-12); }
+.journey-current { background: var(--bg-background); }
+.journey-alert { background: var(--brand-sky-low); color: var(--fg-link); }
+.journey-current p, .journey-alert p { word-break: keep-all; }
+.journey-next, .journey-door { margin-top: 8px; }
+.journey-tools { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; align-items: center; }
+.journey-tools button, .recent-routes .heading-row button { min-height: 44px; color: var(--fg-link); font-size: 13px; }
+.live-map-pin[data-kind="내 위치"] { background: var(--brand-sky-deep); color: white; }
+.recent-routes { flex-shrink: 0; padding: 4px 20px 10px; border-top: 1px solid var(--border-hairline); overflow-y: auto; max-height: 164px; }
+.recent-routes .heading-row { justify-content: space-between; margin: 0; }
+.recent-routes h2 { font-size: 15px; }
+.recent-route { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; text-align: left; font-size: 14px; }
+.recent-route span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

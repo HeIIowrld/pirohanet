@@ -51,8 +51,8 @@ function isCoordinate(point) {
     Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90;
 }
 
-function mapData(points, route, candidate) {
-  const markers = [[points.origin,'출발'], [points.destination,'도착'], [route?.place ?? candidate,'경유']]
+function mapData(points, route, candidate, position) {
+  const markers = [[points.origin,'출발'], [points.destination,'도착'], [route?.place ?? candidate,'경유'], [position,'내 위치']]
     .flatMap(([place,label]) => {
       const point = [place?.longitude,place?.latitude];
       return isCoordinate(point) ? [{point,label}] : [];
@@ -122,13 +122,13 @@ function StreetMap({data}) {
   </>;
 }
 
-export default function LiveMap({points,route,candidate,state}) {
+export default function LiveMap({points,route,candidate,state,position}) {
   const host = useRef(null);
   const map = useRef(null);
   const [sdk,setSdk] = useState(null);
   const [ready,setReady] = useState(false);
   const [unavailable,setUnavailable] = useState(false);
-  const data = useMemo(() => mapData(points,route,candidate), [points,route,candidate]);
+  const data = useMemo(() => mapData(points,route,candidate,position), [points,route,candidate,position]);
 
   useEffect(() => {
     let active = true;
