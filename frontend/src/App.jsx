@@ -10,11 +10,13 @@ import {readSession,saveSession,clearSession} from '../../src/main/login-session
 import {RouteDetails,RouteComparison} from './RouteFlow.jsx';
 import LiveMap from './LiveMap.jsx';
 import Journey from './Journey.jsx';
+import HomeEvents from './HomeEvents.jsx';
 import {addRecentRoute,readRecentRoutes,storeRecentRoutes} from './recent-routes.js';
 import {FATIGUE_SCALE as scale} from './copy.js';
 import {designRoutes} from './design-demo.js';
 import {api,clock,localInput,fromInput,suggestedLevel,finalLevel,makeTrip,queryRoutes,searchWithFallback,validateTimes,timeDraftFromInput,applyTimeDraft} from './services.js';
 import {Icon,Art,Button,Actions,AppBar,Welcome,CalendarIntro,PlaceRow,Field,FatigueScale,Sheet,Badge,Summary,ListRow,MapSurface} from './design.jsx';
+const DAY_MS=24*60*60*1000;
 const kstNow=()=>localInput(new Date());
 const designDemo=import.meta.env.DEV && new URLSearchParams(location.search).get('demo')==='1';
 const emptyForm=()=>({origin:'',destination:'',departure:kstNow(),arrival:''});
@@ -22,6 +24,7 @@ export default function App(){
  const [events,setEvents]=useState([]),[linked,setLinked]=useState(false),[saved,setSaved]=useState([]),[event,setEvent]=useState(null),[form,setForm]=useState(emptyForm),[level,setLevel]=useState(null),[demo,setDemo]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[toast,setToast]=useState(''),[query,setQuery]=useState(''),[hits,setHits]=useState(null),[points,setPoints]=useState({}),[trip,setTrip]=useState(null),[result,setResult]=useState(null),[route,setRoute]=useState(null),[stay,setStay]=useState(designDemo?10:20);
  const [calendarState,setCalendarState]=useState('connect'),[stopIndex,setStopIndex]=useState(0),[timeDraft,setTimeDraft]=useState({ampm:'오후',hour:'6',minute:'00'});
  const [locatedOnly,setLocatedOnly]=useState(true);
+ const [,setCalendarClock]=useState(0);
  const [onboarding,setOnboarding]=useState(()=>readOnboarding(designDemo));
  const request=useRef(0);
  // 앱이 '이 글자가 어느 장소인가요?' 하고 후보를 물었을 때만 그 글자로 기억한다. 도착지를 다른 곳으로 바꾸는 것은 기억하지 않는다.
@@ -159,7 +162,21 @@ export default function App(){
  function openTime(kind){setTimeDraft(timeDraftFromInput(form[kind]||form.departure));openOverlay(kind)}
  function commitTime(){try{update(timePicker,applyTimeDraft(form,timePicker,timeDraft,event));goBack();setError('')}catch(e){setToast(e.message)}}
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
- const upcoming=events.filter(e=>e.status!=='cancelled'&&e.transparency!=='transparent'&&!e.attendees?.some(a=>a.self&&a.responseStatus==='declined')&&e.start?.dateTime&&(designDemo||Date.parse(e.start.dateTime)>Date.now())&&(!locatedOnly||e.location)).sort((a,b)=>Date.parse(a.start.dateTime)-Date.parse(b.start.dateTime));
+ const now=Date.now();
+ const cutoff=now+DAY_MS;
+ const upcoming=events.filter(e=>e.status!=='cancelled'&&e.transparency!=='transparent'&&!e.attendees?.some(a=>a.self&&a.responseStatus==='declined')&&e.start?.dateTime&&(designDemo||Date.parse(e.start.dateTime)>now)&&(!locatedOnly||e.location)).sort((a,b)=>Date.parse(a.start.dateTime)-Date.parse(b.start.dateTime));
+ const laterIndex=upcoming.findIndex(e=>Date.parse(e.start.dateTime)>=cutoff);
+ const nearEvents=laterIndex<0?upcoming:upcoming.slice(0,laterIndex);
+ const laterEvents=laterIndex<0?[]:upcoming.slice(laterIndex);
+ const nextStart=designDemo?Infinity:Date.parse(upcoming[0]?.start.dateTime)||Infinity;
+ const nextUnfold=laterEvents.length?Date.parse(laterEvents[0].start.dateTime)-DAY_MS+1:Infinity;
+ const nextUpdate=Math.min(nextStart,nextUnfold);
+ useEffect(()=>{
+  if(screen!=='home'||!Number.isFinite(nextUpdate))return;
+  const delay=Math.min(DAY_MS,Math.max(0,nextUpdate-Date.now()));
+  const timer=setTimeout(()=>setCalendarClock(Date.now()),delay);
+  return()=>clearTimeout(timer);
+ },[screen,nextUpdate,now]);
  async function calendar(){
   if(designDemo){
    const now=fromInput(kstNow().slice(0,10)+'T18:00');
@@ -353,7 +370,7 @@ export default function App(){
  {screen==='welcome'&&<Welcome login={calendar} busy={busy}/>}
  {screen==='onboarding'&&linked&&<Onboarding initial={onboarding.preferences} step={onboardingStep} onStep={onboardingStep=>navigation.move({screen:'onboarding',onboardingStep})} onBack={navigation.previous?goBack:undefined} onComplete={finishOnboarding}/>}
  {screen==='calendar'&&<CalendarIntro state={calendarState} busy={busy} connect={calendar} error={error}/>}
- {screen==='home'&&<><div className="map-controls"><button className="search-bar" onClick={()=>{setEvent(null);setLevel(null);setConditionChanged(false);update('arrival','');openSearch()}}><Icon name="search"/>목적지를 검색하세요</button><button className="pill" onClick={()=>go('saved')}><Icon name="bookmark"/>내 장소</button></div><button className={`locate ${!linked?'unlinked':upcoming.length?'with-event':'no-events'}`} aria-label="현재 위치로 설정" onClick={currentLocation}><Icon name="locate"/></button><Sheet className={!linked?'home-unlinked':upcoming.length?`home-event ${expanded?'expanded':''}`:'home-empty'} {...(linked&&upcoming.length?(expanded?{onCollapse:goBack}:{onExpand:expandEvents}):{})}>{!linked?<><div className="sheet-body"><h2>다음 약속을 불러올까요?</h2><p>캘린더를 연결하면 일정으로 바로 길을 찾아요.</p><Button kind="sky" onClick={()=>go('calendar')}>캘린더 연결하기</Button></div></>:upcoming.length?<><div className="sheet-body"><div className="event-heading"><p className="subheading">다가오는 일정</p>{expanded&&<button type="button" onClick={goBack}>일정 접기</button>}</div>{(expanded?upcoming:upcoming.filter(item=>item.location).slice(0,1)).map((e,i)=><button className={`event-row ${event===e?'selected':''} ${e.start.dateTime.slice(0,10)===kstNow().slice(0,10)?'':'later'}`} key={e.id||i} disabled={!e.location} onClick={()=>{setEvent(e);if(expanded)selectEvent(e);else expandEvents()}}><span><small>{e.start.dateTime.slice(0,10)===kstNow().slice(0,10)?'오늘':e.start.dateTime.slice(5,10).replace('-','/')}</small><strong>{clock(e.start.dateTime)}</strong></span><span><strong>{e.summary||'다음 약속'}</strong><small>{e.location||'장소가 없어요'}</small></span></button>)}</div><Actions><Button disabled={!upcoming.some(item=>item.location)} onClick={()=>expanded?selectEvent(event?.location?event:upcoming.find(item=>item.location)):expandEvents()}>길 찾기</Button></Actions></>:<div className="sheet-body"><Art name="no-events"/><h2>다가오는 일정이 없어요.</h2><p>목적지를 검색해 길을 찾아보세요.</p><Button onClick={()=>openSearch()}>목적지 검색</Button></div>}{linked&&!expanded&&recentRoutes.length>0&&<section className="recent-routes" aria-label="최근 경로">
+ {screen==='home'&&<><div className="map-controls"><button className="search-bar" onClick={()=>{setEvent(null);setLevel(null);setConditionChanged(false);update('arrival','');openSearch()}}><Icon name="search"/>목적지를 검색하세요</button><button className="pill" onClick={()=>go('saved')}><Icon name="bookmark"/>내 장소</button></div><button className={`locate ${!linked?'unlinked':upcoming.length?'with-event':'no-events'}`} aria-label="현재 위치로 설정" onClick={currentLocation}><Icon name="locate"/></button><Sheet className={!linked?'home-unlinked':upcoming.length?`home-event ${expanded?'expanded':''}`:'home-empty'} {...(linked&&upcoming.length?(expanded?{onCollapse:goBack}:{onExpand:expandEvents}):{})}>{!linked?<><div className="sheet-body"><h2>다음 약속을 불러올까요?</h2><p>캘린더를 연결하면 일정으로 바로 길을 찾아요.</p><Button kind="sky" onClick={()=>go('calendar')}>캘린더 연결하기</Button></div></>:upcoming.length?<HomeEvents expanded={expanded} nearEvents={nearEvents} laterEvents={laterEvents} event={event} now={now} onExpand={expandEvents} onCollapse={goBack} onSelect={selectEvent} onPreview={item=>{setEvent(item);expandEvents()}}/>:<div className="sheet-body"><Art name="no-events"/><h2>다가오는 일정이 없어요.</h2><p>목적지를 검색해 길을 찾아보세요.</p><Button onClick={()=>openSearch()}>목적지 검색</Button></div>}{linked&&!expanded&&recentRoutes.length>0&&<section className="recent-routes" aria-label="최근 경로">
   <div className="heading-row"><h2>최근 경로</h2><button onClick={()=>setRecentRoutes([])}>지우기</button></div>
   {recentRoutes.map(item=><button className="recent-route" key={item.id} onClick={()=>openRecent(item)}>
     <span>{item.origin.name||item.origin.address} → {item.destination.name||item.destination.address}</span><Icon name="chevronRight"/>

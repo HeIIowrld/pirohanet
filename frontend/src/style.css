@@ -252,6 +252,17 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .app:not(.has-nav) .screen > .home-event.expanded { height: calc(100% - var(--safe-top) - 104px); }
 .home-event.expanded .actions { padding-bottom: var(--cta-bottom); box-shadow: 0 -1px 0 var(--border-hairline, #0000000d); }
 .home-event .sheet-body { flex: 1 1 auto; scrollbar-width: none; }
-/* 내일 이후 일정: 박스 없이 흐리게 */
-.event-row.later:not(.selected) { background: transparent; }
-.event-row.later:not(.selected) strong, .event-row.later:not(.selected) small { color: var(--fg-disabled); }
+.event-fold {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-hairline);
+  color: var(--fg-link);
+  font-size: 14px;
+  text-align: left;
+}
+.event-fold .icon { width: 16px; height: 16px; transform: rotate(90deg); }
+.event-fold[aria-expanded="true"] .icon { transform: rotate(-90deg); }
