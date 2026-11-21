@@ -1,14 +1,9 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {addRailGeometry,addMapGeometry,mapStepPoints} from './route-geometry.js';
+import {routeColor} from './route-colors.js';
 
 const center = {latitude:37.5665, longitude:126.978};
 const authFailure = 'modo:naver-map-auth-failure';
-const modeColors = {BUS:'--state-success', SUBWAY:'--brand-sky-deep', WALKING:'--walk'};
-const lineColors = {'2호선':'--line-2','5호선':'--line-5'};
-
-function strokeToken(step) {
-  return lineColors[step.vehicles?.[0]?.name] ?? modeColors[step.type] ?? '--walk';
-}
 let sdkPromise;
 
 function loadNaverMaps() {
@@ -71,7 +66,7 @@ function mapData(points, route, candidate, position) {
     });
   const lines = (route?.steps ?? []).flatMap(step => {
     const points = mapStepPoints(step).filter(isCoordinate);
-    return points.length > 1 ? [{points,color:strokeToken(step),approximate:step.approximate}] : [];
+    return points.length > 1 ? [{points,color:routeColor(step),walking:step.type === 'WALKING',approximate:step.approximate}] : [];
   });
   return {markers,lines,osmGeometry:route?.steps?.some(step => step.osmGeometry),gbisGeometry:route?.steps?.some(step => step.gbisGeometry)};
 }
@@ -87,7 +82,8 @@ function RouteSketch({data}) {
   const dy = Math.max(0.002, maxY-Math.min(...ys));
   const plot = ([x,y]) => [48+294*(x-minX)/dx, 122+190*(maxY-y)/dy];
   return <svg className="route-sketch" viewBox="0 0 390 360" aria-label="대중교통 경로 개요" role="img">
-    {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={`var(${line.color})`} strokeWidth="4"
+    {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={line.color} strokeWidth="4"
+      strokeDasharray={line.walking ? '3 6' : undefined} strokeLinecap="round"
       strokeOpacity={line.approximate ? 0.65 : 0.95} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
     {data.markers.map(({point,label}) => {
       const [x,y]=plot(point);
@@ -217,11 +213,10 @@ export default function LiveMap({points,route,candidate,state,position}) {
     if (!hasNaverCanvas(sdk,node)) return;
     const canvas = map.current;
     const position = ([longitude,latitude]) => new sdk.LatLng(latitude,longitude);
-    const palette = getComputedStyle(node);
     const overlays = data.lines.map(line => new sdk.Polyline({
       map:canvas, path:line.points.map(position), strokeWeight:5,
-      strokeColor:palette.getPropertyValue(line.color).trim(), strokeOpacity:line.approximate ? 0.65 : 0.95,
-      strokeStyle:'solid', strokeLineCap:'round', strokeLineJoin:'round',
+      strokeColor:line.color, strokeOpacity:line.approximate ? 0.65 : 0.95,
+      strokeStyle:line.walking ? 'shortdot' : 'solid', strokeLineCap:'round', strokeLineJoin:'round',
     }));
     for (const {point,label} of data.markers) {
       const pin = document.createElement('span');

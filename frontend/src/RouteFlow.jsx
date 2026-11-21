@@ -4,6 +4,7 @@ import {isDirect} from '../../src/routing/compare.js';
 import {stationName} from '../../src/routing/crowding.js';
 import {clock, routeCategory, hasLateNightBusLeg} from './services.js';
 import {loadRailDoorData, railDoorHints} from './rail-doors.js';
+import {routeColor} from './route-colors.js';
 import {Actions, Art, Badge, Button, Sheet, Summary} from './design.jsx';
 
 const minutes = value => Math.ceil(value ?? 0);
@@ -183,9 +184,7 @@ export function RouteDetails({route, trip, demo, start, openDwell, resume}) {
       {route.crowdingAsOf ? ` (${route.crowdingAsOf} 기준)` : ''}</p>}
     <div className="steps">
       {route.steps?.map((step, index) => <div className={`step step-${step.type || 'place'}`} key={index}>
-        <span className="step-rail"><i style={{background:
-          {'2호선':'var(--line-2)','5호선':'var(--line-5)'}[step.vehicles?.[0]?.name] ??
-          ({BUS:'var(--state-success)',SUBWAY:'var(--brand-sky-deep)',WALKING:'var(--walk)'})[step.type]}}/></span>
+        <span className="step-rail" style={{'--segment-color':routeColor(step)}}><i/></span>
         <div><strong>{step.guidance || step.title}</strong>
           <small>{step.description || (Number.isFinite(step.time) ? `약 ${minutes(step.time / 60)}분` : '')}</small>
           {!demo && <RideEvidence step={step}/>}
