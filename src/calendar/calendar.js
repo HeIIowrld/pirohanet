@@ -134,6 +134,7 @@ export function requestGoogleAuthorization(clientId = GOOGLE_CLIENT_ID) {
       .initTokenClient({
         client_id: clientId,
         scope: GOOGLE_SCOPES,
+        prompt: '', // Let Google request sign-in or consent when needed.
         error_callback: (err) => reject(new Error(err.type ?? 'Google 로그인 실패')),
         callback: (token) => (token.error ? reject(new Error(token.error)) : resolve(token)),
       })

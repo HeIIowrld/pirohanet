@@ -22,6 +22,7 @@ import {Icon,Art,Button,Actions,AppBar,Welcome,CalendarIntro,PlaceRow,Field,Fati
 const DAY_MS=24*60*60*1000;
 const kstNow=()=>localInput(new Date());
 const designDemo=import.meta.env.DEV && new URLSearchParams(location.search).get('demo')==='1';
+const initialView=()=>({screen:!designDemo&&readSession()?'restoring':'welcome'});
 const emptyForm=()=>({origin:'',destination:'',departure:kstNow(),arrival:''});
 export default function App(){
  const [events,setEvents]=useState([]),[linked,setLinked]=useState(false),[saved,setSaved]=useState([]),[event,setEvent]=useState(null),[form,setForm]=useState(emptyForm),[level,setLevel]=useState(null),[demo,setDemo]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[toast,setToast]=useState(''),[query,setQuery]=useState(''),[hits,setHits]=useState(null),[points,setPoints]=useState({}),[trip,setTrip]=useState(null),[result,setResult]=useState(null),[route,setRoute]=useState(null),[stay,setStay]=useState(designDemo?10:20);
@@ -51,7 +52,7 @@ export default function App(){
   setError('');
   setBusy(false);
   setNaming(null);
- });
+ },initialView);
  const view=navigation.view;
  const {screen,picker='destination',expanded=false,overlay,onboardingStep='intro'}=view;
  const watchingGap=Boolean(trip?.arriveBy&&['stops','waypoint','waypoint-confirmed'].includes(screen));
@@ -78,7 +79,11 @@ export default function App(){
   setBusy(false);
   if(screen!==view.screen||view.overlay||view.expanded)navigation.move({screen}, options);
  }
- const enterHome=()=>go(onboarding.completed?'home':'onboarding',{replace:true});
+ function enterHome() {
+  const currentOnboarding=onboarding.completed?onboarding:readOnboarding(designDemo);
+  setOnboarding(currentOnboarding);
+  go(currentOnboarding.completed?'home':'onboarding',{replace:true});
+ }
  const goBack=()=>navigation.back();
  const headerBack=navigation.previous?goBack:screen==='calendar'?()=>go('welcome',{replace:true}):undefined;
  function searchScreen(picker,query='',hits=null) {
@@ -120,8 +125,6 @@ export default function App(){
   navigation.reset({screen:'welcome'});
  }
  async function connectCalendar(session, id) {
-  setCalendarState('connect');
-  navigation.move({screen:'calendar'},{replace:true});
   setBusy(true);
   setError('');
   try {
@@ -142,11 +145,12 @@ export default function App(){
   } catch(error) {
    if(request.current!==id)return;
    const expired=error.message==='Calendar API 401';
-   if(expired)clearSession();
+   if(expired||error.message==='Calendar API 403')clearSession();
    setLinked(false);
    setCalendarState(expired?'expired':'failed');
    setError(expired?'Google로 다시 로그인해 주세요.':'캘린더 읽기 권한을 확인하고 다시 시도해 주세요.');
    setBusy(false);
+   navigation.move({screen:'calendar'},{replace:true});
   }
  }
  const savedPlaces=()=>Object.entries(exportSavedPlaces()).map(([alias,place])=>({...place,alias}));
@@ -154,6 +158,7 @@ export default function App(){
   if(designDemo)return;
   const session=readSession();
   if(session)void connectCalendar(session,++request.current);
+  else if(screen==='restoring')navigation.move({screen:'welcome'},{replace:true});
   return()=>{request.current++};
  },[]);
  useEffect(()=>{
@@ -208,6 +213,11 @@ export default function App(){
    return;
   }
   if(busy)return;
+  const session=readSession();
+  if(session){
+   await connectCalendar(session,++request.current);
+   return;
+  }
   if(!window.google?.accounts?.oauth2){
    setError('Google 로그인을 불러오는 중이에요. 잠시 후 다시 시도해 주세요.');
    return;
@@ -218,8 +228,7 @@ export default function App(){
   try {
    const authorization=await requestGoogleAuthorization();
    if(request.current!==id)return;
-   saveSession(authorization);
-   await connectCalendar(readSession(),id);
+   await connectCalendar(saveSession(authorization),id);
   } catch(error) {
    if(request.current!==id)return;
    setError(error.message==='popup_closed'?'Google 로그인 창을 닫았어요. 다시 시도해 주세요.':'Google 로그인을 완료하지 못했어요. 다시 시도해 주세요.');
@@ -390,8 +399,9 @@ export default function App(){
  return <div className={`app ${mapScreen?'has-map':''} ${navScreen?'has-nav':''}`}><main key={screen} className={`screen screen-${screen}`}>
  {mapScreen&&screen!=='home'&&navigation.previous&&<button className="map-back" aria-label="뒤로 가기" onClick={goBack}><Icon name="back"/></button>}
  {mapScreen&&(designDemo?<MapSurface routes={screen!=='home'} demo={demo} state={screen}/>:<LiveMap state={screen} points={points} route={['loading','route-error','home'].includes(screen)?null:screen==='waypoint'?activeStop:route} candidate={screen==='stops'?activeStop?.place:null} position={screen==='journey'?journeyPosition:null}/>)}
- {!mapScreen&&screen!=='welcome'&&screen!=='onboarding'&&!(screen==='search'&&picker==='destination')&&<AppBar title={title} back={headerBack}/>}
+ {!mapScreen&&!['welcome','restoring','onboarding'].includes(screen)&&!(screen==='search'&&picker==='destination')&&<AppBar title={title} back={headerBack}/>}
  {screen==='welcome'&&<Welcome login={calendar} busy={busy}/>}
+ {screen==='restoring'&&<p className="page" role="status">로그인 상태를 확인하고 있어요…</p>}
  {screen==='onboarding'&&linked&&<Onboarding initial={onboarding.preferences} step={onboardingStep} onStep={onboardingStep=>navigation.move({screen:'onboarding',onboardingStep})} onBack={navigation.previous?goBack:undefined} onComplete={finishOnboarding}/>}
  {screen==='calendar'&&<CalendarIntro state={calendarState} busy={busy} connect={calendar} error={error}/>}
  {screen==='home'&&<>{expanded&&<div className="sheet-backdrop" aria-hidden="true" onClick={goBack}/>}<div className="map-controls"><button className="search-bar" onClick={()=>{setEvent(null);setLevel(null);setConditionChanged(false);update('arrival','');openSearch()}}><Icon name="search"/>목적지를 검색하세요</button><button className="pill" onClick={()=>go('saved')}><Icon name="bookmark"/>내 장소</button></div><button className={`locate ${!linked?'unlinked':upcoming.length?'with-event':'no-events'}`} aria-label="현재 위치로 설정" onClick={currentLocation}><Icon name="locate"/></button><Sheet className={!linked?'home-unlinked':upcoming.length?`home-event ${expanded?'expanded':''}`:'home-empty'} {...(linked&&upcoming.length?(expanded?{onCollapse:goBack}:{onExpand:expandEvents}):{})}>{!linked?<><div className="sheet-body"><h2>다음 약속을 불러올까요?</h2><p>캘린더를 연결하면 일정으로 바로 길을 찾아요.</p><Button kind="sky" onClick={()=>go('calendar')}>캘린더 연결하기</Button></div></>:upcoming.length?<HomeEvents expanded={expanded} nearEvents={nearEvents} laterEvents={laterEvents} event={event} now={now} onExpand={expandEvents} onCollapse={goBack} onSelect={selectEvent} onPreview={item=>{setEvent(item);expandEvents()}}/>:<div className="sheet-body"><Art name="no-events"/><h2>다가오는 일정이 없어요.</h2><p>목적지를 검색해 길을 찾아보세요.</p><Button onClick={()=>openSearch()}>목적지 검색</Button></div>}{linked&&!expanded&&recentRoutes.length>0&&<section className="recent-routes" aria-label="최근 경로">

@@ -13,7 +13,7 @@ npm run dev
 
 [React 화면](http://localhost:5173)을 엽니다. Vite는 5173, API 서버는 5174 포트에서 실행됩니다. 개발용 시연은 [시연 화면](http://localhost:5173/?demo=1)에서 확인할 수 있습니다. 일반 주소에서 지도 홈을 열려면 Google 로그인과 캘린더 연결이 필요합니다.
 
-`frontend/`에서 일정 선택, 장소 검색과 저장, 5단계 컨디션 입력, 대중교통 경로 비교, 경유지 선택, 지도 앱 길안내를 제공합니다. 지도에는 네이버 지도 또는 OpenStreetMap 배경 위에 경로가 표시됩니다.
+`frontend/`에서 일정 선택, 장소 검색과 저장, 5단계 컨디션 입력, 대중교통 경로 비교, 경유지 선택, 지도 앱 길안내를 제공합니다. 경로는 네이버 지도에 표시됩니다.
 
 `npm test`로 테스트를 실행하고, `npm run build`로 `dist/`에 배포용 정적 파일을 생성합니다. `npm run preview`는 정적 빌드 확인용입니다. API가 필요한 로컬 확인에는 `npm run dev`를 사용하세요.
 
@@ -35,6 +35,7 @@ npm start
 | 장소 검색, 현재 위치 주소 확인, 도보 경로 | `kakao-rest-api` |
 | 서울 대중교통 환승 경로 | `SEOUL_TRANSIT_PATH_INFO` 또는 같은 서비스 권한이 있는 `DATA_GO_KR_SERVICE_KEY` · `SEOUL_BUSSTATION_INFO` |
 | 네이버 주소 검색 | `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY` |
+| 네이버 지도 배경 (로컬) | `NAVER_MAP_CLIENT_ID` (생략하면 `X-NCP-APIGW-API-KEY-ID` 사용) |
 | 서울 버스 도착·혼잡 | `SEOUL_BUSSTATION_INFO` 또는 같은 서비스 권한이 있는 `DATA_GO_KR_SERVICE_KEY` |
 
 Google OAuth 클라이언트를 직접 설정하려면 Calendar API와 Drive API를 켜고, 웹 클라이언트의 승인된 JavaScript 원본에 `http://localhost:5173`과 배포 주소를 등록합니다. 동의 화면이 테스트 모드면 로그인할 계정을 테스트 사용자로 추가하세요. 클라이언트 ID는 [`src/calendar/calendar.js`](src/calendar/calendar.js)의 `GOOGLE_CLIENT_ID`에 넣습니다.
@@ -55,7 +56,7 @@ GitHub 워크플로는 `main`의 커밋에서 테스트와 Vite 빌드를 실행
 
 운영 Node 서비스를 같은 버전으로 갱신하고 5173 포트에서 재시작합니다. 버스 혼잡 관측 기록을 이어 쓰려면 `.data`를 유지하세요.
 
-네이버 지도 배경은 `/var/www/pirohanet/map-config.json`의 `naverClientId`를 사용한다. 이 값은 브라우저용 Client ID이며 Client Secret은 서버에만 둔다. 네이버 클라우드 Maps 앱의 Web Dynamic Map과 시연 주소를 등록한다. 네이버 타일을 사용할 수 없으면 OpenStreetMap 배경에 같은 경로 좌표를 표시한다. 지도 배경을 모두 사용할 수 없으면 경로 개요를 표시한다.
+배포본은 `/var/www/pirohanet/map-config.json`의 `naverClientId`를 사용합니다. 네이버 클라우드 Maps 앱에서 Web Dynamic Map을 활성화하고, Web 서비스 URL에 운영 호스트와 로컬 개발용 `http://localhost`를 각각 등록합니다. 포트와 경로는 빼고 등록합니다. Client ID는 브라우저에서 사용하며 Client Secret은 서버에만 둡니다. 지도 로딩에 실패하면 화면의 **지도 다시 불러오기**로 네이버 지도에 다시 연결할 수 있습니다.
 
 ## 서울 버스 도착·혼잡
 

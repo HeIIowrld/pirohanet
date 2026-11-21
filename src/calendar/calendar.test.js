@@ -1,7 +1,7 @@
 // 실행: node src/calendar/calendar.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { summarize } from './calendar.js';
+import { requestGoogleAuthorization, summarize } from './calendar.js';
 import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
 
 const event = (start, end, extra = {}) => ({ summary: 'x', start: { dateTime: start }, end: { dateTime: end }, ...extra });
@@ -105,4 +105,20 @@ test('취소·거절·한가함 일정은 빼고, 겹친 일정은 한 번만 �
 
 test('userLevel이 1~5의 정수나 null이 아니면 거부한다', () => {
   for (const bad of [0, 6, -1, '3', 2.5]) assert.throws(() => summarize(SAMPLE_EVENTS, SAMPLE_NOW, bad), RangeError);
+});
+
+test('Google authorization leaves account selection and consent to Google', async (context) => {
+  const originalGoogle = globalThis.google;
+  context.after(() => { globalThis.google = originalGoogle; });
+  const token = { access_token: 'test-token', expires_in: 3600 };
+  let config;
+  globalThis.google = { accounts: { oauth2: {
+    initTokenClient(options) {
+      config = options;
+      return { requestAccessToken: () => options.callback(token) };
+    },
+  } } };
+
+  assert.equal(await requestGoogleAuthorization(), token);
+  assert.equal(config.prompt, '');
 });

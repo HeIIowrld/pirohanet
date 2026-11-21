@@ -10,22 +10,34 @@ function strokeToken(step) {
   return lineColors[step.vehicles?.[0]?.name] ?? modeColors[step.type] ?? '--walk';
 }
 let sdkPromise;
+let sdkScript;
+
+function notifyAuthFailure() {
+  sdkScript?.remove();
+  sdkScript = undefined;
+  window.dispatchEvent(new Event(authFailure));
+}
 
 function loadNaverMaps() {
-  sdkPromise ??= (async () => {
-    const response = await fetch('/assets/map-config.json', {signal:AbortSignal.timeout(5000)});
-    if (!response.ok) throw new Error('지도 설정을 가져오지 못했어요.');
-    const {naverClientId} = await response.json();
-    if (!naverClientId) throw new Error('네이버 지도 클라이언트 ID가 없어요.');
+  if (sdkPromise) return sdkPromise;
+  if (window.naver?.maps?.Map) return Promise.resolve(window.naver.maps);
+  sdkPromise = (async () => {
+    const response = await fetch('/assets/map-config.json', {signal:AbortSignal.timeout(5000)})
+      .catch(() => null);
+    if (!response?.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error('지도 설정을 가져오지 못했어요.');
+    }
+    const config = await response.json().catch(() => null);
+    const naverClientId = config?.naverClientId;
+    if (typeof naverClientId !== 'string' || !naverClientId.trim()) {
+      throw new Error('네이버 지도 클라이언트 ID를 확인해 주세요.');
+    }
     const url = new URL('https://oapi.map.naver.com/openapi/v3/maps.js');
-    url.searchParams.set('ncpKeyId',naverClientId);
-    const existing = window.navermap_authFailure;
-    window.navermap_authFailure = (...args) => {
-      window.dispatchEvent(new Event(authFailure));
-      existing?.(...args);
-    };
+    url.searchParams.set('ncpKeyId',naverClientId.trim());
+    window.navermap_authFailure = notifyAuthFailure;
     return new Promise((resolve,reject) => {
       const script = document.createElement('script');
+      sdkScript = script;
       script.src = url;
       function finish(error) {
         clearTimeout(timer);
@@ -33,6 +45,7 @@ function loadNaverMaps() {
         script.onerror = null;
         if (error) {
           script.remove();
+          sdkScript = undefined;
           reject(error);
         } else {
           resolve(window.naver.maps);
@@ -43,7 +56,7 @@ function loadNaverMaps() {
       script.onerror = () => finish(new Error('네이버 지도 SDK를 불러오지 못했어요.'));
       document.head.append(script);
     });
-  })();
+  })().finally(() => { sdkPromise = undefined; });
   return sdkPromise;
 }
 
@@ -88,39 +101,9 @@ function RouteSketch({data}) {
   </svg>;
 }
 
-function StreetMap({data,position}) {
-  const host = useRef(null);
-  const map = useRef(null);
-  const [library,setLibrary] = useState(null);
-  const [failed,setFailed] = useState(false);
-  useEffect(() => {
-    let active = true;
-    let loadTimeout;
-    void import('./street-map.js').then((leaflet) => {
-      if (!active) return;
-      map.current = leaflet.createStreetMap(host.current);
-      loadTimeout = setTimeout(() => setFailed(true),8000);
-      map.current.tiles.once('tileload',() => {
-        clearTimeout(loadTimeout);
-        if (active) setFailed(false);
-      });
-      setLibrary(leaflet);
-    }).catch(() => { if(active)setFailed(true) });
-    return () => {
-      active = false;
-      clearTimeout(loadTimeout);
-      map.current?.view.remove();
-    };
-  }, []);
-  useEffect(() => {
-    if (!library) return;
-    return library.drawStreetRoute(map.current.view,data,position);
-  }, [library,data,position]);
-  return <>
-    <div ref={host} className="live-map-canvas" hidden={failed}/>
-    {failed ? <><RouteSketch data={data}/><p className="map-message">지도 배경을 불러오지 못했어요.</p></> :
-      <a className="street-map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
-  </>;
+function hasNaverCanvas(sdk,node) {
+  // On auth failure the SDK empties the map container and then clears its namespace.
+  return window.naver?.maps === sdk && node.hasChildNodes();
 }
 
 export default function LiveMap({points,route,candidate,state,position}) {
@@ -128,7 +111,8 @@ export default function LiveMap({points,route,candidate,state,position}) {
   const map = useRef(null);
   const [sdk,setSdk] = useState(null);
   const [ready,setReady] = useState(false);
-  const [unavailable,setUnavailable] = useState(false);
+  const [loadError,setLoadError] = useState('');
+  const [attempt,setAttempt] = useState(0);
   const [walkGeometry,setWalkGeometry] = useState(null);
   const railGeometry = useMemo(() => addRailGeometry(route),[route]);
   const mapRoute = walkGeometry?.original === railGeometry ? walkGeometry?.route : railGeometry;
@@ -145,20 +129,25 @@ export default function LiveMap({points,route,candidate,state,position}) {
 
   useEffect(() => {
     let active = true;
-    const onFailure = () => setUnavailable(true);
+    const onFailure = () => setLoadError('네이버 지도 인증에 실패했어요.');
     window.addEventListener(authFailure,onFailure);
-    void loadNaverMaps().then(value => {if(active)setSdk(value)})
-      .catch(() => {if(active)setUnavailable(true)});
+    void loadNaverMaps().then(value => {
+      if (!active) return;
+      if (window.naver?.maps === value) setSdk(value);
+      else onFailure();
+    }).catch(error => {
+      if (active) setLoadError(error.message);
+    });
     return () => {
       active = false;
       window.removeEventListener(authFailure,onFailure);
     };
-  }, []);
+  }, [attempt]);
 
   useEffect(() => {
-    if (!sdk || unavailable) return;
+    if (!sdk || loadError) return;
     const node = host.current;
-    const timer = setTimeout(() => setUnavailable(true),9000);
+    const timer = setTimeout(() => setLoadError('네이버 지도 타일을 불러오지 못했어요.'),9000);
     try {
       const canvas = new sdk.Map(node, {
         center:new sdk.LatLng(center.latitude,center.longitude),
@@ -166,29 +155,36 @@ export default function LiveMap({points,route,candidate,state,position}) {
       });
       map.current = canvas;
       const listener = sdk.Event.addListener(canvas,'tilesloaded',() => {
+        // The SDK can emit tilesloaded even when every tile request failed.
+        const hasTile = Array.from(node.querySelectorAll('img')).some(image =>
+          image.complete && image.naturalWidth >= 256 && image.naturalHeight >= 256);
+        if (!hasTile) return;
         clearTimeout(timer);
         setReady(true);
       });
       return () => {
         clearTimeout(timer);
-        sdk.Event.removeListener(listener);
-        canvas.destroy();
         map.current = null;
+        if (hasNaverCanvas(sdk,node)) {
+          sdk.Event.removeListener(listener);
+          canvas.destroy();
+        }
       };
     } catch {
       clearTimeout(timer);
-      setUnavailable(true);
+      setLoadError('네이버 지도를 초기화하지 못했어요.');
     }
-  }, [sdk,unavailable]);
+  }, [sdk,loadError]);
 
   useEffect(() => {
-    if (!sdk || unavailable) return;
+    if (!ready || loadError) return;
     const node = host.current;
     const canvas = map.current;
     const screen = node.closest('.screen');
     if (!canvas || !screen) return;
     const sheet = screen.querySelector('.sheet');
     const fitMap = () => {
+      if (map.current !== canvas || !hasNaverCanvas(sdk,node)) return;
       const height = sheet
         ? sheet.getBoundingClientRect().top - node.getBoundingClientRect().top
         : screen.clientHeight;
@@ -215,13 +211,15 @@ export default function LiveMap({points,route,candidate,state,position}) {
     resize.observe(screen);
     if (sheet) resize.observe(sheet);
     return () => resize.disconnect();
-  }, [sdk,data,state,position,unavailable]);
+  }, [sdk,data,state,position,ready,loadError]);
 
   useEffect(() => {
-    if (!sdk || unavailable || !map.current) return;
+    if (!ready || loadError || !map.current) return;
+    const node = host.current;
+    if (!hasNaverCanvas(sdk,node)) return;
     const canvas = map.current;
     const position = ([longitude,latitude]) => new sdk.LatLng(latitude,longitude);
-    const palette = getComputedStyle(host.current);
+    const palette = getComputedStyle(node);
     const overlays = data.lines.map(line => new sdk.Polyline({
       map:canvas, path:line.points.map(position), strokeWeight:5,
       strokeColor:palette.getPropertyValue(line.color).trim(), strokeOpacity:.9,
@@ -238,13 +236,25 @@ export default function LiveMap({points,route,candidate,state,position}) {
       }));
     }
     return () => {
-      if (map.current === canvas) overlays.forEach(overlay => overlay.setMap(null));
+      if (map.current === canvas && hasNaverCanvas(sdk,node)) {
+        overlays.forEach(overlay => overlay.setMap(null));
+      }
     };
-  }, [sdk,data,unavailable]);
+  }, [sdk,data,ready,loadError]);
+
+  function retry() {
+    setSdk(null);
+    setReady(false);
+    setLoadError('');
+    setAttempt(number => number+1);
+  }
 
   return <div className="map-placeholder live-map" aria-label="이동 지도">
-    <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!unavailable?'naver':undefined} hidden={unavailable}/>
-    {!sdk && !unavailable && <RouteSketch data={data}/>}
-    {unavailable && <StreetMap data={data} position={position}/>}
+    <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!loadError?'naver':undefined} hidden={Boolean(loadError)} inert={!ready||Boolean(loadError)}/>
+    {!ready && !loadError && <RouteSketch data={data}/>}
+    {loadError && <div className="map-message">
+      <p role="status">{loadError}</p>
+      <button type="button" onClick={retry}>지도 다시 불러오기</button>
+    </div>}
   </div>;
 }

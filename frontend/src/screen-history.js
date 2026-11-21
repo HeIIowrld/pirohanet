@@ -1,10 +1,8 @@
 import {useEffect, useRef, useState} from 'react';
 
-const initialView = {screen: 'welcome'};
-
-export function useScreenHistory(onBackOrForward) {
+export function useScreenHistory(onBackOrForward, initialView) {
   const [view, setView] = useState(initialView);
-  const entries = useRef([initialView]);
+  const entries = useRef([view]);
   const position = useRef(0);
   const resetView = useRef(null);
   const listener = useRef(onBackOrForward);

@@ -84,7 +84,9 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .live-map-canvas{position:absolute;inset:0}
 .live-map-pin{display:block;padding:6px 9px;border-radius:var(--radius-8);color:var(--fg-inverse);background:var(--brand-sky-deep);font-family:var(--font-sans);font-size:12px;font-weight:700;white-space:nowrap}
 .route-sketch{position:absolute;inset:0;width:100%;height:auto}
-.map-message{position:absolute;top:112px;left:20px;padding:3px 8px;border-radius:6px;background:#fff;color:var(--fg-secondary);font-size:12px}
+.map-message{position:absolute;top:112px;left:20px;right:20px;max-width:280px;padding:8px 12px 0;border-radius:8px;background:var(--bg-canvas)}
+.map-message p{min-height:21px;font-size:13px}
+.map-message button{width:100%;min-height:44px;color:var(--fg-link);font-size:13px;font-weight:600;text-align:left}
 .saved-place-row{display:flex;align-items:center;gap:8px}
 .saved-place-row .place-row{flex:1;min-width:0}
 .saved-place-row>button{padding:8px;color:var(--fg-secondary)}
@@ -97,12 +99,11 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 
 .departure-notice{position:absolute;z-index:12;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom, 0px) + 68px);display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px;border-radius:16px;background:var(--brand-lime-low);box-shadow:var(--shadow-float)}.departure-notice span{flex-basis:100%}.departure-notice button{padding:4px 8px}
 
-.live-map-canvas{z-index:0}.street-map-credit{position:absolute;z-index:1;top:105px;right:10px;padding:2px 5px;border-radius:4px;background:#fffe;color:var(--fg-link);font-size:10px}
+.live-map-canvas{z-index:0}
 
 .live-map-pin[data-kind="출발"]{background:var(--brand-sky);color:var(--fg-default)}
 .live-map-pin[data-kind="경유"]{background:var(--brand-lime);color:var(--fg-default)}
 .route-sketch{font-family:var(--font-sans)}
-.live-map-canvas .leaflet-tile-pane{filter:saturate(.46)}
 .route-navigation{padding-top:12px;border-top:1px solid var(--border-hairline)}
 .details-page{padding-bottom:18px}
 

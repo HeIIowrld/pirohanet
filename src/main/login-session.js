@@ -29,7 +29,9 @@ export function saveSession({ access_token: token, expires_in }) {
   if (typeof token !== 'string' || !token || !Number.isFinite(lifetime) || lifetime <= 0) {
     throw new Error('Google 로그인 세션을 확인하지 못했어요.');
   }
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token, expiresAt: Date.now() + lifetime * 1000 }));
+  const session = { token, expiresAt: Date.now() + lifetime * 1000 };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return session;
 }
 
 export function requireSession() {
