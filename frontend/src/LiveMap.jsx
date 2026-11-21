@@ -1,4 +1,5 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {addRailGeometry,addWalkingGeometry} from './route-geometry.js';
 
 const center = {latitude:37.5665, longitude:126.978};
 const authFailure = 'modo:naver-map-auth-failure';
@@ -59,7 +60,7 @@ function mapData(points, route, candidate, position) {
     });
   const lines = (route?.steps ?? []).flatMap(step => {
     const points = (step.points ?? []).filter(isCoordinate);
-    return points.length > 1 ? [{points,color:strokeToken(step),dashed:step.approximate || step.type === 'WALKING'}] : [];
+    return points.length > 1 ? [{points,color:strokeToken(step),dashed:step.approximate ?? step.type === 'WALKING'}] : [];
   });
   return {markers,lines};
 }
@@ -87,7 +88,7 @@ function RouteSketch({data}) {
   </svg>;
 }
 
-function StreetMap({data}) {
+function StreetMap({data,position}) {
   const host = useRef(null);
   const map = useRef(null);
   const [library,setLibrary] = useState(null);
@@ -113,8 +114,8 @@ function StreetMap({data}) {
   }, []);
   useEffect(() => {
     if (!library) return;
-    return library.drawStreetRoute(map.current.view,data);
-  }, [library,data]);
+    return library.drawStreetRoute(map.current.view,data,position);
+  }, [library,data,position]);
   return <>
     <div ref={host} className="live-map-canvas" hidden={failed}/>
     {failed ? <><RouteSketch data={data}/><p className="map-message">지도 배경을 불러오지 못했어요.</p></> :
@@ -128,7 +129,19 @@ export default function LiveMap({points,route,candidate,state,position}) {
   const [sdk,setSdk] = useState(null);
   const [ready,setReady] = useState(false);
   const [unavailable,setUnavailable] = useState(false);
-  const data = useMemo(() => mapData(points,route,candidate,position), [points,route,candidate,position]);
+  const [walkGeometry,setWalkGeometry] = useState(null);
+  const railGeometry = useMemo(() => addRailGeometry(route),[route]);
+  const mapRoute = walkGeometry?.original === railGeometry ? walkGeometry?.route : railGeometry;
+  const data = useMemo(() => mapData(points,mapRoute,candidate,position), [points,mapRoute,candidate,position]);
+
+  useEffect(() => {
+    if (!railGeometry?.steps?.some(step => step.approximate && step.type === 'WALKING')) return;
+    const controller = new AbortController();
+    void addWalkingGeometry(railGeometry,controller.signal).then(result => {
+      if (!controller.signal.aborted) setWalkGeometry({original:railGeometry,route:result});
+    });
+    return () => controller.abort();
+  }, [railGeometry]);
 
   useEffect(() => {
     let active = true;
@@ -183,6 +196,10 @@ export default function LiveMap({points,route,candidate,state,position}) {
         node.style.height = Math.round(height) + 'px';
       }
       canvas.autoResize();
+      if (position) {
+        canvas.setCenter(new sdk.LatLng(position.latitude,position.longitude));
+        return;
+      }
       const coordinates = [
         ...data.markers.map(({point}) => point),
         ...data.lines.flatMap(({points}) => points),
@@ -198,7 +215,7 @@ export default function LiveMap({points,route,candidate,state,position}) {
     resize.observe(screen);
     if (sheet) resize.observe(sheet);
     return () => resize.disconnect();
-  }, [sdk,data,state,unavailable]);
+  }, [sdk,data,state,position,unavailable]);
 
   useEffect(() => {
     if (!sdk || unavailable || !map.current) return;
@@ -228,6 +245,6 @@ export default function LiveMap({points,route,candidate,state,position}) {
   return <div className="map-placeholder live-map" aria-label="이동 지도">
     <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!unavailable?'naver':undefined} hidden={unavailable}/>
     {!sdk && !unavailable && <RouteSketch data={data}/>}
-    {unavailable && <StreetMap data={data}/>}
+    {unavailable && <StreetMap data={data} position={position}/>}
   </div>;
 }

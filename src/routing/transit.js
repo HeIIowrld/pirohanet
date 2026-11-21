@@ -89,7 +89,7 @@ async function requestRoutes(origin, destination, fetchFn) {
     route.steps.some((step) => step.type === 'SUBWAY' || step.type === 'BUS'));
 }
 
-async function requestWalk(origin, destination, fetchFn) {
+export async function requestWalk(origin, destination, fetchFn = fetch) {
   const response = await fetchFn(`/api/walk?${routeParams(origin, destination)}`);
   if (!response.ok) return null;
   const { status, route } = await response.json();
