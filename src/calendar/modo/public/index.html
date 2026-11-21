@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko" data-type="software">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="page-type" content="software">
+  <meta name="site-kind" content="software">
+  <meta name="description" content="Google 캘린더의 다음 약속까지 도보 경로와 여유 시간에 들를 곳을 확인하세요.">
+  <meta name="theme-color" content="#f5f6f9">
+  <meta property="og:title" content="modo | 맞춤 도보 지도">
+  <meta property="og:description" content="Google 캘린더의 다음 약속까지 도보 경로와 여유 시간에 들를 곳을 확인하세요.">
+  <title>modo | 맞춤 도보 지도</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="skip" href="#planner">경로 설정으로 건너뛰기</a>
+    <div class="wrap header-content">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">↗</span> modo</div>
+      <div class="mode-switch" role="group" aria-label="이동 계획 방식">
+        <button type="button" data-mode="calendar" aria-pressed="true">캘린더</button>
+        <button type="button" data-mode="live" aria-pressed="false">직접 입력</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="title" data-enter>
+      <div class="wrap workspace">
+        <div class="planner" id="planner" tabindex="-1">
+          <div class="intro">
+            <h1 id="title">다음 약속까지 걷는 길</h1>
+            <p id="intro-text">Google 캘린더를 연결하면 다음 목적지와 가는 길을 보여드려요.</p>
+          </div>
+          <div id="calendar-panel">
+            <div class="calendar-actions">
+              <button type="button" class="primary" id="connect-calendar">Google 캘린더 연결</button>
+              <button type="button" class="text-button" id="show-sample">광화문 샘플 보기</button>
+              <button type="button" class="text-button" id="disconnect-calendar" hidden>연결 해제</button>
+            </div>
+            <p class="status" id="calendar-status" role="status"></p>
+            <div class="appointment" id="appointment" hidden>
+              <time id="appointment-time"></time>
+              <h2 id="appointment-title"></h2>
+              <p class="appointment-location" id="appointment-location"></p>
+              <p class="origin-note" id="origin-note"></p>
+              <button type="button" class="primary" id="confirm-origin" hidden>이곳에서 출발하기</button>
+            </div>
+          </div>
+          <details id="route-options" hidden>
+            <summary>경로 설정</summary>
+            <form id="route-form">
+            <fieldset class="journey">
+              <legend>이동 계획</legend>
+              <label class="location"><span class="node start" aria-hidden="true"></span><span>출발지</span><input required maxlength="100" name="origin" autocomplete="off"></label>
+              <label class="location"><span class="node end" aria-hidden="true"></span><span>목적지</span><input required maxlength="100" name="destination" autocomplete="off"></label>
+              <label class="time-field"><span>도착 희망 일시 (한국 시간)</span><input required type="datetime-local" name="arrive" step="60"></label>
+              <p class="departure" id="departure"></p>
+            </fieldset>
+            <fieldset>
+              <legend>오늘의 컨디션</legend>
+              <div class="fatigue">
+                <label><input type="radio" name="fatigue" value="relaxed"><span>괜찮아요</span></label>
+                <label><input type="radio" name="fatigue" value="normal"><span>조금 피곤해요</span></label>
+                <label><input type="radio" name="fatigue" value="tired"><span>많이 피곤해요</span></label>
+              </div>
+              <p class="departure" id="fatigue-note"></p>
+              <p class="departure" id="route-fatigue"></p>
+            </fieldset>
+            <div class="allowance">
+              <span><label for="budget">추가 이동 허용 시간</label> <output id="allowance" for="budget">15분</output></span>
+              <input type="range" id="budget" name="budget" min="0" max="30" step="1" value="15">
+              <span class="range-labels" aria-hidden="true"><span>0분</span><span>30분</span></span>
+            </div>
+            <fieldset class="interests">
+              <legend>관심 장소</legend>
+              <div id="places" class="places"></div>
+              <button type="button" id="manage-places" class="text-button">＋ 장소 관리</button>
+            </fieldset>
+            <button type="submit" class="primary" id="submit">경로 비교하기 <span aria-hidden="true">↗</span></button>
+            </form>
+          </details>
+          <div id="location-choices" class="location-choices" hidden></div>
+        </div>
+
+        <div class="results" id="results">
+          <div class="results-heading">
+            <div><h2 id="results-title">가는 길</h2><p id="trip-label">다음 약속 경로를 여기에 표시해요.</p></div>
+            <span id="source" class="source" hidden></span>
+          </div>
+          <div id="status" class="status" role="status"></div>
+          <div class="cards route-summary" id="cards" role="group" aria-label="지도에서 볼 경로 선택"></div>
+          <div class="map-frame" id="map-frame" data-visual>
+            <canvas id="map" role="img" aria-label="출발지, 목적지와 도보 경로를 표시하는 지도"></canvas>
+            <div class="map-legend" aria-label="지도 범례">
+              <span><i></i> 일반 경로</span><span><i></i> 추천 경로</span>
+            </div>
+            <div class="map-controls" role="group" aria-label="지도 보기">
+              <button id="zoom-in" type="button" aria-label="지도 확대">+</button>
+              <button id="zoom-out" type="button" aria-label="지도 축소">−</button>
+              <button id="reset-map" type="button" aria-label="경로 전체 보기">◎</button>
+            </div>
+            <div class="map-credit" id="map-credit">광화문 샘플 지도</div>
+          </div>
+          <section class="stop-options" id="stop-options" aria-labelledby="stop-title" hidden>
+            <h3 id="stop-title">약속 전에 들를 곳</h3>
+            <p class="status" id="stop-status"></p>
+            <div class="cards" id="stops" role="group" aria-label="지도에서 볼 경유지 선택"></div>
+          </section>
+          <div class="reason" id="reason" hidden><span class="reason-icon" aria-hidden="true">✳</span><div><strong id="reason-label"></strong><p id="reason-text"></p></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <dialog id="place-dialog" aria-labelledby="place-title">
+    <div class="dialog-heading"><h2 id="place-title">관심 장소 관리</h2><button type="button" id="close-dialog" aria-label="닫기">×</button></div>
+    <form id="place-form">
+      <label>장소 이름<input required name="name" maxlength="100" placeholder="예. 광화문 교보문고"></label>
+      <label>카테고리<select name="category"><option>카페</option><option>서점</option><option>전시</option><option>기타</option></select></label>
+      <button class="primary" type="submit">장소 저장하기</button>
+    </form>
+    <p id="place-status" role="status"></p>
+    <ul id="saved-list" aria-label="등록한 관심 장소"></ul>
+  </dialog>
+</body>
+</html>
