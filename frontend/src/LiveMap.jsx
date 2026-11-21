@@ -1,7 +1,12 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 
 const center = {latitude:37.5665, longitude:126.978};
-const colors = {BUS:'#158352', SUBWAY:'#187299', WALKING:'#586775'};
+const modeColors = {BUS:'--state-success', SUBWAY:'--brand-sky-deep', WALKING:'--walk'};
+const lineColors = {'2호선':'--line-2','5호선':'--line-5'};
+
+function strokeToken(step) {
+  return lineColors[step.vehicles?.[0]?.name] ?? modeColors[step.type] ?? '--walk';
+}
 let sdkPromise;
 
 function loadKakaoMaps() {
@@ -41,7 +46,7 @@ function mapData(points, route, candidate) {
     });
   const lines = (route?.steps ?? []).flatMap(step => {
     const points = (step.points ?? []).filter(isCoordinate);
-    return points.length > 1 ? [{points,color:colors[step.type] ?? colors.WALKING,walk:step.type === 'WALKING'}] : [];
+    return points.length > 1 ? [{points,color:strokeToken(step),walk:step.type === 'WALKING'}] : [];
   });
   return {markers,lines};
 }
@@ -57,13 +62,13 @@ function RouteSketch({data}) {
   const dy = Math.max(0.002, maxY-Math.min(...ys));
   const plot = ([x,y]) => [48+294*(x-minX)/dx, 122+190*(maxY-y)/dy];
   return <svg className="route-sketch" viewBox="0 0 390 360" aria-label="대중교통 경로 개요" role="img">
-    {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={line.color} strokeWidth="4"
+    {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={`var(${line.color})`} strokeWidth="4"
       strokeDasharray={line.walk?'4 5':undefined} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
     {data.markers.map(({point,label}) => {
       const [x,y]=plot(point);
       return <g key={label} transform={`translate(${x},${y})`}>
-        <circle r="6" fill="#177295" stroke="white" strokeWidth="2"/>
-        <text x="0" y="-12" textAnchor="middle" fill="#173946">{label}</text>
+        <circle r="6" fill="var(--brand-sky-deep)" stroke="var(--bg-canvas)" strokeWidth="2"/>
+        <text x="0" y="-12" textAnchor="middle" fill="var(--fg-default)">{label}</text>
       </g>;
     })}
   </svg>;
@@ -127,18 +132,20 @@ export default function LiveMap({points,route,candidate}) {
       for (const {point,label} of data.markers) {
         const pin = document.createElement('span');
         pin.className = 'live-map-pin';
+        pin.dataset.kind = label;
         pin.textContent = label;
         const latLng = position(point);
         bounds.extend(latLng);
         overlays.push(new sdk.CustomOverlay({map:canvas,position:latLng,content:pin,yAnchor:1}));
       }
+      const palette = getComputedStyle(host.current);
       for (const line of data.lines) {
         const path = line.points.map(position);
         path.forEach(point => bounds.extend(point));
-        overlays.push(new sdk.Polyline({map:canvas,path,strokeWeight:5,strokeColor:line.color,
+        overlays.push(new sdk.Polyline({map:canvas,path,strokeWeight:5,strokeColor:palette.getPropertyValue(line.color).trim(),
           strokeOpacity:.9,strokeStyle:line.walk?'shortdash':'solid'}));
       }
-      if (data.lines.length || data.markers.length > 1) canvas.setBounds(bounds,110,30,320,30);
+      if (data.lines.length || data.markers.length > 1) canvas.setBounds(bounds,110,30,Math.round(host.current.clientHeight*.62),30);
       else if (data.markers.length === 1) canvas.setCenter(position(data.markers[0].point));
       return () => overlays.forEach(overlay => overlay.setMap(null));
     } catch {

@@ -75,20 +75,22 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell})
       {route.crowdingAsOf ? ` (${route.crowdingAsOf} 기준)` : ''}</p>}
     <div className="steps">
       {route.steps?.map((step, index) => <div className={`step step-${step.type || 'place'}`} key={index}>
-        <span className="step-rail"><i/></span>
+        <span className="step-rail"><i style={{background:
+          {'2호선':'var(--line-2)','5호선':'var(--line-5)'}[step.vehicles?.[0]?.name] ??
+          ({BUS:'var(--state-success)',SUBWAY:'var(--brand-sky-deep)',WALKING:'var(--walk)'})[step.type]}}/></span>
         <div><strong>{step.guidance || step.title}</strong>
           <small>{step.description || (Number.isFinite(step.time) ? `약 ${minutes(step.time / 60)}분` : '')}</small>
           {step.type === 'BUS' && <BusInformation step={step}/>}
         </div>
       </div>)}
     </div>
-    <div className="route-navigation">
+    <div className="route-navigation" aria-label="구간별 길안내">
       {route.links?.map((link, index) => <div key={link.url}>
         <Button kind={index === 0 ? 'primary' : 'sky'} onClick={() => navigate(link)}>{link.label}</Button>
         <a href={link.url} target="_blank" rel="noreferrer">직접 열기</a>
         <button className="copy-map-link" onClick={() => copyLink(link)}>링크 복사</button>
       </div>)}
     </div>
-    {!trip.arriveBy && !route.viaStop && <Actions><Button kind="text" onClick={openDwell}>들를 곳 찾기</Button></Actions>}
+    {!trip.arriveBy && !route.viaStop && <Button kind="text" onClick={openDwell}>들를 곳 찾기</Button>}
   </section>;
 }

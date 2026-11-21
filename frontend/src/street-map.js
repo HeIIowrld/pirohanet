@@ -15,15 +15,17 @@ export function drawStreetRoute(view,{markers,lines}) {
   for (const {point,label} of markers) {
     const pin = document.createElement('span');
     pin.className = 'live-map-pin';
+    pin.dataset.kind = label;
     pin.textContent = label;
     L.marker(latLng(point),{title:label,icon:L.divIcon({className:'street-pin',html:pin,iconSize:[38,28],iconAnchor:[19,28]})}).addTo(group);
   }
+  const palette = getComputedStyle(view.getContainer());
   for (const line of lines) {
-    L.polyline(line.points.map(latLng),{color:line.color,weight:5,opacity:.9,dashArray:line.walk?'4 6':null}).addTo(group);
+    L.polyline(line.points.map(latLng),{color:palette.getPropertyValue(line.color).trim(),weight:5,opacity:.9,dashArray:line.walk?'4 6':null}).addTo(group);
   }
   if (markers.length > 1 || lines.length) {
     view.fitBounds(group.getBounds(),{paddingTopLeft:[28,90],
-      paddingBottomRight:[28,Math.round(view.getSize().y*.52)],maxZoom:16,animate:false});
+      paddingBottomRight:[28,Math.round(view.getSize().y*.62)],maxZoom:16,animate:false});
   } else if (markers.length === 1) {
     view.setView(latLng(markers[0].point),15,{animate:false});
   }
