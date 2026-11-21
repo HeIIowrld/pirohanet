@@ -1,3 +1,4 @@
+import { mapLink } from '../../src/routing/transit.js';
 import TimeWheel from './TimeWheel.jsx';
 import Onboarding from './Onboarding.jsx';
 import {useScreenHistory} from './screen-history.js';
@@ -389,7 +390,7 @@ export default function App(){
  </label><Actions><Button disabled={busy||level===null} onClick={()=>routes(false)}>경로 보기</Button><Button kind="text" disabled={busy} onClick={()=>{setLevel(null);setConditionChanged(true);routes(false,null)}}>건너뛰기</Button></Actions></section>}
  {screen==='loading'&&<Sheet className="loading-sheet"><div className="sheet-body"><h2>경로를 찾고 있어요.</h2><div className="skeleton"/><div className="skeleton"/></div><Actions><Button disabled><Icon name="refresh"/></Button></Actions></Sheet>}
  {screen==='routes'&&<RouteComparison result={result} route={route} trip={trip} demo={demo} select={item=>{setRoute(item);setDirectChoice(item)}} choose={chooseRoute} changeCondition={()=>go('condition')} changeTrip={()=>go('confirm')} showLate={item=>{setRoute(item);go('details')}}/>}
- {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button></Actions></Sheet>}
+ {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button>{points.origin&&points.destination&&<a className="button text" href={mapLink(points.origin,points.destination)} target="_blank" rel="noreferrer">카카오맵에서 길찾기</a>}</Actions></Sheet>}
  {screen==='stops'&&<GapStops result={result} trip={trip} direct={directChoice??result.direct[0]} demo={demo}
   openStop={index=>{setStopIndex(index);go('waypoint')}}
   goDirect={()=>startJourney(directChoice??result.direct[0])}/>}

@@ -148,10 +148,14 @@ export function createBusInformation({ root, serviceKey, gyeonggiServiceKey, sen
     const longitude = Number(value('lon') || NaN);
     const stop = value('stop');
     const next = value('next');
+    const stopId = value('stopId');
+    const routeId = value('routeId');
+    const exact = /^\d{9}$/.test(stopId) && /^\d{9}$/.test(routeId);
     const routes = (value('routes') ?? '').split(',').map(normalizeRoute);
     const boardingAt = Number(value('at') || NaN);
     if (!Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) ||
-        Math.abs(longitude) > 180 || !stop || stop.length > 100 || !next || next.length > 100 ||
+        Math.abs(longitude) > 180 || !stop || stop.length > 100 ||
+        ((stopId !== undefined || routeId !== undefined) && !exact) || (!exact && (!next || next.length > 100)) ||
         routes.length > 12 || routes.some((route) => !route || route.length > 30) ||
         !Number.isSafeInteger(boardingAt) || Math.abs(boardingAt) > 8e15) {
       return sendJson(res, 400, { error: '버스 탑승 정보를 확인해 주세요.' });
@@ -161,7 +165,7 @@ export function createBusInformation({ root, serviceKey, gyeonggiServiceKey, sen
       const point = { tmX: longitude, tmY: latitude, radius: 100 };
       const stops = await nearby(`${longitude.toFixed(4)},${latitude.toFixed(4)}`, point);
       const matches = stops.filter((station) => /^\d{5}$/.test(station.arsId) && station.arsId !== '00000' &&
-        normalizeStop(station.stationNm) === normalizeStop(stop));
+        (exact ? String(station.stationId) === stopId : normalizeStop(station.stationNm) === normalizeStop(stop)));
       // 카카오 경로선의 시작점과 가까운 동일 이름 정류소만 사용한다.
       matches.sort((a, b) => Number(a.dist) - Number(b.dist));
       if (!matches.length || (matches.length > 1 && Number(matches[1].dist) - Number(matches[0].dist) < 10)) {
@@ -170,10 +174,13 @@ export function createBusInformation({ root, serviceKey, gyeonggiServiceKey, sen
       const station = matches[0];
       const { rows, reports, checkedAt } = await arrivals(station.arsId, station.arsId);
       const showLive = boardingAt >= checkedAt - 5 * MINUTE && boardingAt <= checkedAt + 30 * MINUTE;
-      const result = rows.filter((row) => [row.rtNm, row.busRouteAbrv].some((name) => routes.includes(normalizeRoute(name))) &&
-        normalizeStop(row.nxtStn) === normalizeStop(next) && /^\d+$/.test(row.busRouteId));
+      const result = rows.filter((row) => exact
+        ? String(row.busRouteId) === routeId && String(row.stId) === stopId
+        : [row.rtNm, row.busRouteAbrv].some((name) => routes.includes(normalizeRoute(name))) &&
+          normalizeStop(row.nxtStn) === normalizeStop(next) && /^\d+$/.test(row.busRouteId));
+      // Leave loops with more than one matching stop order unverified.
+      if (exact && result.length !== 1) return sendJson(res, 200, { routes: [] });
       // The regional seat feed shares the station ID, route ID and stop order with these Seoul rows.
-      // Only use regional data after the Seoul stop, requested route and next stop have matched.
       const regionalStation = result.find(row => Number(row.routeType) === 8 && /^\d+$/.test(row.stId))?.stId;
       const regional = showLive && gyeonggiServiceKey && regionalStation
         ? await regionalArrivals(regionalStation,regionalStation).catch(() => null)
@@ -196,7 +203,7 @@ export function createBusInformation({ root, serviceKey, gyeonggiServiceKey, sen
             ? [1,2].map(index => regionalArrival(regionalRow,index,regional.checkedAt)).filter(Boolean) : [];
           return {
             name:row.rtNm,
-            aliases:[row.rtNm,row.busRouteAbrv,regionalRow?.routeName].filter(Boolean).map(String),
+            aliases:[row.rtNm,row.busRouteAbrv,regionalRow?.routeName,...(exact ? routes : [])].filter(Boolean).map(String),
             source:regionalLive.length ? '경기버스정보' : '서울시 버스정보',
             arrivals:showLive ? regionalLive.length ? regionalLive : live.map(({seconds,congestion,remainingSeats}) => ({
               seconds,congestion,at:checkedAt + seconds*1000,

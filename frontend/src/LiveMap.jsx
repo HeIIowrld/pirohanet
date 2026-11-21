@@ -59,7 +59,7 @@ function mapData(points, route, candidate, position) {
     });
   const lines = (route?.steps ?? []).flatMap(step => {
     const points = (step.points ?? []).filter(isCoordinate);
-    return points.length > 1 ? [{points,color:strokeToken(step),walk:step.type === 'WALKING'}] : [];
+    return points.length > 1 ? [{points,color:strokeToken(step),dashed:step.approximate || step.type === 'WALKING'}] : [];
   });
   return {markers,lines};
 }
@@ -76,7 +76,7 @@ function RouteSketch({data}) {
   const plot = ([x,y]) => [48+294*(x-minX)/dx, 122+190*(maxY-y)/dy];
   return <svg className="route-sketch" viewBox="0 0 390 360" aria-label="대중교통 경로 개요" role="img">
     {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={`var(${line.color})`} strokeWidth="4"
-      strokeDasharray={line.walk?'4 5':undefined} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
+      strokeDasharray={line.dashed?'4 5':undefined} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
     {data.markers.map(({point,label}) => {
       const [x,y]=plot(point);
       return <g key={label} transform={`translate(${x},${y})`}>
@@ -208,7 +208,7 @@ export default function LiveMap({points,route,candidate,state,position}) {
     const overlays = data.lines.map(line => new sdk.Polyline({
       map:canvas, path:line.points.map(position), strokeWeight:5,
       strokeColor:palette.getPropertyValue(line.color).trim(), strokeOpacity:.9,
-      strokeStyle:line.walk?'shortdash':'solid', strokeLineCap:'round', strokeLineJoin:'round',
+      strokeStyle:line.dashed?'shortdash':'solid', strokeLineCap:'round', strokeLineJoin:'round',
     }));
     for (const {point,label} of data.markers) {
       const pin = document.createElement('span');

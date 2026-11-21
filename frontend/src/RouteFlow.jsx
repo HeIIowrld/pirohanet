@@ -116,6 +116,7 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
   return <Sheet className="comparison-sheet">
     <div className="sheet-body">
       <div className="heading-row"><h2>어떤 길로 갈까요?</h2>{demo && <Badge/>}</div>
+      {route?.source === 'seoul' && <p className="route-source">서울시 환승경로 · 도보 시간과 지도 점선은 추정값이에요.</p>}
       {result.direct.map((item,index) => <RouteCard key={item.id} item={item}
         label={index === 0 ? '빠른 길' : (result.secondLabel ?? '편한 길')}
         reasons={index === 1 ? result.comfortReasons : null}
@@ -170,6 +171,7 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell, 
     {late && <p className="field-error">도착 목표보다 {minutes((route.arrivalAt - trip.arriveBy) / 60000)}분 늦어요.</p>}
     {route.stayMinutes > 0 && <p>경유지에서 {route.stayMinutes}분 체류</p>}
     <div className="heading-row"><h2>이동 단계</h2>{demo && <Badge/>}</div>
+    {route.source === 'seoul' && <p className="route-source">서울시 환승경로 · 단계별 시간은 추정값이에요.</p>}
     {!!route.knownRideMinutes && <p className="route-source">{crowding(route)} · 서울교통공사 30분 평균
       {route.crowdingAsOf ? ` (${route.crowdingAsOf} 기준)` : ''}</p>}
     <div className="steps">

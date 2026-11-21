@@ -9,9 +9,18 @@ export function busInformationParams(step) {
   const [stop,next] = step.stops ?? [];
   const names = step.vehicles?.map(({name}) => name).filter(name => name && !name.includes(','));
   if (step.type !== 'BUS' || !Number.isFinite(lon) || !Number.isFinite(lat) ||
-      !stop?.name || !next?.name || !names?.length || !Number.isFinite(step.boardingAt)) return null;
-  return new URLSearchParams({lon,lat,stop:stop.name,next:next.name,
+      !stop?.name || !names?.length || !Number.isFinite(step.boardingAt)) return null;
+  const params = new URLSearchParams({lon,lat,stop:stop.name,
     routes:[...new Set(names)].slice(0,12).join(','),at:Math.round(step.boardingAt)});
+  if (/^\d{9}$/.test(step.seoulBusStopId) && /^\d{9}$/.test(step.seoulBusRouteId)) {
+    params.set('stopId', step.seoulBusStopId);
+    params.set('routeId', step.seoulBusRouteId);
+  } else if (next?.name && !step.approximate) {
+    params.set('next', next.name);
+  } else {
+    return null;
+  }
+  return params;
 }
 
 export function pickBusObservation(step,data,now=Date.now()) {

@@ -21,7 +21,7 @@ export function drawStreetRoute(view,{markers,lines}) {
   }
   const palette = getComputedStyle(view.getContainer());
   for (const line of lines) {
-    L.polyline(line.points.map(latLng),{color:palette.getPropertyValue(line.color).trim(),weight:5,opacity:.9,dashArray:line.walk?'4 6':null}).addTo(group);
+    L.polyline(line.points.map(latLng),{color:palette.getPropertyValue(line.color).trim(),weight:5,opacity:.9,dashArray:line.dashed?'4 6':null}).addTo(group);
   }
   if (markers.length > 1 || lines.length) {
     view.fitBounds(group.getBounds(),{paddingTopLeft:[28,90],

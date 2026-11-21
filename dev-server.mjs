@@ -12,6 +12,7 @@ import { recommend, RouteError } from './src/calendar/modo/lib/routes.js';
 import { parseEnv } from 'node:util';
 import { createPersonalization } from './server/personalization.mjs';
 import { createBusInformation } from './server/bus-information.mjs';
+import { createSeoulTransit } from './server/seoul-transit.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT ?? 5173);
@@ -27,10 +28,6 @@ const reverseGeocode = {
   url: 'https://dapi.kakao.com/v2/local/geo/coord2address.json',
   headers: kakaoHeaders,
 };
-const ROUTING_PATHS = new Map([
-  ['/api/transit', 'publictraffic'],
-  ['/api/walk', 'walk'],
-]);
 const UPSTREAMS = {
   '/api/geocode': {
     url: 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode',
@@ -61,6 +58,9 @@ async function proxy(upstream, params, res) {
 }
 
 const config = { ...env, ...process.env };
+const getSeoulTransit = createSeoulTransit({
+  serviceKey: config.SEOUL_TRANSIT_PATH_INFO || config.DATA_GO_KR_SERVICE_KEY || config.SEOUL_BUSSTATION_INFO,
+});
 const handleBusInformation = createBusInformation({
   root: ROOT,
   serviceKey: config.SEOUL_BUSSTATION_INFO || config.DATA_GO_KR_SERVICE_KEY,
@@ -106,8 +106,7 @@ createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     return proxy(reverseGeocode, { x: Number(longitude), y: Number(latitude), input_coord: 'WGS84' }, res);
   }
-  const routingPath = ROUTING_PATHS.get(url.pathname);
-  if (routingPath) {
+  if (url.pathname === '/api/transit' || url.pathname === '/api/walk') {
     if (req.method !== 'GET') return sendJson(res, 405, { error: 'GET 요청이 필요합니다.' });
     const params = {};
     for (const key of ['start_x', 'start_y', 'end_x', 'end_y']) {
@@ -118,7 +117,14 @@ createServer(async (req, res) => {
       params[key] = Number(value);
     }
     res.setHeader('Cache-Control', 'no-store');
-    return proxy({ url: `https://dapi.kakao.com/v2/routing/${routingPath}`, headers: kakaoHeaders }, params, res);
+    if (url.pathname === '/api/walk') {
+      return proxy({ url: 'https://dapi.kakao.com/v2/routing/walk', headers: kakaoHeaders }, params, res);
+    }
+    try {
+      return sendJson(res, 200, await getSeoulTransit(params));
+    } catch (error) {
+      return sendJson(res, error.status ?? 502, { error: error.status ? error.message : '서울시 경로 서비스에 연결하지 못했어요.' });
+    }
   }
   if (upstream) {
     if (!upstream.headers) return proxy(upstream, {}, res);
