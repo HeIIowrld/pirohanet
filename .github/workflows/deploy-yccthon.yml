@@ -1,0 +1,68 @@
+name: Deploy to yccthon
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: deploy-yccthon
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish static files
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Publish the main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_NAME" = yccthon
+          test "$(hostname -s)" = yccthon
+          test "$(id -un)" = github-runner
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          deploy_dir=/var/www/pirohanet
+          exec 9>"$deploy_dir/.deploy.lock"
+          flock 9
+          stage=$(mktemp -d "$deploy_dir/.deploy.XXXXXXXX")
+          trap 'rm -rf -- "$stage"' EXIT
+          mkdir "$stage/site"
+          git -C "$stage" init --quiet
+          git -C "$stage" fetch --quiet --no-tags --depth=1 \
+            https://github.com/HeIIowrld/pirohanet.git refs/heads/main
+          if [ "$(git -C "$stage" rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+            echo "main moved past $GITHUB_SHA; skipping this run."
+            exit 0
+          fi
+
+          git -C "$stage" archive "$GITHUB_SHA" src | tar -x -C "$stage/site"
+          if [ -n "$(find "$stage/site" ! -type d ! -type f -print -quit)" ]; then
+            echo "The published tree must contain only regular files and directories." >&2
+            exit 1
+          fi
+          test -s "$stage/site/src/calendar/demo.html"
+          chmod -R a+rX "$stage/site"
+
+          release="releases/$GITHUB_SHA"
+          if [ ! -d "$deploy_dir/$release" ]; then
+            mv -T -- "$stage/site" "$deploy_dir/$release"
+          fi
+          previous=$(readlink "$deploy_dir/current" || true)
+          ln -s -- "$release" "$stage/next"
+          mv -Tf -- "$stage/next" "$deploy_dir/current"
+          if ! curl -fsS --max-time 10 http://127.0.0.1/src/calendar/demo.html \
+              | cmp -s "$deploy_dir/$release/src/calendar/demo.html" -; then
+            if [ -n "$previous" ]; then
+              ln -s -- "$previous" "$stage/previous"
+              mv -Tf -- "$stage/previous" "$deploy_dir/current"
+            else
+              rm -f -- "$deploy_dir/current"
+            fi
+            echo "Nginx did not return the deployed file." >&2
+            exit 1
+          fi
+          echo "Deployed $GITHUB_SHA"
