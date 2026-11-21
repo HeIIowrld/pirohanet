@@ -1,6 +1,6 @@
 import {requestWalk} from '../../src/routing/transit.js';
 import {railPath,stationName} from '../../packages/landmark-route-planner/lib/rail-directions.js';
-import stationPoints from './seoul-station-points.json' with {type:'json'};
+import stationPoints from '../../src/routing/seoul-station-points.json' with {type:'json'};
 
 // 서울 열린데이터광장 역사마스터(OA-21232)의 호선별 역사 좌표.
 const stationsByLine = new Map(Object.entries(stationPoints).map(([line,stations]) => [
@@ -32,13 +32,13 @@ function location([longitude,latitude]) {
 function railGeometry(step) {
   const line = step.vehicles?.[0]?.name;
   const stations = stationsByLine.get(line);
-  if (!stations || !Number.isSafeInteger(step.railSegments) || step.railSegments < 2) return step;
+  if (!stations || !Number.isSafeInteger(step.railSegments) || step.railSegments < 1) return step;
   const path = railPath('100' + line[0],stationName(step.stops?.[0]?.name),
     stationName(step.stops?.at(-1)?.name),step.railSegments);
   if (!path) return step;
   const intermediate = path.slice(1,-1).map(name => stations.get(name));
   if (intermediate.some(point => !point)) return step;
-  return {...step,points:[step.points[0],...intermediate,step.points.at(-1)]};
+  return {...step,knownStations:true,points:[step.points[0],...intermediate,step.points.at(-1)]};
 }
 
 function distanceBetween([x1,y1],[x2,y2]) {
@@ -52,8 +52,9 @@ async function walkingGeometry(step,signal,fetchFn) {
   const nativeFetch = fetchFn === globalThis.fetch;
   let points = nativeFetch && walkingPaths.get(key);
   if (!points) {
-    const result = await requestWalk(location(from),location(to),(url) => fetchFn(url,{signal})).catch(() => null);
-    if (!result || result.totalDistance > step.distance*2.5+60) return step;
+    const maxDistance = Math.min(2500,step.distance*2.5+60);
+    const result = await requestWalk(location(from),location(to),(url) => fetchFn(url,{signal}),maxDistance).catch(() => null);
+    if (!result) return step;
     points = result.steps.flatMap(({points}) => points ?? []);
     if (points.length < 2 || points.some(point => !Array.isArray(point) || point.length !== 2 || !point.every(Number.isFinite)) ||
         distanceBetween(points[0],from) > 60 || distanceBetween(points.at(-1),to) > 60) return step;
@@ -100,7 +101,7 @@ function busGeometry(step, routes) {
 
 export function mapStepPoints(step) {
   const points = step.points ?? [];
-  if (step.approximate && (step.type === 'BUS' || step.type === 'SUBWAY') && points.length < 3) return [];
+  if (step.approximate && !step.knownStations && (step.type === 'BUS' || step.type === 'SUBWAY') && points.length < 3) return [];
   return points;
 }
 

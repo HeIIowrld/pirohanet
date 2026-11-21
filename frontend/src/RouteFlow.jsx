@@ -98,7 +98,7 @@ function RouteCard({item,label,reasons,selected,onSelect}) {
 
 export function RouteComparison({result, route, trip, demo, select, start, findStops, changeCondition, changeTrip, showLate}) {
   const alternatives = result?.alternatives ?? [];
-  const [expanded,setExpanded] = useState(() => alternatives.some(item => item.id === route?.id));
+  const [expanded,setExpanded] = useState(() => alternatives.some(item => item.id === route?.id || item.mode === 'SUBWAY'));
   if (!result?.direct.length) {
     const fastest = result?.all.filter(isDirect).reduce((best, item) =>
       !best || item.arrivalAt < best.arrivalAt ? item : best, null);

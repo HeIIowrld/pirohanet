@@ -55,3 +55,22 @@ test('bus sketches use ordered stops and hide a two-point ride when stops cannot
   assert.deepEqual(mapStepPoints(result.steps[1]),[]);
   assert.deepEqual(mapStepPoints(rail),[]);
 });
+
+test('adjacent subway stations verified by the network remain visible on the map', () => {
+  const step = {...rail,railSegments:1,vehicles:[{name:'2호선'}],
+    stops:[{name:'홍대입구역'},{name:'합정역'}]};
+  const [mapped] = addRailGeometry({steps:[step]}).steps;
+  assert.deepEqual(mapStepPoints(mapped),step.points);
+  assert.equal(mapped.approximate,true);
+});
+
+test('shown station access walks can exceed the short walking-only candidate limit', async () => {
+  const step = {...walk,distance:1050};
+  const walkPoints = [step.points[0],[126.9365,37.55555],step.points[1]];
+  const fetchFn = async () => Response.json({status:'OK',route:{
+    properties:{totalDistance:1210,totalTime:920},legs:[{steps:[{properties:{},path:{points:walkPoints}}]}],
+  }});
+  const [mapped] = (await addStreetGeometry({steps:[step]},new AbortController().signal,fetchFn)).steps;
+  assert.deepEqual(mapStepPoints(mapped),walkPoints);
+  assert.equal(mapped.approximate,false);
+});

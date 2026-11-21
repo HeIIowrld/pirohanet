@@ -94,3 +94,29 @@ test('Seoul subway-only trips appear alongside bus trips and survive a mixed end
     new URL(url).pathname.endsWith('/getPathInfoBySubway') ? response([subwayTrip]) : new Response(null,{status:429})});
   assert.equal((await partial(stationPair)).routes[0].properties.totalTime,480);
 });
+
+test('walks to a nearby station when the subway service cannot route from the original place', async () => {
+  const places = {start_x:126.93893572,start_y:37.56433711,end_x:126.91702776,end_y:37.54962397};
+  let stationRequests = 0;
+  const city = createSeoulTransit({serviceKey:'fixture',fetchFn:url => {
+    const {pathname,searchParams} = new URL(url);
+    if (!pathname.endsWith('/getPathInfoBySubway')) return response([]);
+    if (+searchParams.get('startX') === places.start_x) {
+      return Response.json({msgHeader:{headerCd:'4'}});
+    }
+    stationRequests++;
+    return response([{time:'8',distance:'3110',pathList:[{
+      routeNm:'2호선',fname:'신촌역',tname:'합정역',fx:'126.93702',fy:'37.55515',
+      tx:'126.91447',ty:'37.54990',railLinkList:[{railLinkId:'1'},{railLinkId:'2'}],
+    }]}]);
+  }});
+  const result = await city(places);
+  assert.equal(result.status,'OK');
+  assert.ok(stationRequests > 0 && stationRequests <= 4);
+  const [route] = result.routes;
+  assert.equal(route.properties.type,'SUBWAY');
+  assert.ok(route.properties.totalTime > 20 * 60);
+  assert.deepEqual(route.steps.map(step=>step.properties.type),['WALKING','SUBWAY','WALKING']);
+  assert.deepEqual(route.steps[0].path.points[0],[places.start_x,places.start_y]);
+  assert.deepEqual(route.steps.at(-1).path.points.at(-1),[places.end_x,places.end_y]);
+});
