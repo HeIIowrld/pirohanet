@@ -164,7 +164,7 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell, 
   const doors = railDoorHints(route.steps ?? [],doorData);
   return <section className="page details-page">
     <Summary values={[
-      ['출발', clock(trip.departAt)],
+      ['출발', clock(route.departureAt ?? trip.departAt)],
       ['이동', `${minutes(route.travelMinutes)}분`],
       ['도착', clock(route.arrivalAt)],
     ]}/>

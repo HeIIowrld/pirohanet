@@ -1,6 +1,6 @@
 import { prepareTrip } from '../../src/main/trip.js';
 import { addBusObservations } from '../../src/routing/bus-observations.js';
-import { queryTransit } from '../../src/routing/transit.js';
+import { MINIMUM_STOP_MINUTES, queryTransit } from '../../src/routing/transit.js';
 import { gapPlaces } from './gap-places.js';
 import { compareRoutes, comfortReasons, isDirect } from '../../src/routing/compare.js';
 import { summarize } from '../../src/calendar/calendar.js';
@@ -96,7 +96,7 @@ export async function queryRoutes(trip, {places, previous, stops=false, saved=[]
   const freeMinutes = baseline && trip.arriveBy
     ? Math.max(0, Math.floor((trip.arriveBy - trip.departAt) / 60_000 - baseline.travelMinutes))
     : null;
-  if (freeMinutes !== null && freeMinutes < 5) return {...previous, stops:[], freeMinutes};
+  if (freeMinutes !== null && freeMinutes < MINIMUM_STOP_MINUTES) return {...previous, stops:[], freeMinutes};
   const stopPlaces = await gapPlaces(places, baseline, saved);
   const results = await Promise.allSettled(stopPlaces.map(async place => {
     const preferences = {...trip.preferences, savedStop:{query:place.name || place.alias, stayMinutes}};

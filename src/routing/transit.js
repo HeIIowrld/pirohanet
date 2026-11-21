@@ -1,6 +1,7 @@
 import { expectedCrowding, expandSubwayStops, stationName, subwayDirection } from './crowding.js';
 
 const MINUTE = 60_000;
+export const MINIMUM_STOP_MINUTES = 5;
 const TRANSFER_MINUTES = 3;
 const MAX_REBOARD_PLANS = 2;
 const MAX_WALK_DISTANCE_METERS = 800;
@@ -273,7 +274,7 @@ async function savedStopRoute(places, departAt, requestedStay, data, fetchFn, ar
 
   const travelMinutes = firstRoute.travelMinutes + secondRoute.travelMinutes;
   const stayMinutes = arriveBy == null ? requestedStay : Math.floor((arriveBy - departAt) / MINUTE - travelMinutes + 1e-9);
-  if (arriveBy != null && stayMinutes < 5) return null;
+  if (arriveBy != null && stayMinutes < MINIMUM_STOP_MINUTES) return null;
   const first = profile(firstRoute, departAt, data);
   const stopArrivalAt = +departAt + first.travelMinutes * MINUTE;
   const nextDeparture = new Date(stopArrivalAt + stayMinutes * MINUTE);
