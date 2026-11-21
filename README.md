@@ -67,7 +67,7 @@ Node.js 22.13 이상에서 저장소 루트의 `npm ci`와 `npm start`를 차례
 
 GitHub 워크플로는 `main`의 커밋에서 테스트와 Vite 빌드를 실행한 뒤 `/var/www/pirohanet/current`에 정적 파일을 배포한다. `/src/main/`은 React 화면을 제공하고, 5173 포트의 Node 서비스는 장소·길찾기·버스 API를 제공한다. [Nginx 설정](deploy/yccthon-nginx.conf)이 두 경로를 연결한다.
 
-카카오 지도 배경은 `/var/www/pirohanet/map-config.json`의 `kakaoJavaScriptKey`를 사용한다. 여기에 등록할 값은 브라우저 공개용 JavaScript 키다. 지도 SDK 허용 도메인에 배포 주소를 등록한다. 카카오 지도 배경을 사용할 수 없으면 OpenStreetMap 배경에 같은 경로 좌표를 표시한다. 지도 배경을 모두 사용할 수 없으면 경로 개요를 표시한다.
+네이버 지도 배경은 `/var/www/pirohanet/map-config.json`의 `naverClientId`를 사용한다. 이 값은 브라우저용 Client ID이며 Client Secret은 서버에만 둔다. 네이버 클라우드 Maps 앱의 Web Dynamic Map과 시연 주소를 등록한다. 네이버 타일을 사용할 수 없으면 OpenStreetMap 배경에 같은 경로 좌표를 표시한다. 지도 배경을 모두 사용할 수 없으면 경로 개요를 표시한다.
 
 ## 서울 버스 도착·혼잡
 
