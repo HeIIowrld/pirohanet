@@ -96,10 +96,15 @@ export function createBusInformation({ root, serviceKey, sendJson, fetchFn = fet
     return Array.isArray(rows) ? rows : rows ? [rows] : [];
   }
   const nearby = cachedLookup(6 * 60 * MINUTE, (point) => getStationData('getStationByPos', point));
-  const arrivals = cachedLookup(15_000, async (arsId) => ({
-    rows: await getStationData('getStationByUid', { arsId }),
-    checkedAt: Date.now(),
-  }));
+  const arrivals = cachedLookup(15_000, async (arsId) => {
+    // The regular feed includes the next stop. The accessibility feed can have newer vehicle reports.
+    const [rows, accessible] = await Promise.all([
+      getStationData('getStationByUid', { arsId }),
+      getStationData('getLowStationByUid', { arsId }).catch(() => []),
+    ]);
+    const reports = new Map(accessible.map((row) => [`${row.busRouteId}/${row.staOrd}`, row]));
+    return { rows, reports, checkedAt: Date.now() };
+  });
 
   return async (req, res, url) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -129,13 +134,16 @@ export function createBusInformation({ root, serviceKey, sendJson, fetchFn = fet
         return sendJson(res, 200, { routes: [] });
       }
       const station = matches[0];
-      const { rows, checkedAt } = await arrivals(station.arsId, station.arsId);
+      const { rows, reports, checkedAt } = await arrivals(station.arsId, station.arsId);
       const showLive = boardingAt >= checkedAt - 5 * MINUTE && boardingAt <= checkedAt + 30 * MINUTE;
-      const result = rows.filter((row) => routes.includes(normalizeRoute(row.rtNm)) &&
+      const result = rows.filter((row) => [row.rtNm, row.busRouteAbrv].some((name) => routes.includes(normalizeRoute(name))) &&
         normalizeStop(row.nxtStn) === normalizeStop(next) && /^\d+$/.test(row.busRouteId));
       return sendJson(res, 200, {
         checkedAt, showLive, routes: result.map((row) => {
-          const live = [1, 2].map((index) => readArrival(row, index, checkedAt)).filter(Boolean);
+          const accessible = reports.get(`${row.busRouteId}/${row.staOrd}`);
+          const from = (report) => [1, 2].map((index) => readArrival(report, index, checkedAt)).filter(Boolean);
+          const accessibleLive = accessible ? from(accessible) : [];
+          const live = accessibleLive.length ? accessibleLive : from(row);
           const approaching = live.find(({ code, seconds }) => code && seconds <= 180);
           if (approaching) history.record(station.arsId, row.busRouteId, checkedAt, approaching.code);
           return {
