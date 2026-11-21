@@ -24,6 +24,7 @@ export function prepareTrip(input, events = [], now = new Date()) {
   };
 }
 
+// resolvePlace를 생략하면 지도 모듈의 기본 위치 검색을 사용한다.
 export async function planTrip(trip, { resolvePlace, queryRoutes }) {
   if (!trip.origin || !trip.destination) {
     throw new Error('출발지와 목적지를 입력해 주세요.');
