@@ -24,6 +24,8 @@ export default function App(){
  const request=useRef(0);
  // 앱이 '이 글자가 어느 장소인가요?' 하고 후보를 물었을 때만 그 글자로 기억한다. 도착지를 다른 곳으로 바꾸는 것은 기억하지 않는다.
  const teaching=useRef(false);
+ // 내 장소 추가: 장소를 고른 뒤 원하는 이름(집, 회사, 1공…)을 붙여 저장한다. {place,name}
+ const [naming,setNaming]=useState(null);
  const retry=useRef(null);
  const [expiresAt,setExpiresAt]=useState(null);
  const [conditionChanged,setConditionChanged]=useState(false);
@@ -51,6 +53,7 @@ export default function App(){
  const goBack=()=>navigation.back();
  const headerBack=navigation.previous?goBack:screen==='calendar'?()=>go('welcome',{replace:true}):undefined;
  function searchScreen(picker,query='',hits=null) {
+  setNaming(null);
   setQuery(query);
   setHits(hits);
   navigation.move({screen:'search',picker});
@@ -174,7 +177,7 @@ export default function App(){
  async function search(e){e?.preventDefault();if(!query.trim())return;const id=++request.current;setBusy(true);setError('');try{const matches=saved.filter(p=>[p.alias,p.name,p.address].some(t=>t?.includes(query)));const found=designDemo?[{name:'광화문',subtitle:'관광명소, 종로구',distance:'1.2km',address:'서울 종로구 사직로 161',latitude:37.5759,longitude:126.9768},{name:'광화문역 5호선',subtitle:'지하철역, 종로구',distance:'1.3km',address:'서울 종로구 세종대로',latitude:37.5716,longitude:126.9768}]:[...matches,...(await searchWithFallback(query,locateCandidates).catch(e=>{if(!matches.length)throw e;return[]})).filter(p=>!matches.some(m=>m.latitude===p.latitude&&m.longitude===p.longitude))];if(request.current===id)setHits(found)}catch(e){if(request.current===id)setError('장소 검색을 완료하지 못했어요. 검색 API 설정이나 주소를 확인해 주세요.')}finally{if(request.current===id)setBusy(false)}}
  useEffect(()=>{if(screen!=='search'||!query.trim())return;const timer=setTimeout(()=>void search(),350);return()=>clearTimeout(timer)},[query,screen]);
  function choose(place,field=picker){
-  if(field==='save'){void save(place);return}
+  if(field==='save'){setNaming({place,name:''});return}
   setDemo(designDemo);
   // 일정에 적힌 위치 글자(예: '1공')에 대해 실제 장소를 고른 것이면 그 글자로 기억한다.
   // 다음에 같은 글자가 나오면 검색 없이 이 장소를 쓴다.
@@ -199,11 +202,12 @@ export default function App(){
   catch{if(readSession()?.token===session.token)setToast('이 브라우저에만 변경 사항을 저장했어요.')}
   return readSession()?.token===session.token;
  }
- async function save(place){
-  const alias=place.alias||place.name||place.address;
-  if(designDemo){setSaved(items=>[...items,{...place,alias}]);go('saved');return}
+ async function save(place,name=''){
+  const alias=name.trim()||place.alias||place.name||place.address;
+  const done=()=>{setNaming(null);if(screen==='search'&&navigation.previous?.screen==='saved')goBack();else go('saved',{replace:screen==='search'})};
+  if(designDemo){setSaved(items=>[...items,{...place,alias}]);done();return}
   setBusy(true);
-  try{if(await persistPlace(alias,place))go('saved')}
+  try{if(await persistPlace(alias,place))done()}
   catch(error){setError(error.message)}
   finally{setBusy(false)}
  }
@@ -274,7 +278,7 @@ export default function App(){
  }
  const mapScreen=['home','routes','loading','route-error','stops','waypoint','waypoint-confirmed'].includes(screen);
  const navScreen=screen==='my'||screen==='home'&&!expanded;
- const title={details:'경로 상세',my:'내 정보',saved:'내 장소',settings:'캘린더 설정',search:picker==='origin'?'출발 위치 선택':''}[screen]||'';
+ const title={details:'경로 상세',my:'내 정보',saved:'내 장소',settings:'캘린더 설정',search:picker==='origin'?'출발 위치 선택':picker==='save'?'장소 추가':''}[screen]||'';
  const activeStop=result?.stops[stopIndex]??null;
  const chooseRoute=()=>{
   if(trip?.arriveBy)void routes(true);
@@ -288,7 +292,8 @@ export default function App(){
  {screen==='onboarding'&&linked&&<Onboarding initial={onboarding.preferences} step={onboardingStep} onStep={onboardingStep=>navigation.move({screen:'onboarding',onboardingStep})} onBack={navigation.previous?goBack:undefined} onComplete={finishOnboarding}/>}
  {screen==='calendar'&&<CalendarIntro state={calendarState} busy={busy} connect={calendar} error={error}/>}
  {screen==='home'&&<><div className="map-controls"><button className="search-bar" onClick={()=>{setEvent(null);setLevel(null);setConditionChanged(false);update('arrival','');openSearch()}}><Icon name="search"/>목적지를 검색하세요</button><button className="pill" onClick={()=>go('saved')}><Icon name="bookmark"/>내 장소</button></div><button className={`locate ${!linked?'unlinked':upcoming.length?'with-event':'no-events'}`} aria-label="현재 위치로 설정" onClick={currentLocation}><Icon name="locate"/></button><Sheet className={!linked?'home-unlinked':upcoming.length?'home-event':'home-empty'}>{!linked?<><div className="sheet-body"><h2>다음 약속을 불러올까요?</h2><p>캘린더를 연결하면 일정으로 바로 길을 찾아요.</p><Button kind="sky" onClick={()=>go('calendar')}>캘린더 연결하기</Button></div></>:upcoming.length?<div className="sheet-body"><div className="event-heading"><p className="subheading">다가오는 일정</p>{expanded&&<button type="button" onClick={goBack}>일정 접기</button>}</div>{(expanded?upcoming:upcoming.filter(item=>item.location).slice(0,1)).map((e,i)=><button className={`event-row ${event===e?'selected':''}`} key={e.id||i} disabled={!e.location} onClick={()=>{setEvent(e);if(expanded)selectEvent(e);else expandEvents()}}><span><small>{e.start.dateTime.slice(0,10)===kstNow().slice(0,10)?'오늘':e.start.dateTime.slice(5,10).replace('-','/')}</small><strong>{clock(e.start.dateTime)}</strong></span><span><strong>{e.summary||'다음 약속'}</strong><small>{e.location||'장소가 없어요'}</small></span></button>)}<Button disabled={!upcoming.some(item=>item.location)} onClick={()=>expanded?selectEvent(event?.location?event:upcoming.find(item=>item.location)):expandEvents()}>길 찾기</Button></div>:<div className="sheet-body"><Art name="no-events"/><h2>다가오는 일정이 없어요.</h2><p>목적지를 검색해 길을 찾아보세요.</p><Button onClick={()=>openSearch()}>목적지 검색</Button></div>}</Sheet></>}
- {screen==='search'&&<section className={`search-page ${picker==='origin'?'origin-picker':''}`}><form onSubmit={search} className="search-form"><Icon name="search"/><input aria-label="장소 이름 또는 주소" placeholder={picker==='origin'?'출발지를 검색하세요':'목적지를 검색하세요'} autoFocus value={query} onChange={e=>{request.current++;setBusy(false);setQuery(e.target.value);setHits(null)}}/><button type="button" aria-label="검색 닫기" onClick={goBack}><Icon name="close"/></button></form>{picker==='origin'&&<><button className="origin-current" disabled={busy} onClick={currentLocation}><Icon name="locate"/>현재 위치로 설정</button><p className="search-label">내 장소</p></>}{(hits??saved).map((p,i)=><PlaceRow key={i} place={p} onClick={()=>choose(p)} tail={p.distance}/>)}{hits?.length===0&&<p className="search-message">검색 결과가 없어요. 지역명이나 주소를 함께 입력해 주세요.</p>}{busy&&<p className="search-message" role="status">장소를 확인하고 있어요…</p>}</section>}
+ {screen==='search'&&naming&&<section className="page name-page"><h1>어떤 이름으로 저장할까요?</h1><form onSubmit={e=>{e.preventDefault();void save(naming.place,naming.name)}}><label className="name-field"><small>이름</small><input aria-label="저장할 이름" autoFocus maxLength={30} placeholder="예: 집, 회사, 1공" value={naming.name} onChange={e=>setNaming(n=>({...n,name:e.target.value}))}/></label><div className="name-field"><small>주소</small><strong>{naming.place.name||naming.place.address}</strong>{naming.place.name&&<small>{naming.place.address}</small>}</div><p>일정의 위치에 이 이름을 적어 두면 검색 없이 이 장소로 안내해요. 비워 두면 ‘{naming.place.name||naming.place.address}’(으)로 저장해요.</p><Button type="submit" disabled={busy}>{busy?'저장하고 있어요…':'저장'}</Button><Button type="button" kind="text" disabled={busy} onClick={()=>setNaming(null)}>다른 장소 고르기</Button></form></section>}
+ {screen==='search'&&!naming&&<section className={`search-page ${picker==='origin'?'origin-picker':''}`}><form onSubmit={search} className="search-form"><Icon name="search"/><input aria-label="장소 이름 또는 주소" placeholder={picker==='origin'?'출발지를 검색하세요':picker==='save'?'주소나 장소 이름을 검색하세요':'목적지를 검색하세요'} autoFocus value={query} onChange={e=>{request.current++;setBusy(false);setQuery(e.target.value);setHits(null)}}/><button type="button" aria-label="검색 닫기" onClick={goBack}><Icon name="close"/></button></form>{picker==='origin'&&<><button className="origin-current" disabled={busy} onClick={currentLocation}><Icon name="locate"/>현재 위치로 설정</button><p className="search-label">내 장소</p></>}{(hits??saved).map((p,i)=><PlaceRow key={i} place={p} onClick={()=>choose(p)} tail={p.distance}/>)}{hits?.length===0&&<p className="search-message">검색 결과가 없어요. 지역명이나 주소를 함께 입력해 주세요.</p>}{busy&&<p className="search-message" role="status">장소를 확인하고 있어요…</p>}</section>}
  {screen==='confirm'&&<section className="page confirm-page"><h1>이동 정보를 확인해 주세요.</h1><div className="field-list"><Field label="출발" value={form.origin||'출발 위치 선택'} onClick={()=>openSearch('origin')}/><Field label="도착" value={form.destination||'목적지 선택'} onClick={()=>openSearch('destination')}/>{event&&<Field label="약속 시간" value={clock(event.start.dateTime)}/>}<Field label="출발 시간" value={clock(fromInput(form.departure)??new Date())} onClick={()=>openTime('departure')}/><Field label="도착 목표" value={form.arrival?clock(fromInput(form.arrival)):'도착 목표 없음'} error={Boolean(timeError)} onClick={()=>openTime('arrival')}/>{(error||timeError)&&<p className="field-error">{error||timeError}</p>}</div><Actions><Button disabled={busy||Boolean(timeError)||!form.origin||!form.destination} onClick={condition}>컨디션 확인</Button></Actions></section>}
  {screen==='condition'&&<section className="page condition-page"><h1>{scale.title}</h1>{!conditionChanged&&<p>{level!==null?'일정을 참고해 미리 골랐어요.':'지금 컨디션을 골라 주세요.'}</p>}<FatigueScale value={level} onChange={value=>{setLevel(value);setConditionChanged(true)}}/>
  <label className="avoid-line">가능하면 피할 지하철 노선

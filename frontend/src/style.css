@@ -216,3 +216,10 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .saved-page.empty > .actions { margin-top: 0; align-self: stretch; }
 .onboarding-extra { margin-top: 16px; }
 .onboarding-option { min-height: 48px; height: auto; padding-block: 8px; }
+/* 내 장소 추가: 고른 장소에 원하는 이름을 붙이는 화면 */
+.name-page form{display:flex;flex-direction:column;gap:8px;margin-top:28px}
+.name-field{display:flex;flex-direction:column;gap:2px;background:var(--bg-surface);border-radius:12px;padding:10px 16px}
+.name-field input{border:0;outline:0;background:transparent;font-size:16px;line-height:24px;padding:0;width:100%}
+.name-field strong{font-size:16px;line-height:24px;font-weight:500}
+.name-page form>p{margin:4px 4px 12px}
+
