@@ -1,7 +1,7 @@
 // 실행: node src/calendar/myplaces.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { exportSavedPlaces, pushMyPlaces, savePlace, syncMyPlaces } from './location.js';
+import { exportSavedPlaces, importSavedPlaces, pushMyPlaces, savedPlace, savePlace, syncMyPlaces } from './location.js';
 
 const OFFICE = { name: '현대자동차 본사 양재사옥', address: '서울 서초구 헌릉로 12', latitude: 37.46, longitude: 127.04 };
 const HOME = { name: '우리 집', address: '서울 마포구 어딘가', latitude: 37.55, longitude: 126.92 };
@@ -61,15 +61,69 @@ test('새 브라우저에서 로그인하면 계정의 내 장소를 받아 온�
   assert.deepEqual(drive.calls, ['GET /drive/v3/files', 'GET /drive/v3/files/FILE1']); // 달라진 것이 없어 다시 저장하지 않는다
 });
 
-test('양쪽에 있는 내 장소를 합치고, 같은 글자는 계정 쪽을 따른다', async () => {
+test('양쪽에 있는 내 장소를 합치고, 이미 맞춘 글자는 계정 쪽을 따른다', async () => {
   const store = fakeStore();
+  // 예전에 계정과 맞춰 둔 옛 값(올리지 못한 변경이 아니다)과, 이 브라우저에서 새로 기억한 집
+  importSavedPlaces({ 회사: { ...OFFICE, name: '이 브라우저의 옛 회사' } }, store);
   savePlace('집', HOME, store);
-  savePlace('회사', { ...OFFICE, name: '이 브라우저의 옛 회사' }, store);
   const drive = fakeDrive({ 회사: OFFICE });
   const merged = await syncMyPlaces('TOKEN', drive.fetchFn, store);
-  assert.deepEqual(merged, { 집: HOME, 회사: OFFICE });
-  assert.deepEqual(drive.remote, { 집: HOME, 회사: OFFICE });
+  assert.deepEqual(merged, { 회사: OFFICE, 집: HOME });
+  assert.deepEqual(drive.remote, { 회사: OFFICE, 집: HOME });
   assert.equal(drive.calls.at(-1), 'PATCH /upload/drive/v3/files/FILE1');
+});
+
+test('이 브라우저에서 고치고 아직 올리지 못한 장소는 맞출 때 되돌아가지 않는다', async () => {
+  const store = fakeStore();
+  const WRONG = { name: '엉뚱한 곳', address: '울산 북구 염포로 706', latitude: 35.5, longitude: 129.3 };
+  const drive = fakeDrive({ '1공': WRONG, 회사: OFFICE });
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  savePlace('1공', HOME, store); // 로그인 없이, 또는 올리기에 실패한 채 고친 상태
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.deepEqual(savedPlace('1공', store), HOME);
+  assert.deepEqual(drive.remote, { '1공': HOME, 회사: OFFICE });
+  // 한 번 올라간 뒤에는 다시 계정 쪽을 따른다
+  drive.remote = { '1공': OFFICE, 회사: OFFICE };
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.deepEqual(savedPlace('1공', store), OFFICE);
+});
+
+test('로그인 없이 지운 장소는 맞출 때 계정에서도 지워진다', async () => {
+  const store = fakeStore();
+  const drive = fakeDrive({ 회사: OFFICE, 집: HOME });
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  savePlace('회사', null, store);
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.deepEqual(exportSavedPlaces(store), { 집: HOME });
+  assert.deepEqual(drive.remote, { 집: HOME });
+});
+
+test('맞추지 못한 채 기억해도 계정에만 있는 장소를 지우지 않는다', async () => {
+  const store = fakeStore(); // 새 기기: 이 브라우저에는 아무것도 없고 계정에는 회사와 집이 있다
+  const drive = fakeDrive({ 회사: OFFICE, 집: HOME });
+  savePlace('1공', OFFICE, store);
+  await pushMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.deepEqual(drive.remote, { 회사: OFFICE, 집: HOME, '1공': OFFICE });
+  assert.deepEqual(exportSavedPlaces(store), { '1공': OFFICE, 회사: OFFICE, 집: HOME });
+});
+
+test('올리기에 실패한 변경은 남아 있다가 다음에 맞출 때 올라간다', async () => {
+  const store = fakeStore();
+  const drive = fakeDrive({ 회사: OFFICE });
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  savePlace('회사', HOME, store);
+  await assert.rejects(pushMyPlaces('TOKEN', fakeDrive(null, { status: 503 }).fetchFn, store), /Drive 503/);
+  assert.deepEqual(savedPlace('회사', store), HOME); // 이 브라우저의 값은 그대로
+  await syncMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.deepEqual(drive.remote, { 회사: HOME });
+});
+
+test('저장이 막힌 브라우저에서 맞춰도 계정의 내 장소를 비우지 않는다', async () => {
+  const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+  const drive = fakeDrive({ 회사: OFFICE, 집: HOME });
+  assert.deepEqual(await syncMyPlaces('TOKEN', drive.fetchFn, blocked), { 회사: OFFICE, 집: HOME });
+  assert.deepEqual(drive.remote, { 회사: OFFICE, 집: HOME });
+  assert.deepEqual(drive.calls, ['GET /drive/v3/files', 'GET /drive/v3/files/FILE1']); // 올리지 않는다
 });
 
 test('계정에 좌표 없는 항목이 있으면 버린다', async () => {

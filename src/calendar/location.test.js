@@ -1,7 +1,7 @@
 // 실행: node src/calendar/location.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isPersonalLabel, locate, locateAll, locateCandidates, savedPlace, savePlace, staticMapUrl } from './location.js';
+import { isPersonalLabel, locate, locateAll, locateCandidates, placeKey, savedPlace, savePlace, staticMapUrl } from './location.js';
 
 const KYOBO = { roadAddress: '서울특별시 종로구 종로 1', jibunAddress: '서울특별시 종로구 종로1가 1', x: '126.9779', y: '37.5709' };
 const KYOBO_PLACE = { name: '교보문고 광화문점', address: '서울특별시 종로구 종로 1', latitude: 37.5709, longitude: 126.9779 };
@@ -140,6 +140,13 @@ test('저장소가 깨졌거나 막혀 있어도 위치 찾기는 동작한다',
     assert.doesNotThrow(() => savePlace('회사', OFFICE, store));
     assert.equal((await locateCandidates('서울특별시 종로구 종로 1', fetchFn, store)).length, 1);
   }
+});
+
+test('placeKey는 공백과 대소문자만 다른 글자를 같은 키로 만든다', () => {
+  assert.equal(placeKey('  우리  집 '), placeKey('우리 집'));
+  assert.equal(placeKey('Home'), placeKey('home'));
+  assert.notEqual(placeKey('회사'), placeKey('학교'));
+  assert.equal(placeKey(undefined), '');
 });
 
 test('지도 이미지 주소', () => {

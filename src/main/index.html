@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f3f5f1">
   <title>모도</title>
   <link rel="stylesheet" href="./app.css">
+  <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
 <body>
   <div class="app">
@@ -51,9 +52,8 @@
             <button id="load-sample" type="button" class="secondary">샘플 일정 불러오기</button>
           </div>
           <div class="account-actions">
-            <a id="google-login" href="/auth/google" hidden>Google 로그인</a>
-            <button id="google-calendar" class="secondary" type="button" hidden>Google 일정 불러오기</button>
-            <button id="logout" class="secondary" type="button" hidden>로그아웃</button>
+            <button id="google-calendar" class="secondary" type="button">Google 일정 불러오기</button>
+            <button id="logout" class="secondary" type="button" hidden>연결 끊기</button>
           </div>
           <p id="account-status" class="status" role="status" hidden></p>
           <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
@@ -125,6 +125,34 @@
     <p id="departure-timing" class="departure-timing"></p>
     <a class="primary departure-action" href="#results-heading" rel="noopener noreferrer">경로 보기</a>
   </aside>
-  <script type="module" src="./main.js"></script>
+  <script>
+    // 시연 서버 앞의 Cloudflare가 JS를 4시간 캐시해서, 배포 직후에는 새 HTML이 옛 JS를 불러와 깨진다.
+    // HTML은 캐시되지 않으므로, 여기서 import map으로 모듈 주소마다 시각을 붙여 항상 최신 코드를 받는다.
+    {
+      // main.js가 직접·간접으로 import 하는 모든 파일. 모듈을 추가로 import 하면 여기에도 넣는다.
+      const modules = [
+        '/src/main/main.js',
+        '/src/main/route-results.js',
+        '/src/main/bus-information.js',
+        '/src/main/departure-reminder.js',
+        '/src/places/recommended-stops.js',
+        '/src/routing/transit.js',
+        '/src/routing/crowding.js',
+        '/src/main/trip.js',
+        '/src/calendar/calendar.js',
+        '/src/calendar/location.js',
+        '/src/calendar/sample.js',
+        '/src/map/places.js',
+        '/src/preferences/preferences.js',
+        '/src/routing/compare.js',
+      ];
+      const fresh = `?t=${Date.now()}`;
+      const importMap = document.createElement('script');
+      importMap.type = 'importmap';
+      importMap.textContent = JSON.stringify({ imports: Object.fromEntries(modules.map((path) => [path, path + fresh])) });
+      document.currentScript.after(importMap); // 모듈을 하나라도 불러오기 전에 문서에 있어야 한다
+      import('/src/main/main.js');
+    }
+  </script>
 </body>
 </html>

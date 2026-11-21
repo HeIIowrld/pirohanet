@@ -13,17 +13,18 @@ Node.js 22.13 이상에서 저장소 루트의 `npm ci`와 `npm start`를 차례
 | `src/preferences/` | 피로도, 이동 우선순위, 추가 이동 한도, 저장 경유지 입력 |
 | `src/routing/` | 대중교통 후보 조회, 지하철 혼잡도 추정, 이동 조건 비교 |
 
-## Google 계정과 저장 장소
+## Google 계정과 내 장소
 
-1. Google Cloud 프로젝트에서 Google Calendar API를 활성화하고 웹 애플리케이션 OAuth 클라이언트를 설정한다. 승인된 리디렉션 URI에 `http://localhost:5173/auth/google/callback`을 추가한다. 동의 화면이 테스트 모드면 로그인할 계정을 테스트 사용자로 등록한다.
-2. 서버의 `.env` 또는 환경 변수에 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`을 설정한다. 배포 시 `APP_ORIGIN`을 실제 HTTPS 주소로 설정하고 해당 주소의 `/auth/google/callback`도 Google Cloud에 등록한다.
-3. 메인 화면에서 Google 로그인 후 **Google 일정 불러오기**를 누른다. 같은 Google 계정으로 캘린더 읽기를 허용한다.
-4. 일정 카드의 후보 주소를 확인하면 일정의 장소 이름으로 자동 저장된다. 주소가 다르거나 검색 결과가 없으면 목적지에 실제 주소를 입력하고 이동 계획에서 장소를 확인한 뒤, 일정 카드에 표시된 주소를 선택한다. 이후 같은 이름의 일정이 나오면 저장 주소와 좌표를 사용한다. 상단의 **내 장소**에서 주소를 변경하거나 별칭을 삭제할 수 있다.
-5. **내 장소 → 장소 추가**에서 저장할 이름과 장소 또는 주소를 입력하고 검색 결과를 선택하면, 캘린더 연결 없이도 경유지를 등록할 수 있다.
+홈페이지와 내 장소 페이지는 서버를 거치지 않고 브라우저에서 바로 Google에 연결한다. 길찾기와 실시간 버스 정보는 앱 서버를 통해 조회한다.
 
-**내 장소**의 **현재 위치 사용**을 누르고 브라우저에서 위치를 허용하면 주소 후보가 표시된다. 후보를 선택하면 해당 장소의 주소와 좌표가 갱신된다. 이 기능은 HTTPS 또는 localhost에서 동작하며, 서버의 `.env`에 `kakao-rest-api` 키가 필요하다. 배포 환경에서는 `/api/reverse-geocode`를 애플리케이션 서버로 연결한다.
+1. Google Cloud 프로젝트에서 Google Calendar API와 Google Drive API를 활성화하고 웹 애플리케이션 OAuth 클라이언트를 만든다. 승인된 JavaScript 원본에 `http://localhost:5173`과 배포 주소를 추가한다. 동의 화면이 테스트 모드면 로그인할 계정을 테스트 사용자로 등록한다. 클라이언트 ID는 `src/calendar/calendar.js`의 `GOOGLE_CLIENT_ID`에 있다. 비밀 키는 쓰지 않는다.
+2. 메인 화면에서 **Google 일정 불러오기**를 누르고 캘린더 읽기와 앱 데이터 저장을 허용한다. 토큰은 메모리에만 두므로 페이지를 새로 열면 다시 누른다.
+3. 일정의 장소가 `1공`처럼 사용자만 아는 이름이면, 목적지에 실제 장소(`제1공학관`)를 입력해 확인한 뒤 일정 카드에 표시된 주소를 선택한다. 그러면 `1공 → 그 장소`로 기억하고, 다음에 `1공`이 나오면 검색하지 않고 기억한 주소와 좌표를 그대로 쓴다. `회사`, `집`, `학교`처럼 흔한 이름은 처음부터 검색하지 않고 주소를 묻는다.
+4. 상단의 **내 장소**에서 검색으로 장소를 추가하고, 기억한 장소의 주소를 바꾸거나 지울 수 있다. **현재 위치 사용**은 HTTPS 또는 localhost에서 동작하고, 서버의 `/api/reverse-geocode`(`.env`의 `kakao-rest-api` 키)가 필요하다.
 
-사용자 식별자, 30일 세션, 저장 장소는 `.data/personalization.sqlite`에 저장한다. 배포할 때는 이 디렉터리에 영속 디스크를 연결한다. Calendar 액세스 토큰은 현재 세션의 서버 메모리에만 있으며, 만료되거나 서버가 재시작되면 일정을 다시 연결한다.
+내 장소는 이 브라우저의 저장소에 먼저 기억하고, Google에 연결돼 있으면 사용자 본인 Google Drive의 앱 전용 숨김 폴더에도 저장한다. 다른 기기에서 연결하면 그대로 이어 쓴다. 관련 함수는 `src/calendar/location.js`에 있다(`savedPlace`, `savePlace`, `locateCandidates`, `syncMyPlaces`, `pushMyPlaces`).
+
+`server/personalization.mjs`의 서버 로그인과 SQLite 저장 장소(`/auth/*`, `/api/account`, `/api/calendar`, `/api/saved-places`)는 저장소에 남아 있지만 화면에서는 더 이상 쓰지 않는다.
 
 ## 추천 경유지
 

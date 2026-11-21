@@ -1,5 +1,5 @@
-import { searchPlaceCandidates } from '../calendar/location.js';
-import { api, savePlace } from '../preferences/account-api.js';
+import { requestGoogleToken } from '../calendar/calendar.js';
+import { exportSavedPlaces, pushMyPlaces, savedPlace, savePlace, searchPlaceCandidates, syncMyPlaces } from '../calendar/location.js';
 
 const list = document.querySelector('#saved-place-list');
 const status = document.querySelector('#saved-places-status');
@@ -10,8 +10,22 @@ const addQuery = addForm.elements.query;
 const addAlias = addForm.elements.alias;
 const addStatus = addPanel.querySelector('[role="status"]');
 const addChoices = addPanel.querySelector('.account-actions');
-const authFailed = new URLSearchParams(window.location.search).get('auth') === 'failed';
-if (authFailed) window.history.replaceState(null, '', window.location.pathname);
+let googleToken = null; // 메모리에만 있어서 페이지를 떠나면 사라진다
+
+// 이 브라우저에 먼저 반영하고, Google에 연결돼 있으면 계정에도 올린다. 사용자에게 보여 줄 안내를 돌려준다.
+// 계정에 올리지 못한 변경은 location.js가 기록해 두었다가 다음에 계정과 맞출 때 반영한다.
+async function applyPlace(alias, place) {
+  savePlace(alias, place);
+  if (Boolean(savedPlace(alias)) !== Boolean(place)) throw new Error('이 브라우저에 변경 사항을 저장하지 못했어요.');
+  if (!googleToken) return '이 브라우저에만 반영했어요. Google 계정과 맞추면 다른 기기에도 반영돼요.';
+  try {
+    await pushMyPlaces(googleToken);
+    return 'Google 계정에도 반영했어요.';
+  } catch (error) {
+    console.warn(error);
+    return 'Google 계정에는 반영하지 못해 이 브라우저에만 반영했어요.';
+  }
+}
 
 async function locateCurrentPlace() {
   if (!window.isSecureContext || !navigator.geolocation) {
@@ -82,10 +96,10 @@ function renderPlace(entry) {
           const controls = [query, ...buttons, ...choices.children];
           for (const control of controls) control.disabled = true;
           try {
-            const updated = await savePlace(entry.alias, place);
-            address.textContent = query.value = updated.address;
+            const note = await applyPlace(entry.alias, place);
+            address.textContent = query.value = place.address;
             choices.replaceChildren();
-            feedback.textContent = '주소를 변경했어요.';
+            feedback.textContent = `주소를 변경했어요. ${note}`;
           } catch (error) {
             feedback.textContent = error.message;
           } finally {
@@ -116,9 +130,9 @@ function renderPlace(entry) {
     const controls = [query, ...buttons, ...choices.children];
     for (const control of controls) control.disabled = true;
     try {
-      await api('/api/saved-places', 'DELETE', { alias: entry.alias });
+      const note = await applyPlace(entry.alias, null);
       item.remove();
-      status.textContent = list.childElementCount ? `‘${entry.alias}’을 삭제했어요.` : '저장한 장소가 없어요.';
+      status.textContent = `${list.childElementCount ? `‘${entry.alias}’을 삭제했어요.` : '저장한 장소가 없어요.'} ${note}`;
       list.hidden = !list.childElementCount;
     } catch (error) {
       feedback.textContent = error.message;
@@ -168,11 +182,10 @@ addForm.addEventListener('submit', async (event) => {
         const controls = [...addForm.elements, ...addChoices.children];
         for (const control of controls) control.disabled = true;
         try {
-          const entry = await savePlace(alias, place, 'POST');
-          list.append(renderPlace(entry));
-          list.hidden = false;
-          status.textContent = '';
-          addStatus.textContent = `‘${entry.alias}’ 장소를 저장했어요.`;
+          if (savedPlace(alias)) throw new Error('같은 이름의 장소가 있어요. 다른 이름을 입력해 주세요.');
+          const note = await applyPlace(alias, place);
+          loadPlaces();
+          addStatus.textContent = `‘${alias}’ 장소를 저장했어요. ${note}`;
           addForm.reset();
           addChoices.replaceChildren();
         } catch (error) {
@@ -192,32 +205,33 @@ addForm.addEventListener('submit', async (event) => {
   }
 });
 
-async function loadPlaces() {
-  try {
-    const account = await api('/api/account');
-    if (!account.signedIn) {
-      addPanel.hidden = true;
-      list.hidden = true;
-      list.replaceChildren();
-      status.textContent = !account.ready ? 'Google OAuth 설정이 필요해요.' : authFailed
-        ? 'Google 연결을 완료하지 못했어요. 다시 시도해 주세요.'
-        : 'Google로 로그인하면 저장한 장소를 볼 수 있어요.';
-      login.hidden = !account.ready;
-      return;
-    }
-    login.hidden = true;
-    const entries = await api('/api/saved-places');
-    list.replaceChildren(...entries.map(renderPlace));
-    list.hidden = !entries.length;
-    addPanel.hidden = false;
-    status.textContent = entries.length ? '' : '저장한 장소가 없어요.';
-  } catch (error) {
-    status.textContent = error.message;
-  }
+// 이 브라우저에 저장된 내 장소를 그린다. 항목의 이름은 저장 키다. notice는 목록 위에 보여 줄 안내.
+function loadPlaces(notice = '') {
+  const entries = Object.entries(exportSavedPlaces()).map(([alias, place]) => ({ alias, address: place?.address ?? '' }));
+  list.replaceChildren(...entries.map(renderPlace));
+  list.hidden = !entries.length;
+  status.textContent = entries.length ? notice : `${notice} 저장한 장소가 없어요. 장소 검색으로 추가할 수 있어요.`.trim();
 }
 
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) void loadPlaces();
+login.addEventListener('click', async () => {
+  try {
+    // 팝업이 막히지 않게 다른 await보다 먼저 부른다.
+    // 창을 닫아도 응답이 오지 않는 경우가 있어, 버튼은 토큰을 받은 뒤에 잠근다.
+    const token = await requestGoogleToken();
+    login.disabled = true;
+    googleToken = token;
+    const count = Object.keys(await syncMyPlaces(token)).length;
+    loadPlaces(`Google 계정의 내 장소 ${count}곳과 맞췄어요.`);
+  } catch (error) {
+    console.warn(error);
+    loadPlaces('Google 계정과 맞추지 못했어요. 잠시 뒤 다시 눌러 주세요. 이 브라우저에 저장한 장소는 그대로 쓸 수 있어요.');
+  } finally {
+    login.disabled = false;
+  }
 });
 
-void loadPlaces();
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) loadPlaces();
+});
+
+loadPlaces();
