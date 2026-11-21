@@ -2,7 +2,6 @@ import React from 'react';
 import './google-button.css';
 // Adapted from Google's official HTML button configurator (Apache 2.0).
 // https://developers.google.com/identity/branding-guidelines#render-html-button-element
-// Uses the existing server OAuth flow, not the GIS credential/JWT flow.
 export default function GoogleSignInButton({onClick,disabled=false}){
  return <button type="button" className="gsi-material-button neutral" onClick={onClick} disabled={disabled}>
   <span className="gsi-material-button-state"/>

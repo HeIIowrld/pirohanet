@@ -63,7 +63,11 @@ Node.js 22.13 이상에서 저장소 루트의 `npm ci`와 `npm start`를 차례
 
 ## yccthon 배포
 
-GitHub 워크플로는 `/var/www/pirohanet/current`에 정적 파일을 배포한다. 운영 Node 서비스를 먼저 같은 버전의 코드로 갱신하고 5173 포트에서 재시작한다. [Nginx 설정](/deploy/yccthon-nginx.conf)은 정적 파일과 Node의 API·OAuth 경로를 연결한다. 워크플로는 새 정적 파일을 활성화하기 전에 `/api/account` 응답과 두 경로 API의 좌표 검증을 확인한다. Google 로그인을 쓰는 공개 HTTPS 주소는 Node의 `APP_ORIGIN` 및 OAuth 리디렉션 URI에 등록한다.
+시연 화면은 `frontend/`의 React 앱이다. 로컬에서는 `npm ci` 후 `npm run dev`로 열고, Google 콘솔의 승인된 JavaScript 원본에 접속 주소를 등록한다. 본인 Google 계정으로 캘린더 읽기를 승인해야 지도 홈에 진입한다. 위치 권한을 거절하면 출발지를 검색해서 선택할 수 있다.
+
+GitHub 워크플로는 `main`의 커밋에서 테스트와 Vite 빌드를 실행한 뒤 `/var/www/pirohanet/current`에 정적 파일을 배포한다. `/src/main/`은 React 화면을 제공하고, 5173 포트의 Node 서비스는 장소·길찾기·버스 API를 제공한다. [Nginx 설정](deploy/yccthon-nginx.conf)이 두 경로를 연결한다.
+
+카카오 지도 배경은 `/var/www/pirohanet/map-config.json`의 `kakaoJavaScriptKey`를 사용한다. 여기에 등록할 값은 브라우저 공개용 JavaScript 키다. 지도 SDK 허용 도메인에 배포 주소를 등록한다. 카카오 지도 배경을 사용할 수 없으면 OpenStreetMap 배경에 같은 경로 좌표를 표시한다. 지도 배경을 모두 사용할 수 없으면 경로 개요를 표시한다.
 
 ## 서울 버스 도착·혼잡
 

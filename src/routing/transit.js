@@ -31,8 +31,10 @@ async function requestRoutes(origin, destination, fetchFn) {
     transfers: properties.transfers,
     fare: properties.fare?.value ?? null,
     totalDistance: properties.totalDistance,
-    steps: steps.map(({ properties, path }) => properties.type === 'BUS'
-      ? { ...properties, boardingPoint: path?.points?.[0] } : properties),
+    steps: steps.map(({ properties, path }) => ({
+      ...properties, points: path?.points,
+      ...(properties.type === 'BUS' && { boardingPoint: path?.points?.[0] }),
+    })),
   })).filter((route) => Number.isFinite(route.travelMinutes) && route.travelMinutes > 0 &&
     route.steps.some((step) => step.type === 'SUBWAY' || step.type === 'BUS'));
 }
@@ -53,7 +55,7 @@ async function requestWalk(origin, destination, fetchFn) {
     fare: 0,
     totalDistance: distance,
     steps: (route.legs ?? []).flatMap((leg) =>
-      leg.steps.map(({ properties }) => ({ ...properties, type: 'WALKING' }))),
+      leg.steps.map(({ properties, path }) => ({ ...properties, type: 'WALKING', points: path?.points }))),
   };
 }
 
@@ -236,13 +238,18 @@ async function savedStopRoute(places, departAt, stayMinutes, data, fetchFn) {
   };
 }
 
-export async function queryTransit({ places, departAt, preferences }, fetchFn = fetch) {
+export async function queryTransit({ places, departAt, preferences, detourOnly = false }, fetchFn = fetch) {
   const [rawRoutes, data] = await Promise.all([
-    requestRoutes(places.origin, places.destination, fetchFn),
+    detourOnly ? [] : requestRoutes(places.origin, places.destination, fetchFn),
     fetchFn(new URL('./seoul-crowding.json', import.meta.url)).then((response) =>
       response.ok ? response.json() : null,
     ).catch(() => null),
   ]);
+  if (detourOnly) {
+    const route = places.stop && preferences?.savedStop
+      ? await savedStopRoute(places, departAt, preferences.savedStop.stayMinutes, data, fetchFn) : null;
+    return route ? [route] : [];
+  }
   const routes = rawRoutes.map((route) => ({ ...profile(route, departAt, data), crowdingAsOf: data?.asOf }));
   const seen = new Set();
   const bases = routes.filter(({ boardings }) => {

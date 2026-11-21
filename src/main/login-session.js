@@ -14,7 +14,7 @@ export function returnPath(path) {
   return HOME;
 }
 
-function readSession() {
+export function readSession() {
   try {
     const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
     if (typeof session?.token === 'string' && session.token && session.expiresAt > Date.now()) return session;
@@ -47,9 +47,13 @@ export function guardSession() {
   return true;
 }
 
+export function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
 export function signOut() {
   try {
-    sessionStorage.removeItem(SESSION_KEY);
+    clearSession();
   } finally {
     const next = returnPath(window.location.href);
     window.location.replace(`${HOME}login.html?${new URLSearchParams({ next })}`);

@@ -47,3 +47,21 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 @media(prefers-reduced-motion:reduce){.onboarding{animation:none}}
 /* Required calendar connection keeps its sole action on the shared baseline. */
 .welcome .actions:has(>.gsi-material-button:only-child){padding-bottom:calc(var(--cta-bottom) + var(--cta-secondary-slot))}
+
+.live-map-canvas{position:absolute;inset:0}
+.live-map-pin{display:block;padding:6px 9px;border-radius:9px;color:#fff;background:#187299;font-size:12px;font-weight:700;white-space:nowrap}
+.route-sketch{position:absolute;inset:0;width:100%;height:auto}
+.map-message{position:absolute;top:112px;left:20px;padding:3px 8px;border-radius:6px;background:#fff;color:var(--fg-secondary);font-size:12px}
+.saved-place-row{display:flex;align-items:center;gap:8px}
+.saved-place-row .place-row{flex:1;min-width:0}
+.saved-place-row>button{padding:8px;color:var(--fg-secondary)}
+.route-navigation{display:grid;gap:12px;margin:14px 0}
+.route-navigation>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.route-navigation .button{flex-basis:100%}
+.route-navigation a,.copy-map-link,.route-source,.bus-information{font-size:13px;color:var(--fg-secondary)}
+.bus-information button{border-radius:8px;padding:4px 8px;background:var(--bg-surface)}
+.event-row:disabled{opacity:.55;cursor:default}
+
+.departure-notice{position:absolute;z-index:12;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom, 0px) + 68px);display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px;border-radius:16px;background:#f1fae9;box-shadow:0 2px 12px #0002}.departure-notice span{flex-basis:100%}.departure-notice button{padding:4px 8px}
+
+.live-map-canvas{z-index:0}.street-map-credit{position:absolute;z-index:1;top:105px;right:10px;padding:2px 5px;border-radius:4px;background:#fffe;color:#234561;font-size:10px}
