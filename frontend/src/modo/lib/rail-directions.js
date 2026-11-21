@@ -44,11 +44,15 @@ function routesBetween(network, from, to, count, firstStep) {
   return paths;
 }
 
+export function railPath(line, from, to, count) {
+  const paths = routesBetween(networks.get(line), from, to, count);
+  return paths.length === 1 ? paths[0] : null;
+}
+
 export function railDirection(line, from, to, count) {
   const network = networks.get(line);
-  const paths = routesBetween(network, from, to, count);
-  if (paths.length !== 1) return null;
-  const [path] = paths;
+  const path = railPath(line, from, to, count);
+  if (!path) return null;
   return {
     next: path[1],
     canReach(terminal) {

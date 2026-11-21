@@ -10,7 +10,7 @@ export function createStreetMap(host) {
   return {view,tiles};
 }
 
-export function drawStreetRoute(view,{markers,lines}) {
+export function drawStreetRoute(view,{markers,lines},position) {
   const group = L.featureGroup().addTo(view);
   for (const {point,label} of markers) {
     const pin = document.createElement('span');
@@ -23,7 +23,9 @@ export function drawStreetRoute(view,{markers,lines}) {
   for (const line of lines) {
     L.polyline(line.points.map(latLng),{color:palette.getPropertyValue(line.color).trim(),weight:5,opacity:.9,dashArray:line.dashed?'4 6':null}).addTo(group);
   }
-  if (markers.length > 1 || lines.length) {
+  if (position) {
+    view.panTo([position.latitude,position.longitude],{animate:false});
+  } else if (markers.length > 1 || lines.length) {
     view.fitBounds(group.getBounds(),{paddingTopLeft:[28,90],
       paddingBottomRight:[28,Math.round(view.getSize().y*.62)],maxZoom:16,animate:false});
   } else if (markers.length === 1) {
