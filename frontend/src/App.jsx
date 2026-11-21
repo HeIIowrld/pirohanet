@@ -3,7 +3,7 @@ import Onboarding from './Onboarding.jsx';
 import {useScreenHistory} from './screen-history.js';
 import {readOnboarding,completeOnboarding,DEFAULT_TRAVEL_PREFERENCES,normalizeTravelPreferences} from './onboarding.js';
 import React,{useEffect,useRef,useState} from 'react';
-import {locateCandidates,exportSavedPlaces,placeKey,savedPlace,savePlace as saveLocal,syncMyPlaces,pushMyPlaces} from '../../src/calendar/location.js';
+import {locateCandidates,exportSavedPlaces,clearSyncedPlaces,placeKey,savedPlace,savePlace as saveLocal,syncMyPlaces,pushMyPlaces} from '../../src/calendar/location.js';
 import {fetchGoogleEvents,requestGoogleAuthorization} from '../../src/calendar/calendar.js';
 import {planDepartureReminder} from '../../src/main/departure-reminder.js';
 import {readSession,saveSession,clearSession} from '../../src/main/login-session.js';
@@ -26,6 +26,8 @@ export default function App(){
  const request=useRef(0);
  // 앱이 '이 글자가 어느 장소인가요?' 하고 후보를 물었을 때만 그 글자로 기억한다. 도착지를 다른 곳으로 바꾸는 것은 기억하지 않는다.
  const teaching=useRef(false);
+ // 이번 로그인에서 계정의 내 장소와 맞추는 데 성공했는지. 성공했을 때만 로그아웃하며 브라우저의 내 장소를 비운다(계정에 없는 것을 잃지 않게).
+ const synced=useRef(false);
  // 내 장소 추가·이름 바꾸기: 장소에 원하는 이름(집, 회사, 1공…)을 붙여 저장한다. {place,name,from}. from은 바꾸기 전 이름.
  const [naming,setNaming]=useState(null);
  const retry=useRef(null);
@@ -71,6 +73,9 @@ export default function App(){
  function disconnect() {
   request.current++;
   clearSession();
+  // 다음에 다른 계정이 이 브라우저로 로그인해도 내 장소가 섞이지 않게 한다. 다시 로그인하면 계정에서 받아 온다.
+  if(synced.current)clearSyncedPlaces();
+  synced.current=false;
   setLinked(false);
   setEvents([]);
   setSaved([]);
@@ -107,7 +112,9 @@ export default function App(){
    setExpiresAt(session.expiresAt);
    enterHome();
    void syncMyPlaces(session.token).then(()=>{
-    if(readSession()?.token===session.token)setSaved(savedPlaces());
+    if(readSession()?.token!==session.token)return;
+    synced.current=true;
+    setSaved(savedPlaces());
    }).catch(()=>{
     if(readSession()?.token===session.token)setToast('이 브라우저에 저장된 장소를 사용해요.');
    });
@@ -209,10 +216,13 @@ export default function App(){
   if(!session){disconnect();return false}
   saveLocal(alias,place);
   setSaved(savedPlaces());
-  try{await pushMyPlaces(session.token)}
+  try{await pushMyPlaces(session.token);if(readSession()?.token===session.token)synced.current=true}
   catch{if(readSession()?.token===session.token)setToast('이 브라우저에만 변경 사항을 저장했어요.')}
   return readSession()?.token===session.token;
  }
+ // 도착지 글자가 저장된 이름(예: 1공)이면 확인 화면에 실제 장소를 보여 준다. 잘못 저장된 것을 출발 전에 알아챌 수 있다.
+ const destinationPlace=!designDemo&&form.destination?savedPlace(form.destination):null;
+ const destinationAlias=destinationPlace?.name&&!form.destination.includes(destinationPlace.name)?form.destination.trim():'';
  // 저장하려는 이름. 비워 두면 장소 이름을 쓴다.
  const namingAlias=naming?(naming.name.trim()||naming.place.alias||naming.place.name||naming.place.address):'';
  const nameUnchanged=naming?.from!=null&&placeKey(namingAlias)===placeKey(naming.from);
@@ -351,7 +361,7 @@ export default function App(){
  </section>}</Sheet></>}
  {naming&&(screen==='search'||screen==='saved')&&<section className="page name-page"><h1>{naming.from!=null?'이름을 어떻게 바꿀까요?':'어떤 이름으로 저장할까요?'}</h1><form onSubmit={e=>{e.preventDefault();if(!nameTaken)void save(naming.place,naming.name,naming.from)}}><label className={`name-field ${nameTaken?'invalid':''}`}><small>이름</small><input aria-label="저장할 이름" aria-invalid={nameTaken} autoFocus maxLength={30} placeholder="예: 집, 회사, 1공" value={naming.name} onChange={e=>setNaming(n=>({...n,name:e.target.value}))}/></label>{nameTaken&&<p className="field-error" role="alert">‘{namingAlias}’은(는) 이미 저장된 이름이에요. 다른 이름을 적어 주세요.</p>}<div className="name-field"><small>주소</small><strong>{naming.place.name||naming.place.address}</strong>{naming.place.name&&<small>{naming.place.address}</small>}</div><p>일정의 위치에 이 이름을 적어 두면 검색 없이 이 장소로 안내해요.{naming.from==null&&` 비워 두면 ‘${naming.place.name||naming.place.address}’(으)로 저장해요.`}</p><Button type="submit" disabled={busy||nameTaken}>{busy?'저장하고 있어요…':'저장'}</Button><Button type="button" kind="text" disabled={busy} onClick={()=>setNaming(null)}>{naming.from!=null?'취소':'다른 장소 고르기'}</Button></form></section>}
  {screen==='search'&&!naming&&<section className={`search-page ${picker==='origin'?'origin-picker':''}`}><form onSubmit={search} className="search-form"><Icon name="search"/><input aria-label="장소 이름 또는 주소" placeholder={picker==='origin'?'출발지를 검색하세요':picker==='save'?'주소나 장소 이름을 검색하세요':'목적지를 검색하세요'} autoFocus value={query} onChange={e=>{request.current++;setBusy(false);setQuery(e.target.value);setHits(null)}}/><button type="button" aria-label="검색 닫기" onClick={goBack}><Icon name="close"/></button></form>{picker==='origin'&&<><button className="origin-current" disabled={busy} onClick={currentLocation}><Icon name="locate"/>현재 위치로 설정</button><p className="search-label">내 장소</p></>}{(hits??saved).map((p,i)=><PlaceRow key={i} place={p} onClick={()=>choose(p)} tail={p.distance}/>)}{hits?.length===0&&<p className="search-message">검색 결과가 없어요. 지역명이나 주소를 함께 입력해 주세요.</p>}{busy&&<p className="search-message" role="status">장소를 확인하고 있어요…</p>}</section>}
- {screen==='confirm'&&<section className="page confirm-page"><h1>이동 정보를 확인해 주세요.</h1><div className="field-list"><Field label="출발" value={form.origin||'출발 위치 선택'} onClick={()=>openSearch('origin')}/><Field label="도착" value={form.destination||'목적지 선택'} onClick={()=>openSearch('destination')}/>{event&&<Field label="약속 시간" value={clock(event.start.dateTime)}/>}<Field label="출발 시간" value={clock(fromInput(form.departure)??new Date())} onClick={()=>openTime('departure')}/><Field label="도착 목표" value={form.arrival?clock(fromInput(form.arrival)):'도착 목표 없음'} error={Boolean(timeError)} onClick={()=>openTime('arrival')}/>{(error||timeError)&&<p className="field-error">{error||timeError}</p>}</div><Actions><Button disabled={busy||Boolean(timeError)||!form.origin||!form.destination} onClick={condition}>컨디션 확인</Button></Actions></section>}
+ {screen==='confirm'&&<section className="page confirm-page"><h1>이동 정보를 확인해 주세요.</h1><div className="field-list"><Field label="출발" value={form.origin||'출발 위치 선택'} onClick={()=>openSearch('origin')}/><Field label={destinationAlias?`도착 · 내 장소 ‘${destinationAlias.length>14?destinationAlias.slice(0,14)+'…':destinationAlias}’`:'도착'} value={destinationAlias?destinationPlace.name:form.destination||'목적지 선택'} onClick={()=>openSearch('destination')}/>{event&&<Field label="약속 시간" value={clock(event.start.dateTime)}/>}<Field label="출발 시간" value={clock(fromInput(form.departure)??new Date())} onClick={()=>openTime('departure')}/><Field label="도착 목표" value={form.arrival?clock(fromInput(form.arrival)):'도착 목표 없음'} error={Boolean(timeError)} onClick={()=>openTime('arrival')}/>{(error||timeError)&&<p className="field-error">{error||timeError}</p>}</div><Actions><Button disabled={busy||Boolean(timeError)||!form.origin||!form.destination} onClick={condition}>컨디션 확인</Button></Actions></section>}
  {screen==='condition'&&<section className="page condition-page"><h1>{scale.title}</h1>{!conditionChanged&&<p>{level!==null?'일정을 참고해 미리 골랐어요.':'지금 컨디션을 골라 주세요.'}</p>}<FatigueScale value={level} onChange={value=>{setLevel(value);setConditionChanged(true)}}/>
  <label className="avoid-line">가능하면 피할 지하철 노선
   <select value={avoidLine} onChange={event=>setAvoidLine(event.target.value)}>

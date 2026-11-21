@@ -31,7 +31,6 @@ const PERSONAL_LABELS = new Set(['회사', '직장', '사무실', '오피스', '
 
 const keyOf = (text) => (text ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-// ponytail: 한 브라우저를 여러 Google 계정이 번갈아 쓰면 이 저장소의 내 장소가 섞인다. 계정별로 나누려면 저장 키에 계정을 넣는다
 const defaultStore = () => {
   try {
     return globalThis.localStorage ?? null;
@@ -87,6 +86,15 @@ export const exportSavedPlaces = (store = defaultStore()) => readSaved(store);
 // 내 장소 전체를 바꿔 넣는다. 좌표가 없는 항목은 버린다.
 export function importSavedPlaces(places, store = defaultStore()) {
   writeSaved(Object.fromEntries(Object.entries(places ?? {}).filter(([, place]) => validPlace(place))), store);
+}
+
+// 로그아웃할 때 부른다. 다음에 다른 계정이 로그인해도 섞이지 않게 이 브라우저의 내 장소를 비운다.
+// 계정에 올리지 못한 변경이 남아 있으면 잃지 않도록 그대로 두고 false를 돌려준다.
+// ponytail: 로그아웃 없이 탭만 닫으면 비우지 못한다. 완전히 막으려면 저장 키에 계정을 넣는다
+export function clearSyncedPlaces(store = defaultStore()) {
+  if (readPending(store).length) return false;
+  writeSaved({}, store);
+  return true;
 }
 
 // 이 위치 글자로 저장해 둔 내 장소. 없으면 null.

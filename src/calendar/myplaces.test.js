@@ -1,7 +1,7 @@
 // 실행: node src/calendar/myplaces.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { exportSavedPlaces, importSavedPlaces, pushMyPlaces, savedPlace, savePlace, syncMyPlaces } from './location.js';
+import { clearSyncedPlaces, exportSavedPlaces, importSavedPlaces, pushMyPlaces, savedPlace, savePlace, syncMyPlaces } from './location.js';
 
 const OFFICE = { name: '현대자동차 본사 양재사옥', address: '서울 서초구 헌릉로 12', latitude: 37.46, longitude: 127.04 };
 const HOME = { name: '우리 집', address: '서울 마포구 어딘가', latitude: 37.55, longitude: 126.92 };
@@ -149,4 +149,24 @@ test('Drive 호출이 실패하면 예외를 던지고 이 브라우저의 내 �
   await assert.rejects(syncMyPlaces('TOKEN', drive.fetchFn, store), /Drive 403/);
   await assert.rejects(pushMyPlaces('TOKEN', drive.fetchFn, store), /Drive 403/);
   assert.deepEqual(exportSavedPlaces(store), { 회사: OFFICE });
+});
+
+test('로그아웃: 계정에 다 올라가 있으면 브라우저의 내 장소를 비우고, 올리지 못한 변경이 있으면 남긴다', async () => {
+  const store = fakeStore();
+  savePlace('회사', OFFICE, store);
+  assert.equal(clearSyncedPlaces(store), false); // 아직 계정에 올리지 못했다
+  assert.deepEqual(savedPlace('회사', store), OFFICE);
+
+  const drive = fakeDrive(null);
+  await pushMyPlaces('TOKEN', drive.fetchFn, store);
+  assert.equal(clearSyncedPlaces(store), true);
+  assert.deepEqual(exportSavedPlaces(store), {});
+
+  // 다른 계정이 이 브라우저로 로그인해도 앞 사람의 장소가 그 계정에 올라가지 않는다
+  const other = fakeDrive({ 집: HOME });
+  assert.deepEqual(await syncMyPlaces('TOKEN', other.fetchFn, store), { 집: HOME });
+  assert.deepEqual(other.remote, { 집: HOME });
+  // 원래 계정으로 다시 로그인하면 계정에서 받아 온다
+  clearSyncedPlaces(store);
+  assert.deepEqual(await syncMyPlaces('TOKEN', drive.fetchFn, store), { 회사: OFFICE });
 });
