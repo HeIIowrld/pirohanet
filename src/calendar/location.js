@@ -114,6 +114,10 @@ export async function locateCandidates(text, fetchFn = fetch, store = defaultSto
   const saved = savedPlace(text, store);
   if (saved) return [saved];
   if (isPersonalLabel(text)) return []; // 검색하면 무관한 곳이 나온다. 화면에서 어디인지 묻고 savePlace로 저장한다
+  return searchPlaceCandidates(text, fetchFn);
+}
+
+export async function searchPlaceCandidates(text, fetchFn = fetch) {
   const queries = queriesFor(text ?? '');
   for (const query of queries) {
     const hits = await geocode(query, fetchFn);

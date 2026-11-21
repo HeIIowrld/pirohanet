@@ -135,15 +135,19 @@ export function requestGoogleToken(clientId = GOOGLE_CLIENT_ID) {
   });
 }
 
-// requestGoogleToken으로 받은 토큰으로 어제부터 이후 6일까지의 일정을 읽는다. 실패하면 호출부에서 sample.js로 대체한다.
-export async function fetchGoogleEvents(token, now = new Date()) {
+export function calendarEventParams(now = new Date()) {
   const dayStart = kstDayStart(+now);
-  const params = new URLSearchParams({
+  return new URLSearchParams({
     timeMin: new Date(dayStart - DAY).toISOString(), // 어제 늦은 일정까지
     timeMax: new Date(dayStart + 7 * DAY).toISOString(), // 오늘과 이후 6일
     singleEvents: 'true',
     orderBy: 'startTime',
   });
+}
+
+// requestGoogleToken으로 받은 토큰으로 어제부터 이후 6일까지의 일정을 읽는다. 실패하면 호출부에서 sample.js로 대체한다.
+export async function fetchGoogleEvents(token, now = new Date()) {
+  const params = calendarEventParams(now);
   const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   });

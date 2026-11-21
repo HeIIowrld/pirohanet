@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f1">
+  <title>내 장소 · 모도</title>
+  <link rel="stylesheet" href="./app.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <a href="./index.html">모도</a>
+      <nav aria-label="주 메뉴">
+        <a href="./index.html#schedule">일정</a>
+        <a href="./saved-places.html" aria-current="page">내 장소</a>
+      </nav>
+    </header>
+    <main>
+      <section class="panel" aria-labelledby="saved-places-heading">
+        <h1 id="saved-places-heading">내 장소</h1>
+        <p id="saved-places-status" class="status" role="status">저장한 장소를 불러오는 중이에요.</p>
+        <a id="saved-places-login" href="/auth/google?return=places" hidden>Google 로그인</a>
+        <ul id="saved-place-list" hidden></ul>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./saved-places.js"></script>
+</body>
+</html>

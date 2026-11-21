@@ -3,14 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f1">
   <title>모도</title>
+  <link rel="stylesheet" href="./app.css">
 </head>
 <body>
-  <main>
-    <h1>모도</h1>
-    <button id="load-sample" type="button">샘플 일정 불러오기</button>
-    <p id="trip-summary" role="status"></p>
-  </main>
+  <div class="app">
+    <header class="app-header">
+      <h1>모도</h1>
+      <nav aria-label="주 메뉴">
+        <a href="#schedule">일정</a>
+        <a href="./saved-places.html">내 장소</a>
+      </nav>
+    </header>
+
+    <main>
+      <form id="trip-form">
+        <section class="panel" aria-labelledby="trip-heading">
+          <h2 id="trip-heading">이동 계획</h2>
+          <div class="fields">
+            <label for="origin">출발지</label>
+            <input id="origin" name="origin" type="text" required placeholder="장소 또는 주소">
+            <label for="destination">목적지</label>
+            <input id="destination" name="destination" type="text" required placeholder="장소 또는 주소">
+          </div>
+        </section>
+
+        <section id="schedule" class="panel" aria-labelledby="schedule-heading">
+          <div class="section-header">
+            <h2 id="schedule-heading">일정</h2>
+            <button id="load-sample" type="button" class="secondary">샘플 일정 불러오기</button>
+          </div>
+          <div class="account-actions">
+            <a id="google-login" href="/auth/google" hidden>Google 로그인</a>
+            <button id="google-calendar" class="secondary" type="button" hidden>Google 일정 불러오기</button>
+            <button id="logout" class="secondary" type="button" hidden>로그아웃</button>
+          </div>
+          <p id="account-status" class="status" role="status" hidden></p>
+          <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
+          <div id="calendar-place-candidates" class="account-actions"></div>
+        </section>
+
+        <fieldset class="panel">
+          <legend class="sr-only">오늘 컨디션</legend>
+          <h2>오늘 컨디션</h2>
+          <div class="options">
+            <label><input type="radio" name="fatigue" value="0"><span>괜찮아요</span></label>
+            <label><input type="radio" name="fatigue" value="1"><span>조금 피곤해요</span></label>
+            <label><input type="radio" name="fatigue" value="2"><span>많이 피곤해요</span></label>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button id="check-places" class="primary" type="submit">출발지와 목적지 확인</button>
+        </div>
+      </form>
+
+      <section class="panel" aria-labelledby="results-heading">
+        <h2 id="results-heading">이동 결과</h2>
+        <p id="route-status" class="status" role="status">출발지와 목적지를 확인하면 검색 결과가 표시돼요.</p>
+        <dl id="confirmed-places" hidden>
+          <dt>출발지</dt><dd id="origin-result"></dd>
+          <dt>목적지</dt><dd id="destination-result"></dd>
+        </dl>
+      </section>
+    </main>
+  </div>
   <script type="module" src="./main.js"></script>
 </body>
 </html>
