@@ -116,6 +116,9 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
   return <Sheet className="comparison-sheet">
     <div className="sheet-body">
       <div className="heading-row"><h2>어떤 길로 갈까요?</h2>{demo && <Badge/>}</div>
+      {trip.condition?.label && <p className="route-source">{trip.condition.source} · {trip.condition.label}
+        {trip.condition.reason && ` · ${trip.condition.reason}`}</p>}
+      {trip.condition?.mobilityLabel && <p className="route-source">이동 조건 · {trip.condition.mobilityLabel}</p>}
       {route?.source === 'seoul' && <p className="route-source">서울시 환승경로 · 도보 시간과 지도 점선은 추정값이에요.</p>}
       {result.direct.map((item,index) => <RouteCard key={item.id} item={item}
         label={index === 0 ? '빠른 길' : (result.secondLabel ?? '편한 길')}
@@ -134,7 +137,7 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
       </>}
     </div>
     <Actions>
-      <Button kind="text" onClick={changeCondition}>컨디션 변경</Button>
+      <Button kind="text" onClick={changeCondition}>컨디션·이동 옵션</Button>
       <Button disabled={!route} onClick={choose}>{trip.arriveBy ? '여유 시간 확인' : '이 경로로 가기'}</Button>
     </Actions>
   </Sheet>;

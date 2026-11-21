@@ -21,9 +21,9 @@ const HOUR = 3600e3;
 const DAY = 24 * HOUR;
 const KST = 9 * HOUR; // ponytail: 날짜 경계를 KST로 고정. 서울 전용이라 충분하고, 다른 시간대를 지원하면 Intl로 바꾼다
 
-const kstDayStart = (t) => Math.floor((t + KST) / DAY) * DAY - KST;
+export const kstDayStart = (t) => Math.floor((t + KST) / DAY) * DAY - KST;
 
-const usable = (e) =>
+export const isBusyCalendarEvent = (e) =>
   e.status !== 'cancelled' &&
   e.start?.dateTime && // 종일 일정은 date만 있다
   e.transparency !== 'transparent' && // '한가함'으로 표시한 일정
@@ -39,11 +39,11 @@ const formatDuration = (ms) => {
 //   nextAppointment  지금 이후 장소가 있는 가장 빠른 일정. 없으면 null.
 //   suggestedFatigue 오늘 지금까지의 일정으로 추정한 지금 컨디션. 선택 화면의 기본값으로 쓴다. 근거가 없으면 null.
 //   fatigue          경로 추천에 넘기는 최종값. 사용자 입력도 일정도 없으면 null.
-export function summarize(items, now = new Date(), userLevel = null) {
+export function summarize(items, now = new Date(), userLevel = null, horizon = null) {
   if (userLevel !== null && !(Number.isInteger(userLevel) && userLevel >= 1 && userLevel <= LABELS.length)) throw new RangeError('userLevel은 1~5의 정수 또는 null이어야 합니다');
   const t = +now;
   const events = items
-    .filter(usable)
+    .filter(isBusyCalendarEvent)
     .map((e) => ({
       title: e.summary ?? '',
       description: e.description ?? '',
@@ -55,9 +55,9 @@ export function summarize(items, now = new Date(), userLevel = null) {
     .sort((a, b) => a.start - b.start);
 
   const next = events.find((e) => e.start > t && e.location);
-  const until = next ? next.start : t;
+  const until = horizon ?? next?.start ?? t;
   const soFar = load(events, kstDayStart(t), t, '오늘'); // 오늘 지금까지
-  const byThen = load(events, kstDayStart(until), until, next ? '약속 전' : '오늘'); // 약속 당일, 약속 시각까지
+  const byThen = load(events, kstDayStart(until), until, until > t ? '약속 전' : '오늘'); // 약속 당일, 약속 시각까지
   const sameDay = kstDayStart(until) === kstDayStart(t);
   return {
     nextAppointment: next ? {

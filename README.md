@@ -36,6 +36,7 @@ test -e .env || cp .env.example .env
 | 로컬 네이버 지도 배경 | `NAVER_MAP_CLIENT_ID`. 비워 두면 `X-NCP-APIGW-API-KEY-ID`를 사용합니다. |
 | 서울 대중교통 경로 | `SEOUL_TRANSIT_PATH_INFO`. 같은 API 권한이 있는 `DATA_GO_KR_SERVICE_KEY` 또는 `SEOUL_BUSSTATION_INFO`도 사용할 수 있습니다. |
 | 서울 버스 도착·혼잡 | `SEOUL_BUSSTATION_INFO` 또는 같은 API 권한이 있는 `DATA_GO_KR_SERVICE_KEY` |
+| AI 컨디션 추천 | `OPENAI_API_KEY` (기존 `open-ai-API`도 지원), 선택 사항 `OPENAI_CONDITION_MODEL` |
 | 경기 버스 도착·잔여 좌석 | `GYEONGGI_BUS_INFO` |
 | Node 서버의 계정 API와 OAuth 콜백 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_ORIGIN` |
 
@@ -46,7 +47,8 @@ React 앱의 Google 로그인은 [캘린더 모듈](src/calendar/calendar.js)의
 ## 앱에서 할 수 있는 일
 
 - **일정과 내 장소** — Google Calendar에서 다가오는 일정을 확인합니다. 날짜·시간이 있는 일정은 24시간 이내와 이후로 나눠 표시합니다. 일정에 쓰는 별칭을 **내 장소**에 저장하면 주소를 다시 찾을 때 사용할 수 있고, 저장한 장소는 Google Drive 앱 저장소로 동기화됩니다.
-- **경로 비교** — 출발·도착과 시간 조건을 확인하고 5단계 컨디션을 선택합니다. 처음 등록한 이동 선호, 추가 이동 한도, 도착 여유 시간과 피할 지하철 노선도 경로 비교에 반영합니다. 위치 권한을 거절하면 출발지를 직접 검색할 수 있습니다.
+- **경로 비교** — 출발·도착과 시간 조건을 확인하고 **경로 보기**를 누르면 출발 전 일정으로 컨디션을 자동 추정합니다. **컨디션·이동 옵션**에서 직접 조정할 수 있습니다. 처음 등록한 이동 선호, 추가 이동 한도, 도착 여유 시간과 피할 지하철 노선도 경로 비교에 반영합니다. 위치 권한을 거절하면 출발지를 직접 검색할 수 있습니다.
+- **AI 컨디션 추천** — **캘린더 설정**에서 켜면 관련 일정 제목과 메모 일부를 OpenAI에 보내 오래 서 있는 일정이나 구두·짐 등 명시된 이동 조건을 반영합니다. 분석할 일정이 없거나 연결이 실패하면 일정 시간과 간격을 사용합니다.
 - **경유와 이동 안내** — 약속 전 여유 시간에 들를 곳을 찾아 직행과 비교합니다. 선택하면 추가 이동 시간, 체류 가능 시간과 다시 출발할 시각을 확인할 수 있습니다. 이동 중에는 앱에서 도보·탑승·환승 단계를 보거나 지도 앱에서 길안내를 열 수 있습니다.
 
 경로 제공처, 소요 시간 추정, 버스 혼잡과 지하철 빠른 하차 데이터는 [경로와 교통 데이터](docs/ROUTING.md)에 정리했습니다.
@@ -75,6 +77,6 @@ npm --prefix packages/landmark-route-planner run dev
 
 `main`에 푸시하면 [GitHub Actions 워크플로](.github/workflows/deploy-yccthon.yml)가 테스트와 빌드를 실행합니다. Nginx 응답을 확인하며 `/var/www/pirohanet/current`에 정적 파일을 배포합니다. `/`는 `/src/main/`으로 이동하고, 이 주소가 React 앱을 제공합니다.
 
-[Nginx 설정](deploy/yccthon-nginx.conf)은 API와 OAuth 요청을 5173 포트의 Node 서비스로 전달합니다. Node 코드를 변경한 경우 운영 서비스를 같은 버전으로 갱신하고 재시작합니다. 버스 관측 기록을 이어 쓰려면 운영 서비스의 `.data/`를 유지합니다.
+[Nginx 설정](deploy/yccthon-nginx.conf)은 API와 OAuth 요청을 5173 포트의 Node 서비스로 전달합니다. Node 코드를 변경한 경우 운영 서비스를 같은 버전으로 갱신하고 재시작합니다. AI 캘린더 분석을 쓰려면 `APP_ORIGIN`을 앱의 공개 주소에 맞추고 Nginx에서 `/api/calendar-condition`을 전달합니다. 버스 관측 기록을 이어 쓰려면 운영 서비스의 `.data/`를 유지합니다.
 
 운영 지도 설정은 `/var/www/pirohanet/map-config.json`의 `naverClientId`입니다. Nginx가 이 파일을 `/assets/map-config.json`으로 제공합니다.
