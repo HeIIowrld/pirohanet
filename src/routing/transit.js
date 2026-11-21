@@ -18,16 +18,57 @@ function routeParams(origin, destination) {
   });
 }
 
-async function requestRoutes(origin, destination, fetchFn) {
-  const response = await fetchFn(`/api/transit?${routeParams(origin, destination)}`);
-  if (!response.ok) {
-    const failure = await response.json().catch(() => null);
-    if (response.status === 429 || /api limit has been exceeded/i.test(failure?.msg ?? failure?.error ?? '')) {
-      throw new Error('대중교통 경로 서비스의 조회 한도가 초과됐어요.');
-    }
-    throw new Error('대중교통 경로 서비스에 연결하지 못했어요.');
+// 대중교통 조회는 하루 한도가 작다. 성공한 응답을 이 브라우저에 보관해 같은 구간은 10분 동안 다시 묻지 않고,
+// 한도가 끝났을 때는 전에 받아 둔 응답으로 보여 준다. 테스트처럼 fetch를 바꿔 넣으면 보관하지 않는다.
+const TRANSIT_CACHE_KEY = 'modo.transit.v1';
+const TRANSIT_FRESH_MS = 10 * 60_000;
+const TRANSIT_CACHE_ENTRIES = 12;
+const transitInFlight = new Map();
+const transitStore = () => { try { return globalThis.localStorage ?? null; } catch { return null; } };
+function readTransitCache() {
+  try { return JSON.parse(transitStore()?.getItem(TRANSIT_CACHE_KEY) ?? '{}') ?? {}; } catch { return {}; }
+}
+function writeTransitCache(key, result) {
+  const store = transitStore();
+  if (!store) return;
+  const entries = Object.entries({ ...readTransitCache(), [key]: { at: Date.now(), result } })
+    .sort(([, a], [, b]) => b.at - a.at).slice(0, TRANSIT_CACHE_ENTRIES);
+  // ponytail: 응답이 커서 저장 공간이 모자라면 가장 새 것 하나만 남긴다
+  for (const kept of [entries, entries.slice(0, 1)]) {
+    try { store.setItem(TRANSIT_CACHE_KEY, JSON.stringify(Object.fromEntries(kept))); return; } catch { /* 다음 크기로 */ }
   }
-  const result = await response.json();
+}
+
+async function transitResponse(origin, destination, fetchFn) {
+  const cacheable = fetchFn === globalThis.fetch;
+  const key = [origin.longitude, origin.latitude, destination.longitude, destination.latitude]
+    .map((value) => Number(value).toFixed(5)).join(',');
+  const cached = cacheable ? readTransitCache()[key] : null;
+  if (cached && Date.now() - cached.at < TRANSIT_FRESH_MS) return cached.result;
+  if (cacheable && transitInFlight.has(key)) return transitInFlight.get(key); // 같은 구간을 동시에 두 번 묻지 않는다
+  const pending = (async () => {
+    const response = await fetchFn(`/api/transit?${routeParams(origin, destination)}`);
+    if (!response.ok) {
+      const failure = await response.json().catch(() => null);
+      if (response.status === 429 || /api limit has been exceeded/i.test(failure?.msg ?? failure?.error ?? '')) {
+        if (cached) return cached.result;
+        throw new Error('대중교통 경로 서비스의 조회 한도가 초과됐어요.');
+      }
+      throw new Error('대중교통 경로 서비스에 연결하지 못했어요.');
+    }
+    const result = await response.json();
+    if (cacheable && result.status === 'OK') writeTransitCache(key, result);
+    return result;
+  })();
+  if (cacheable) {
+    transitInFlight.set(key, pending);
+    pending.finally(() => transitInFlight.delete(key)).catch(() => {});
+  }
+  return pending;
+}
+
+async function requestRoutes(origin, destination, fetchFn) {
+  const result = await transitResponse(origin, destination, fetchFn);
   if (['NO_RESULTS', 'STARTNODES_NULL', 'ENDNODES_NULL', 'EQUAL_POINTS'].includes(result.status)) return [];
   if (result.status !== 'OK' || !Array.isArray(result.routes)) throw new Error('대중교통 경로를 조회하지 못했어요.');
   return result.routes.map(({ properties, steps }) => ({
