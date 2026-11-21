@@ -46,6 +46,7 @@ export function summarize(items, now = new Date(), userLevel = null) {
     .filter(usable)
     .map((e) => ({
       title: e.summary ?? '',
+      description: e.description ?? '',
       location: e.location?.trim() ?? '',
       startText: e.start.dateTime,
       start: Date.parse(e.start.dateTime),
@@ -59,7 +60,12 @@ export function summarize(items, now = new Date(), userLevel = null) {
   const byThen = load(events, kstDayStart(until), until, next ? '약속 전' : '오늘'); // 약속 당일, 약속 시각까지
   const sameDay = kstDayStart(until) === kstDayStart(t);
   return {
-    nextAppointment: next ? { title: next.title, start: next.startText, location: next.location } : null,
+    nextAppointment: next ? {
+      title: next.title,
+      start: next.startText,
+      location: next.location,
+      ...(next.description && { description: next.description }),
+    } : null,
     suggestedFatigue: soFar && describe(soFar.level, soFar.reasons),
     fatigue: userLevel === null ? byThen && describe(byThen.level, byThen.reasons) : combine(userLevel, byThen, sameDay ? soFar : null),
   };

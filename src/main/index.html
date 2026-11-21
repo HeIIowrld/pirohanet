@@ -26,6 +26,35 @@
         </div>
       </section>
       <form id="trip-form">
+        <section id="schedule" class="panel" aria-labelledby="schedule-heading">
+          <div class="section-header">
+            <h2 id="schedule-heading">다음 일정</h2>
+            <button id="load-sample" type="button" class="secondary">샘플 일정 불러오기</button>
+          </div>
+          <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
+          <div id="calendar-place-candidates" class="account-actions"></div>
+          <div id="schedule-arrival" hidden>
+            <div class="fields">
+              <label for="arrival-buffer">일정 시작 몇 분 전에 도착할까요?</label>
+              <select id="arrival-buffer" aria-describedby="arrival-reason">
+                <option value="">추천 시간</option>
+                <option value="0">시작 시각에 도착</option>
+                <option value="5">5분 전</option>
+                <option value="10">10분 전</option>
+                <option value="15">15분 전</option>
+                <option value="20">20분 전</option>
+                <option value="30">30분 전</option>
+                <option value="45">45분 전</option>
+                <option value="60">60분 전</option>
+                <option value="manual" hidden>직접 입력한 시각</option>
+              </select>
+            </div>
+            <p id="arrival-reason" class="status"></p>
+            <p id="arrival-target" role="status"></p>
+          </div>
+          <p id="departure-status" class="status" role="status" tabindex="-1" hidden></p>
+          <button id="preview-departure" type="button" class="secondary departure-preview" hidden>출발 알림 미리보기</button>
+        </section>
         <section class="panel" aria-labelledby="trip-heading">
           <h2 id="trip-heading">이동 계획</h2>
           <div class="fields">
@@ -35,7 +64,7 @@
             <input id="destination" name="destination" type="text" required placeholder="장소 또는 주소">
             <label for="depart-at">출발 시각 (한국 시간)</label>
             <input id="depart-at" name="departAt" type="datetime-local">
-            <label for="arrive-by">도착 목표 (한국 시간)</label>
+            <label for="arrive-by">도착 목표 직접 입력 (한국 시간)</label>
             <input id="arrive-by" name="arriveBy" type="datetime-local">
             <label for="max-extra">추가 이동 허용 시간 (분)</label>
             <input id="max-extra" name="maxExtra" type="number" min="0" value="20" required>
@@ -50,17 +79,6 @@
             <label for="stay-minutes">경유지 체류 시간 (분)</label>
             <input id="stay-minutes" name="stayMinutes" type="number" min="0" value="10" required>
           </div>
-        </section>
-
-        <section id="schedule" class="panel" aria-labelledby="schedule-heading">
-          <div class="section-header">
-            <h2 id="schedule-heading">일정</h2>
-            <button id="load-sample" type="button" class="secondary">샘플 일정 불러오기</button>
-          </div>
-          <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
-          <p id="departure-status" class="status" role="status" tabindex="-1" hidden></p>
-          <div id="calendar-place-candidates" class="account-actions"></div>
-          <button id="preview-departure" type="button" class="secondary departure-preview" hidden>출발 알림 미리보기</button>
         </section>
 
         <fieldset class="panel">
@@ -103,7 +121,7 @@
       </form>
 
       <section class="panel" aria-labelledby="results-heading">
-        <h2 id="results-heading" tabindex="-1">이동 결과</h2>
+        <h2 id="results-heading">이동 결과</h2>
         <p id="route-status" class="status" role="status">출발지와 목적지를 입력하고 경로를 찾아보세요.</p>
         <dl id="confirmed-places" hidden>
           <dt>출발지</dt><dd id="origin-result"></dd>
@@ -123,8 +141,9 @@
     <h2 id="departure-heading">지금 출발할 시간이에요</h2>
     <p id="departure-appointment" class="departure-appointment"></p>
     <p id="departure-location" class="status"></p>
+    <p id="departure-reason" class="status"></p>
     <p id="departure-timing" class="departure-timing"></p>
-    <a class="primary departure-action" href="#results-heading" rel="noopener noreferrer">경로 보기</a>
+    <a class="primary departure-action" href="#check-places">추천 경로 보기</a>
   </aside>
   <script>
     // 시연 서버 앞의 Cloudflare가 JS를 4시간 캐시해서, 배포 직후에는 새 HTML이 옛 JS를 불러와 깨진다.

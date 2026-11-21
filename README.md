@@ -34,11 +34,11 @@ Node.js 22.13 이상에서 저장소 루트의 `npm ci`와 `npm start`를 차례
 
 ## 모듈 연결
 
-- `prepareTrip(input, events, now)`는 일정 또는 직접 입력으로 이동 계획을 구성한다. 시간 입력은 `Date`를 사용한다. 기본 도착 목표는 약속 5분 전이다.
-- `planTrip(trip, { resolvePlace, queryRoutes })`는 공급자 함수를 받는다. `resolvePlace`를 생략하면 기본 위치 검색을 사용한다. 기본 검색은 장소의 `{ name, address, latitude, longitude }`를 반환한다. 저장 경유지가 있다면 `preferences.savedStop`의 `{ query, stayMinutes }`로 전달한다.
+- `prepareTrip(input, events, now)`는 일정 또는 직접 입력으로 이동 계획을 구성한다. 시간 입력은 `Date`를 사용한다. 다음 일정의 안내나 제목으로 도착 여유를 제안하고, 사용자가 선택한 `arrivalBufferMinutes` 또는 직접 입력한 `arriveBy`를 우선한다.
+- `planTrip(trip, { resolvePlace, resolveStop, queryRoutes })`는 공급자 함수를 받는다. `resolvePlace`를 생략하면 기본 위치 검색을 사용한다. 경유 선택은 `preferences.savedStop`의 `{ query, stayMinutes }`로 전달한다. 선택 지점을 별도로 확인할 때는 `resolveStop`을 전달하며, 좌표를 확인할 수 없어 `null`을 반환하면 직행을 비교한다.
 - `queryRoutes({ origin, destination, places, departAt, arriveBy, preferences, calendar })`는 후보 배열을 반환한다. 각 후보에는 `travelMinutes`, `stayMinutes`, `viaStop`이 필요하다. 경유 후보를 보낼 때는 비교 기준인 직행 후보도 함께 보낸다. 경로선과 안내 단계는 후보에 추가해 그대로 화면에 전달할 수 있다.
-- 메인 화면은 수동 출발 시각과 도착 목표를 지원하며, 가장 빠른 직행 대비 추가 이동 한도의 기본값은 20분이다. 컨디션과 이동 우선순위로 도보·환승·예상 혼잡에 가중치를 적용한다. 저장 장소를 선택하면 두 구간의 이동 시간과 체류 시간으로 예상 도착을 계산한다.
-- 대중교통과 도보 조회는 `kakao-rest-api` 키를 사용하는 `GET /api/transit`과 `GET /api/walk`가 필요하다. 저장 장소를 거치는 구간의 직선거리가 800m 이내이면 카카오 도보 경로도 확인하고, 도보 경로 길이가 800m 이내일 때 대중교통 후보와 함께 비교한다.
+- 메인 화면은 수동 출발 시각과 도착 목표를 지원하며, 가장 빠른 직행 대비 추가 이동 한도의 기본값은 20분이다. 컨디션과 이동 우선순위로 도보·환승·예상 혼잡에 가중치를 적용한다. 경유지를 선택하면 두 구간의 이동 시간과 체류 시간으로 예상 도착을 계산한다.
+- 대중교통과 도보 조회는 `kakao-rest-api` 키를 사용하는 `GET /api/transit`과 `GET /api/walk`가 필요하다. 경유지를 거치는 구간의 직선거리가 800m 이내이면 카카오 도보 경로도 확인하고, 도보 경로 길이가 800m 이내일 때 대중교통 후보와 함께 비교한다.
 - `src/routing/seoul-crowding.json`은 [서울교통공사 혼잡도 정보](https://data.seoul.go.kr/dataList/OA-12928/S/1/datasetView.do)의 2026-09-30 엑셀을 변환한 스냅샷이다. `days`는 평일·토요일·일요일 순서이고, 각 역·방향 배열은 05:30부터 30분 간격이다. 빈 칸과 0은 정보 없음으로 처리했다. 탑승 시각은 카카오의 경로 총 시간과 단계 시간으로 추정한다.
 - 한 정거장 먼저 타는 후보는 원래 탑승역에서 역방향으로 한 정거장 이동한 뒤 같은 노선의 원래 경로를 이어 타는 두 구간을 확인한다. 재탑승 지점의 혼잡도가 10%p 이상 낮을 때 비교하며, 승강장 이동에 3분을 추가하고 요금은 두 구간의 합계로 표시한다. 열차 시간표, 실시간 혼잡 및 좌석 정보는 연결되어 있지 않다.
 

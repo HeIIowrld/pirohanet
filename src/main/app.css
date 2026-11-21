@@ -87,6 +87,16 @@ dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
 .account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .55rem; }
 #calendar-place-candidates:empty { display: none; }
 #calendar-place-candidates button { text-align: left; }
+#schedule-arrival { margin-top: .85rem; border-top: 1px solid var(--line); }
+#arrival-target {
+  margin-top: .6rem;
+  padding: .65rem .8rem;
+  border-radius: .7rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: .875rem;
+  font-weight: 650;
+}
 #saved-place-list { display: grid; gap: .75rem; padding: 0; list-style: none; }
 #saved-place-list p { overflow-wrap: anywhere; }
 .saved-place-edit { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }

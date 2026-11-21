@@ -14,6 +14,12 @@ const form = document.querySelector('#trip-form');
 const sampleButton = document.querySelector('#load-sample');
 const checkButton = document.querySelector('#check-places');
 const summary = document.querySelector('#trip-summary');
+const scheduleArrival = document.querySelector('#schedule-arrival');
+const arrivalBuffer = document.querySelector('#arrival-buffer');
+const arrivalReason = document.querySelector('#arrival-reason');
+const arrivalTarget = document.querySelector('#arrival-target');
+const manualArrival = form.elements.arriveBy;
+const manualArrivalOption = arrivalBuffer.querySelector('[value="manual"]');
 const routeResults = document.querySelector('#route-results');
 const routeStatus = document.querySelector('#route-status');
 const confirmedPlaces = document.querySelector('#confirmed-places');
@@ -35,18 +41,21 @@ const timeFormat = new Intl.DateTimeFormat('ko-KR', {
   minute: '2-digit',
   timeZone: 'Asia/Seoul',
 });
+const scheduleTimeFormat = new Intl.DateTimeFormat('ko-KR', {
+  month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul',
+});
 const departureReminder = createDepartureReminder(timeFormat);
 
 let events = [];
 let source = null;
 let scheduleVersion = 0;
+let scheduleAppointmentKey = null;
 let routeVersion = 0;
+let sampleReminder = null;
 let stopCatalog = null;
 const sampleStopId = 'seoul_002';
 const seoulTimeField = (date) => new Date(+date + 9 * 60 * 60_000).toISOString().slice(0, 16);
 const sampleDeparture = seoulTimeField(SAMPLE_NOW);
-const sampleTrip = prepareTrip({}, SAMPLE_EVENTS, SAMPLE_NOW);
-const sampleArrival = seoulTimeField(sampleTrip.arriveBy);
 
 function accountMessage(message) {
   accountStatus.textContent = message || 'Google 계정이 연결됐어요.';
@@ -58,15 +67,23 @@ function subject(label) {
   return `‘${label}’${code >= 0 && code <= 11171 && code % 28 ? '이' : '가'}`;
 }
 
+function readTiming() {
+  const localTime = (value) => value ? new Date(`${value}+09:00`) : undefined;
+  const buffer = arrivalBuffer.value;
+  return {
+    departAt: localTime(form.elements.departAt.value),
+    arriveBy: localTime(manualArrival.value),
+    arrivalBufferMinutes: buffer && buffer !== 'manual' ? Number(buffer) : undefined,
+  };
+}
+
 function readTrip(stop) {
   const fields = new FormData(form);
   const fatigue = fields.get('fatigue');
-  const localTime = (key) => fields.get(key) ? new Date(`${fields.get(key)}+09:00`) : undefined;
   return prepareTrip({
     origin: fields.get('origin'),
     destination: fields.get('destination'),
-    departAt: localTime('departAt'),
-    arriveBy: localTime('arriveBy'),
+    ...readTiming(),
     preferences: {
       fatigueLevel: fatigue === null ? null : Number(fatigue),
       priority: fields.get('priority') || null,
@@ -159,7 +176,21 @@ async function initializeStopCatalog() {
 }
 
 function scheduleTrip() {
-  return prepareTrip({}, events, source === 'sample' ? SAMPLE_NOW : new Date());
+  return prepareTrip(readTiming(), events, source === 'sample' ? SAMPLE_NOW : new Date());
+}
+
+function showArrivalTarget(trip) {
+  scheduleArrival.hidden = !trip.arrivalAdvice;
+  if (!trip.arrivalAdvice) return;
+
+  const { minutes, reason } = trip.arrivalAdvice;
+  arrivalBuffer.options[0].textContent = `추천 · ${minutes === 0 ? '시작 시각에 도착' : `${minutes}분 전`}`;
+  manualArrivalOption.hidden = !manualArrival.value;
+  if (manualArrival.value) arrivalBuffer.value = 'manual';
+  else if (arrivalBuffer.value === 'manual') arrivalBuffer.value = '';
+  arrivalReason.textContent = manualArrival.value ? '이동 계획에서 입력한 시각을 적용했어요.' : reason;
+  const tooLate = trip.arriveBy <= trip.departAt ? ' 출발 시각이나 도착 여유를 조정해 주세요.' : '';
+  arrivalTarget.textContent = `도착 목표 · ${scheduleTimeFormat.format(trip.arriveBy)}까지${tooLate}`;
 }
 
 function offerConfirmation(alias, places, version) {
@@ -196,14 +227,23 @@ async function refreshSchedule() {
   if (!source) return;
   const version = ++scheduleVersion;
   candidates.replaceChildren();
-  const trip = scheduleTrip();
-  const alias = trip.destination;
-  if (!trip.arriveBy) {
+  let trip = scheduleTrip();
+  const next = trip.calendar.nextAppointment;
+  const key = next ? JSON.stringify([source, next.start, next.title, next.location]) : null;
+  if (scheduleAppointmentKey && scheduleAppointmentKey !== key) {
+    arrivalBuffer.value = '';
+    manualArrival.value = '';
+    trip = scheduleTrip();
+  }
+  scheduleAppointmentKey = key;
+  showArrivalTarget(trip);
+  if (!next) {
     summary.textContent = '장소가 있는 다음 일정이 없어요.';
     return;
   }
 
-  const appointment = `${alias} · ${timeFormat.format(trip.arriveBy)}까지 도착`;
+  const alias = next.location;
+  const appointment = `${scheduleTimeFormat.format(new Date(next.start))} · ${next.title || '약속'} · ${alias}`;
   const remembered = savedPlace(alias);
   if (remembered) {
     summary.textContent = `${appointment} · ${remembered.name ? remembered.name + ' · ' : ''}${remembered.address}`;
@@ -232,6 +272,8 @@ async function refreshSchedule() {
 
 function clearRouteResults() {
   routeVersion++;
+  sampleReminder = null;
+  previewDeparture.hidden = source !== 'sample';
   departureReminder.set(null);
   confirmedPlaces.hidden = true;
   routeResults.replaceChildren();
@@ -241,11 +283,9 @@ function clearRouteResults() {
 function showSchedule(items, kind) {
   if (source === 'sample' && kind !== 'sample') {
     if (form.elements.departAt.value === sampleDeparture) form.elements.departAt.value = '';
-    if (form.elements.arriveBy.value === sampleArrival) form.elements.arriveBy.value = '';
   }
   events = items;
   source = kind;
-  previewDeparture.hidden = source !== 'sample';
   destination.value = scheduleTrip().destination;
   clearRouteResults();
   void refreshSchedule();
@@ -279,20 +319,30 @@ async function importCalendar() {
 }
 
 sampleButton.addEventListener('click', () => {
-  showSchedule(SAMPLE_EVENTS, 'sample');
   form.elements.origin.value = SAMPLE_ORIGIN;
   form.elements.departAt.value = sampleDeparture;
-  form.elements.arriveBy.value = sampleArrival;
+  manualArrival.value = '';
+  arrivalBuffer.value = '';
+  showSchedule(SAMPLE_EVENTS, 'sample');
   if (stopSelect.value === sampleStopId) stayMinutes.value = 10;
 });
 previewDeparture.addEventListener('click', () => {
-  const reminder = planDepartureReminder(sampleTrip, { travelMinutes: 22 });
-  departureReminder.preview(reminder, previewDeparture);
+  const reminder = sampleReminder ?? planDepartureReminder(scheduleTrip(), {
+    route: { travelMinutes: 24 },
+    reason: '환승 없이 가는 예시 경로예요.',
+  });
+  if (reminder) departureReminder.preview(reminder, previewDeparture);
 });
 calendarButton.addEventListener('click', () => importCalendar());
 logout.addEventListener('click', signOut);
 
-form.addEventListener('input', clearRouteResults);
+form.addEventListener('input', ({ target }) => {
+  if (target === arrivalBuffer && arrivalBuffer.value !== 'manual') manualArrival.value = '';
+  if (target === arrivalBuffer || target === manualArrival || target === form.elements.departAt) {
+    showArrivalTarget(scheduleTrip());
+  }
+  clearRouteResults();
+});
 stopSelect.addEventListener('change', () => {
   const place = selectedRecommendation();
   if (place) stayMinutes.value = source === 'sample' && place.id === sampleStopId
@@ -359,8 +409,13 @@ form.addEventListener('submit', async (event) => {
       }
     }
     routeStatus.textContent = messages.join(' ');
-    renderRoutes(routeResults, routes, timeFormat, trip.preferences.priority, stop?.recommendation?.name);
-    if (source === 'google') departureReminder.set(planDepartureReminder(trip, fastestDirect));
+    const recommendation = renderRoutes(routeResults, routes, timeFormat, trip.preferences.priority, stop?.name);
+    const reminder = planDepartureReminder(trip, recommendation);
+    if (source === 'google') departureReminder.set(reminder);
+    if (source === 'sample') {
+      sampleReminder = reminder;
+      previewDeparture.hidden = !reminder;
+    }
   } catch (error) {
     if (isCurrent()) {
       const unknown = [trip.origin, trip.destination].find((query) => isPersonalLabel(query) && !savedPlace(query));
