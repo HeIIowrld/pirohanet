@@ -23,7 +23,27 @@ export function CalendarIntro({state='connect',busy,connect,error}){const copy={
 export function PlaceRow({place,onClick,tail}){return <button className="place-row" onClick={onClick}><span className="place-icon"><Icon name="pin"/></span><span className="place-copy"><strong>{place.alias||place.name||place.address}</strong><small>{place.subtitle||place.address}</small></span>{tail&&<small>{tail}</small>}</button>}
 export function Field({label,value,onClick,error}){return <button className={`field ${error?'invalid':''}`} onClick={onClick} disabled={!onClick}><span><small>{label}</small><strong>{value}</strong></span>{onClick&&<Icon name="chevronRight"/>}</button>}
 export function FatigueScale({value,onChange}){return <div className={`fatigue ${value===null?'unset':''}`} style={{'--progress':`${((value??1)-1)*25}%`}}><div className="slider"><div className="scale-track"/><div className="scale-ticks">{[1,2,3,4,5].map(n=><i key={n} className={value!==null&&n<=value?'filled':''}/>)}</div><input aria-label={scale.title} type="range" min="1" max="5" step="1" value={value??1} aria-valuetext={value===null?'선택하지 않음':`${value}단계`} onChange={e=>onChange(Number(e.target.value))} onPointerDown={()=>value===null&&onChange(1)}/></div><div className="numbers">{[1,2,3,4,5].map(n=><button key={n} aria-label={`피로도 ${n} 선택`} aria-pressed={value===n} onClick={()=>onChange(n)}>{n}</button>)}</div><div className="scale-labels"><span>{scale.minLabel}</span><span>{scale.maxLabel}</span></div></div>}
-export function Sheet({children,className=''}){return <section className={`sheet ${className}`}><div className="handle"/>{children}</section>}
+const SHEET_DRAG_THRESHOLD=48;
+// onExpand/onCollapse가 있으면 손잡이를 위아래로 끌거나 눌러서 시트를 펼치고 접는다.
+export function Sheet({children,className='',onExpand,onCollapse}){
+ const ref=React.useRef(null);
+ const drag=React.useRef(null);
+ const draggable=Boolean(onExpand||onCollapse);
+ const offset=dy=>dy<0?(onExpand?Math.max(dy,-96)*.5:0):(onCollapse?dy:Math.min(dy,24)*.3);
+ const setOffset=(dy,animate)=>{const el=ref.current;if(!el)return;el.style.transition=animate?'transform .2s ease-out':'none';el.style.transform=dy?`translateY(${dy}px)`:''};
+ function down(e){if(!draggable||e.button>0)return;drag.current={y:e.clientY,dy:0,moved:false};e.currentTarget.setPointerCapture?.(e.pointerId)}
+ function move(e){const d=drag.current;if(!d)return;d.dy=e.clientY-d.y;if(Math.abs(d.dy)>6)d.moved=true;if(d.moved)setOffset(offset(d.dy),false)}
+ const dragged=React.useRef(false);
+ function up(){const d=drag.current;drag.current=null;if(!d)return;setOffset(0,true);dragged.current=d.moved;if(!d.moved)return;if(d.dy<=-SHEET_DRAG_THRESHOLD&&onExpand)onExpand();else if(d.dy>=SHEET_DRAG_THRESHOLD&&onCollapse)onCollapse()}
+ function cancel(){drag.current=null;setOffset(0,true)}
+ // 끌기 없이 누르기(마우스·터치·키보드)는 펼치기/접기 토글
+ function click(){if(dragged.current){dragged.current=false;return}(onExpand??onCollapse)()}
+ const grip=draggable?{onPointerDown:down,onPointerMove:move,onPointerUp:up,onPointerCancel:cancel,onClick:click}:{};
+ return <section ref={ref} className={`sheet ${draggable?'draggable':''} ${className}`}>
+  {draggable?<button type="button" className="sheet-grip" aria-label={onExpand?'일정 펼치기':'일정 접기'} aria-expanded={!onExpand} {...grip}><span className="handle"/></button>:<div className="handle"/>}
+  {children}
+ </section>
+}
 export const Badge=()=> <span className="badge">데모 예시</span>;
 export function Summary({values}){return <div className="summary-card">{values.map(([label,value])=><div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>}
 export function ListRow({title,subtitle,tail,onClick}){return <button className="list-row" onClick={onClick}><Icon name="calendar"/><span><strong>{title}</strong>{subtitle&&<small>{subtitle}</small>}</span>{tail??<Icon name="chevronRight"/>}</button>}
