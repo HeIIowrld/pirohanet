@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createGbisShape} from './gbis-shape.mjs';
+import {createGbisShape,createSeoulBusShape} from './gbis-shape.mjs';
 
 test('GBIS directions are converted from Web Mercator and share one cache entry', async () => {
   let calls = 0;
@@ -17,5 +17,21 @@ test('GBIS directions are converted from Web Mercator and share one cache entry'
   assert.equal(first,second);
   assert.deepEqual(first[0][0],[126.777603,37.770354]);
   assert.deepEqual(await lookup('165000381'),[]);
+  assert.equal(calls,1);
+});
+
+test('TOPIS supplies ordered road points for requested Seoul routes', async () => {
+  let calls = 0;
+  const fetchShape = createSeoulBusShape({fetchFn:url => {
+    calls++;
+    const routeId = url.searchParams.get('routId');
+    assert.equal(url.hostname,'topis.seoul.go.kr');
+    return Response.json({rows:[[126.93,37.55],[126.93,37.55],[126.94,37.56]]
+      .map(([posX,posY]) => ({routeId,posX,posY}))});
+  }});
+  const [first,second] = await Promise.all([fetchShape('100100450'),fetchShape('100100450')]);
+  assert.equal(first,second);
+  assert.deepEqual(first,[[[126.93,37.55],[126.94,37.56]]]);
+  assert.deepEqual(await fetchShape('219000027'),[]);
   assert.equal(calls,1);
 });

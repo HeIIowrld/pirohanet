@@ -14,7 +14,7 @@ import { createCalendarCondition } from './server/calendar-condition.mjs';
 import { createPersonalization } from './server/personalization.mjs';
 import { createBusInformation } from './server/bus-information.mjs';
 import { createSeoulTransit } from './server/seoul-transit.mjs';
-import { createGbisShape, isGbisRouteId } from './server/gbis-shape.mjs';
+import { createGbisShape, createSeoulBusShape, isGbisRouteId, isSeoulRouteId } from './server/gbis-shape.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT ?? 5173);
@@ -64,6 +64,7 @@ const getSeoulTransit = createSeoulTransit({
   serviceKey: config.SEOUL_TRANSIT_PATH_INFO || config.DATA_GO_KR_SERVICE_KEY || config.SEOUL_BUSSTATION_INFO,
 });
 const getGbisShape = createGbisShape();
+const getSeoulBusShape = createSeoulBusShape();
 const handleBusInformation = createBusInformation({
   root: ROOT,
   serviceKey: config.SEOUL_BUSSTATION_INFO || config.DATA_GO_KR_SERVICE_KEY,
@@ -89,7 +90,9 @@ createServer(async (req, res) => {
     if (req.method === 'GET' && url.searchParams.has('shapeRouteId')) {
       const routeId = url.searchParams.get('shapeRouteId');
       if (!isGbisRouteId(routeId)) return sendJson(res, 400, {error:'노선 번호를 확인해 주세요.'});
-      return sendJson(res, 200, {lines:await getGbisShape(routeId)});
+      const seoul = isSeoulRouteId(routeId);
+      const lines = await (seoul ? getSeoulBusShape(routeId) : getGbisShape(routeId));
+      return sendJson(res, 200, {source:seoul ? 'seoul' : 'gbis',lines});
     }
     return handleBusInformation(req, res, url);
   }

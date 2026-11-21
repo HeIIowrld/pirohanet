@@ -21,7 +21,9 @@ function busStopDataUrl(routeId) {
 function getGeometry(url,field,fetchFn) {
   const load = async () => {
     const response = await fetchFn(url,{signal:AbortSignal.timeout(5000)});
-    return response.ok ? (await response.json())[field] : null;
+    if (!response.ok) return null;
+    const data = await response.json();
+    return field ? data[field] : data.lines?.length ? data : null;
   };
   if (fetchFn !== globalThis.fetch) return load().catch(() => null);
   if (!geometryRequests.has(url)) {
@@ -118,9 +120,10 @@ export async function addMapGeometry(route,signal,fetchFn = fetch) {
       }
     }
     if (/^(?:1[0-2]\d|2\d{2})\d{6}$/.test(id)) {
-      const lines = await getGeometry(`/api/bus-information?shapeRouteId=${id}`,'lines',fetchFn);
-      const road = clipBusShape(withStops,lines ?? [],{forwardOnly:true});
-      if (road) return {...step,points:road,approximate:false,gbisGeometry:true};
+      const shape = await getGeometry(`/api/bus-information?shapeRouteId=${id}`,null,fetchFn);
+      const road = clipBusShape(withStops,shape?.lines,{forwardOnly:true});
+      if (road) return {...step,points:road,approximate:false,
+        ...(shape.source === 'seoul' ? {seoulGeometry:true} : {gbisGeometry:true})};
     }
     if (!range) return step;
     const busShapes = await getGeometry('/assets/data/osm-bus-shapes.json','lines',fetchFn);

@@ -66,10 +66,11 @@ function mapData(points, route, candidate, position) {
     });
   const lines = (route?.steps ?? []).flatMap(step => {
     const points = mapStepPoints(step).filter(isCoordinate);
-    return points.length > 1 ? [{points,color:routeColor(step),walking:step.type === 'WALKING',approximate:step.approximate}] : [];
+    const walking = step.type === 'WALKING';
+    return points.length > 1 ? [{points,color:routeColor(step),walking,approximate:step.approximate}] : [];
   });
   return {markers,lines,osmGeometry:route?.steps?.some(step => step.osmGeometry),gbisGeometry:route?.steps?.some(step => step.gbisGeometry),
-    incheonGeometry:route?.steps?.some(step => step.incheonGeometry)};
+    incheonGeometry:route?.steps?.some(step => step.incheonGeometry),seoulGeometry:route?.steps?.some(step => step.seoulGeometry)};
 }
 
 function RouteSketch({data}) {
@@ -84,7 +85,7 @@ function RouteSketch({data}) {
   const plot = ([x,y]) => [48+294*(x-minX)/dx, 122+190*(maxY-y)/dy];
   return <svg className="route-sketch" viewBox="0 0 390 360" aria-label="대중교통 경로 개요" role="img">
     {data.lines.map((line,index) => <polyline key={index} fill="none" stroke={line.color} strokeWidth="4"
-      strokeDasharray={line.walking ? '3 6' : undefined} strokeLinecap="round"
+      strokeDasharray={line.walking ? '3 6' : line.approximate ? '8 6' : undefined} strokeLinecap="round"
       strokeOpacity={line.approximate ? 0.65 : 0.95} points={line.points.map(point => plot(point).join(',')).join(' ')}/>)}
     {data.markers.map(({point,label}) => {
       const [x,y]=plot(point);
@@ -217,7 +218,7 @@ export default function LiveMap({points,route,candidate,state,position}) {
     const overlays = data.lines.map(line => new sdk.Polyline({
       map:canvas, path:line.points.map(position), strokeWeight:5,
       strokeColor:line.color, strokeOpacity:line.approximate ? 0.65 : 0.95,
-      strokeStyle:line.walking ? 'shortdot' : 'solid', strokeLineCap:'round', strokeLineJoin:'round',
+      strokeStyle:line.walking ? 'shortdot' : line.approximate ? 'shortdash' : 'solid', strokeLineCap:'round', strokeLineJoin:'round',
     }));
     for (const {point,label} of data.markers) {
       const pin = document.createElement('span');
@@ -245,13 +246,15 @@ export default function LiveMap({points,route,candidate,state,position}) {
 
   return <div className="map-placeholder live-map" aria-label="이동 지도">
     <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!loadError?'naver':undefined} hidden={Boolean(loadError)} inert={!ready||Boolean(loadError)}/>
-    {!ready && !loadError && <RouteSketch data={data}/>}
-    {(data.osmGeometry || data.gbisGeometry || data.incheonGeometry) && !loadError && <div className="route-shape-credit">
+    {(!ready || loadError) && <RouteSketch data={data}/>}
+    {data.lines.some(line => !line.walking && line.approximate) && <div className="route-approximate">긴 점선은 추정 구간</div>}
+    {(data.osmGeometry || data.gbisGeometry || data.incheonGeometry || data.seoulGeometry) && <div className="route-shape-credit">
       {data.osmGeometry && <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
+      {data.seoulGeometry && <a href="https://topis.seoul.go.kr/map/openBusMap.do" target="_blank" rel="noreferrer">서울시 TOPIS</a>}
       {data.incheonGeometry && <a href="https://bus.incheon.go.kr/" target="_blank" rel="noreferrer">인천 버스정보</a>}
       {data.gbisGeometry && <a href="https://www.gbis.go.kr/" target="_blank" rel="noreferrer">경기버스정보</a>}
     </div>}
-    {loadError && <div className="map-message">
+    {loadError && <div className={`map-message${data.lines.length ? ' with-route-sketch' : ''}`}>
       <p role="status">{loadError}</p>
       <button type="button" onClick={retry}>지도 다시 불러오기</button>
     </div>}

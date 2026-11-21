@@ -42,7 +42,7 @@ test('the map uses actual walk coordinates for a nearby route and keeps the exis
   assert.deepEqual(outage.steps,addRailGeometry(route).steps);
 });
 
-test('ordered bus stops alone do not draw a road segment', async () => {
+test('missing bus and subway shapes retain approximate segments', async () => {
   const step = {type:'BUS',approximate:true,seoulBusRouteId:'100100112',seoulBusStopId:'113000420',
     points:[[126.93588,37.55535],[126.96656,37.56553]]};
   const middle = [126.953,37.559];
@@ -52,10 +52,24 @@ test('ordered bus stops alone do not draw a road segment', async () => {
   const route = {steps:[step,{...step,seoulBusRouteId:'unknown'}]};
   const signal = new AbortController().signal;
   const result = await addMapGeometry(route,signal,async () => Response.json({routes}));
-  assert.deepEqual(mapStepPoints(result.steps[0]),[]);
+  assert.deepEqual(mapStepPoints(result.steps[0]),[step.points[0],middle,step.points[1]]);
   assert.equal(result.steps[0].approximate,true);
-  assert.deepEqual(mapStepPoints(result.steps[1]),[]);
-  assert.deepEqual(mapStepPoints(rail),[]);
+  assert.deepEqual(mapStepPoints(result.steps[1]),step.points);
+  assert.deepEqual(mapStepPoints(rail),rail.points);
+});
+
+test('7011 uses the official road through the selected stops when available', async () => {
+  const id = '100100450';
+  const rows = JSON.parse(await readFile(new URL('../public/assets/data/seoul-bus-stops.json',import.meta.url))).routes[id];
+  const [from,middle,to] = rows.slice(23,26);
+  const road = [from.slice(1),[126.925,37.5526],middle.slice(1),to.slice(1)];
+  const step = {type:'BUS',approximate:true,seoulBusRouteId:id,seoulBusStopId:String(from[0]),
+    seoulBusAlightStopId:String(to[0]),vehicles:[{name:'7011'}],points:[from.slice(1),to.slice(1)]};
+  const [mapped] = (await addMapGeometry({steps:[step]},new AbortController().signal,async url =>
+    Response.json(url.includes('shapeRouteId=') ? {source:'seoul',lines:[road]} : {routes:{[id]:rows}}))).steps;
+  assert.deepEqual(mapStepPoints(mapped),road);
+  assert.equal(mapped.seoulGeometry,true);
+  assert.equal(mapped.approximate,false);
 });
 
 test('adjacent subway stations verified by the network remain visible on the map', () => {

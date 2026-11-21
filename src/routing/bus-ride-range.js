@@ -12,7 +12,7 @@ function stopMatches(stops, id, point) {
     if (!Number.isFinite(lon) || !Number.isFinite(lat) ||
         (id != null && String(stopId) !== String(id))) return [];
     const distance = coordinateDistance([lon,lat],point);
-    return distance <= stopRadius ? [{index,distance}] : [];
+    return id != null || distance <= stopRadius ? [{index,distance}] : [];
   });
 }
 
@@ -31,10 +31,12 @@ export function busRideRange(step, stops) {
     if (turnIndex >= 0 && start.index <= turnIndex && end.index > turnIndex) return [];
     return [{
       start:start.index, end:end.index, direction:turnIndex < 0 ? null : Number(start.index > turnIndex),
-      distance:start.distance+end.distance,
+      distance:start.distance+end.distance, nearby:start.distance <= stopRadius && end.distance <= stopRadius,
     }];
-  })).sort((a,b) => a.distance-b.distance);
-  const [best, next] = matches;
-  if (!best || (next && next.distance-best.distance < 15)) return null;
+  }));
+  if (!matches.length) return null;
+  const [best, next] = matches.filter(match => match.nearby).sort((a,b) => a.distance-b.distance);
+  if (!best) return undefined;
+  if (next && next.distance-best.distance < 15) return null;
   return best;
 }
