@@ -46,7 +46,7 @@ export function Sheet({children,className='',onExpand,onCollapse}){
 }
 export const Badge=()=> <span className="badge">데모 예시</span>;
 export function Summary({values}){return <div className="summary-card">{values.map(([label,value])=><div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>}
-export function ListRow({title,subtitle,tail,onClick}){return <button className="list-row" onClick={onClick}><Icon name="calendar"/><span><strong>{title}</strong>{subtitle&&<small>{subtitle}</small>}</span>{tail??<Icon name="chevronRight"/>}</button>}
+export function ListRow({title,subtitle,tail,onClick,icon='calendar'}){return <button type="button" className="list-row" onClick={onClick}><Icon name={icon}/><span><strong>{title}</strong>{subtitle&&<small>{subtitle}</small>}</span>{tail??<Icon name="chevronRight"/>}</button>}
 export function MapSurface({routes=false,demo=false,state}){
  const routed=routes&&demo&&!['loading','route-error'].includes(state);
  const waypoint=['waypoint','waypoint-confirmed'].includes(state);

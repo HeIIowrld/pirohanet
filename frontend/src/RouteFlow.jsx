@@ -137,11 +137,12 @@ export function RouteComparison({result, route, trip, demo, select, start, findS
             label={routeCategory(item)} selected={route?.id === item.id} onSelect={() => select(item)}/>)}
         </div>
       </>}
+      {/* Figma H04: 조건 변경은 카드 아래 작은 Text 버튼, CTA 영역은 전폭 버튼을 세로로 쌓는다 */}
+      <button type="button" className="route-condition-link" onClick={changeCondition}>컨디션·이동 옵션</button>
     </div>
     <Actions>
-      <Button kind="text" onClick={changeCondition}>컨디션·이동 옵션</Button>
-      {findStops && <Button kind="sky" disabled={!route} onClick={findStops}>여유 시간 확인</Button>}
       <Button disabled={!route} onClick={start}>이 경로로 안내 시작</Button>
+      {findStops && <Button kind="sky" disabled={!route} onClick={findStops}>여유 시간 확인</Button>}
     </Actions>
   </Sheet>;
 }
