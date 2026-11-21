@@ -326,7 +326,7 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .trip-stop strong { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trip-stop > .icon { width: 20px; height: 20px; color: var(--fg-muted); }
 .trip-times { margin-top: 16px; }
-.trip-stop small b { font-weight: 600; color: var(--fg-secondary); }
+.trip-stop small b { font-weight: 500; color: var(--fg-secondary); }
 .trip-time-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .trip-time-fields .field { padding: 8px 14px; min-height: 56px; gap: 6px; }
 .trip-time-fields .field strong { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
