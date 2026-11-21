@@ -343,14 +343,9 @@ export default function App(){
   }finally{if(id===request.current)setBusy(false)}
  }
  async function currentLocation(){const id=++request.current;setBusy(true);setError('');try{if(!navigator.geolocation)throw new Error('현재 위치를 지원하지 않는 브라우저예요.');const pos=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{timeout:10000}));const {latitude,longitude}=pos.coords;const data=await api(`/api/reverse-geocode?latitude=${latitude}&longitude=${longitude}`);if(id!==request.current)return;const address=data.documents?.[0]?.road_address?.address_name||data.documents?.[0]?.address?.address_name;if(!address)throw new Error('주소를 확인하지 못했어요. 출발지를 검색해 주세요.');choose({name:'현재 위치',address,latitude,longitude},'origin')}catch(e){if(id===request.current)setError(e.code===1?'위치 권한이 꺼져 있어요. 출발지를 직접 검색해 주세요.':e.message)}finally{if(id===request.current)setBusy(false)}}
- function navigate(link){
-  const opened=window.open('','_blank');
-  if(opened){opened.opener=null;opened.location.replace(link.url);return}
-  setToast('지도 창이 차단됐어요. 지도 링크를 복사하거나 직접 열어 주세요.');
- }
  async function copyLink(link){
   try{await navigator.clipboard.writeText(link.url);setToast('지도 링크를 복사했어요.')}
-  catch{setToast('링크를 복사하지 못했어요. 길안내 링크를 직접 열어 주세요.')}
+  catch{setToast('링크를 복사하지 못했어요. 길찾기 링크를 눌러 열어 주세요.')}
  }
  function startJourney(selected=route) {
   if(!trip||!selected)return;
@@ -422,7 +417,7 @@ export default function App(){
  </label><Actions><Button disabled={busy||level===null} onClick={()=>routes(false)}>경로 보기</Button><Button kind="text" disabled={busy} onClick={()=>{setLevel(null);setConditionChanged(true);routes(false,null)}}>건너뛰기</Button></Actions></section>}
  {screen==='loading'&&<Sheet className="loading-sheet"><div className="sheet-body"><h2>경로를 찾고 있어요.</h2><div className="skeleton"/><div className="skeleton"/></div><Actions><Button disabled><Icon name="refresh"/></Button></Actions></Sheet>}
  {screen==='routes'&&<RouteComparison result={result} route={route} trip={trip} demo={demo} select={item=>{setRoute(item);setDirectChoice(item)}} choose={chooseRoute} changeCondition={()=>go('condition')} changeTrip={()=>go('confirm')} showLate={item=>{setRoute(item);go('details')}}/>}
- {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button>{points.origin&&points.destination&&<a className="button text" href={mapLink(points.origin,points.destination)} target="_blank" rel="noreferrer">카카오맵에서 길찾기</a>}</Actions></Sheet>}
+ {screen==='route-error'&&<Sheet className="route-error-sheet"><div className="sheet-body"><Art name="route-error"/><h2>경로를 불러오지 못했어요.</h2><p>{error||'잠시 후 다시 시도해 주세요.'}</p></div><Actions><Button onClick={()=>routes(retry.current?.withStops,retry.current?.level)}>다시 시도</Button><Button kind="text" onClick={()=>go('confirm')}>출발 조건 변경</Button>{points.origin&&points.destination&&<a className="button text" href={mapLink(points.origin,points.destination)} rel="noreferrer">카카오맵에서 길찾기</a>}</Actions></Sheet>}
  {screen==='stops'&&result&&trip&&<GapStops result={result} trip={trip} now={gapNow} direct={directChoice??result.direct[0]} demo={demo}
   openStop={index=>{setStopIndex(index);go('waypoint')}}
   goDirect={()=>startJourney(directChoice??result.direct[0])}/>}
@@ -468,7 +463,7 @@ export default function App(){
  {screen==='journey'&&route&&trip&&progress&&<Journey route={route} trip={trip} demo={demo} progress={progress}
   advance={()=>setProgress(current=>({index:Math.min(current.index+1,route.steps.length-1),startsAt:Date.now()}))} finish={finishJourney}
   openDetails={()=>go('details')} openDwell={!trip.arriveBy&&!route.viaStop&&progress.index===0?()=>openOverlay('dwell'):null} position={journeyPosition} setPosition={setJourneyPosition}/>}
- {screen==='details'&&route&&<RouteDetails route={route} trip={trip} demo={demo} navigate={navigate} copyLink={copyLink} openDwell={(!progress||progress.index===0)?()=>openOverlay('dwell'):null} resume={progress&&navigation.previous?.screen==='journey'?goBack:null}/>}
+ {screen==='details'&&route&&<RouteDetails route={route} trip={trip} demo={demo} copyLink={copyLink} openDwell={(!progress||progress.index===0)?()=>openOverlay('dwell'):null} resume={progress&&navigation.previous?.screen==='journey'?goBack:null}/>}
  {screen==='my'&&<section className="page list-page"><ListRow title="내 장소" subtitle="저장한 장소 관리" onClick={()=>go('saved')}/><ListRow title="캘린더 설정" subtitle="Google 캘린더 연결" onClick={()=>go('settings')}/></section>}
  {screen==='settings'&&<section className="page list-page"><ListRow title="Google 캘린더" subtitle="일정은 읽기만 해요." tail={<small>연결됨</small>}/><ListRow title="약속 장소가 있는 일정만 보기" onClick={()=>setLocatedOnly(v=>!v)} tail={<span className={`toggle ${locatedOnly?'on':''}`} role="switch" aria-checked={locatedOnly} aria-label="약속 장소가 있는 일정만 보기"/>}/><Actions><Button kind="danger" onClick={disconnect}>연결 해제 및 로그아웃</Button></Actions></section>}
  {screen==='saved'&&!naming&&<section className={`page saved-page ${saved.length?'':'empty'}`}>{saved.length?saved.map((p,i)=><div className="saved-place-row" key={p.alias||i}><PlaceRow place={p} onClick={()=>{setEvent(null);update('arrival','');choose(p,'destination')}} tail={p.distance}/><button aria-label={`${p.alias||p.name} 이름 바꾸기`} disabled={busy} className="saved-edit" onClick={()=>setNaming({place:p,name:p.alias||p.name||'',from:p.alias||p.name||''})}>수정</button><button className="saved-delete" aria-label={`${p.alias||p.name} 삭제`} disabled={busy} onClick={()=>remove(p)}>삭제</button></div>):<><Art name="empty-saved"/><h2>저장한 장소가 없어요.</h2><p>자주 가는 곳을 저장해 두면 빠르게 찾을 수 있어요.</p></>}<Actions><Button kind="sky" onClick={()=>openSearch('save')}>장소 추가</Button></Actions></section>}
