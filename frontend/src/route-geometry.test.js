@@ -74,3 +74,22 @@ test('shown station access walks can exceed the short walking-only candidate lim
   assert.deepEqual(mapStepPoints(mapped),walkPoints);
   assert.equal(mapped.approximate,false);
 });
+
+test('a Seoul to Incheon bus transfer draws both the adjacent stop pair and the Incheon bus', async () => {
+  const bus = (route,stop,points) => ({type:'BUS',approximate:true,seoulBusRouteId:route,seoulBusStopId:stop,points});
+  const cityBus = bus('100100551','112000015',[[126.93891,37.56008],[126.93549,37.56011]]);
+  const incheonBus = bus('165000381','112000031',[[126.9353,37.55977],[126.91384,37.54949]]);
+  const missing = bus('165000399','112000031',incheonBus.points);
+  const sources = {
+    seoul:{'100100551':[[112000015,...cityBus.points[0]],[112000013,...cityBus.points[1]]]},
+    incheon:{
+      '165000381':[[112000031,...incheonBus.points[0]],[113000414,126.92432,37.55732],[113000412,...incheonBus.points[1]]],
+      '165000399':[[112000031,...incheonBus.points[0]],[113000414,null,null],[113000412,...incheonBus.points[1]]],
+    },
+  };
+  const result = await addStreetGeometry({steps:[cityBus,incheonBus,missing]},new AbortController().signal,
+    async url=>Response.json({routes:sources[url.includes('incheon')?'incheon':'seoul']}));
+  assert.deepEqual(mapStepPoints(result.steps[0]),cityBus.points);
+  assert.deepEqual(mapStepPoints(result.steps[1]),[incheonBus.points[0],[126.92432,37.55732],incheonBus.points[1]]);
+  assert.deepEqual(mapStepPoints(result.steps[2]),[]);
+});
