@@ -1,0 +1,4585 @@
+{
+  "schema_version": "1.1.0",
+  "dataset_name": "모도 서울 추천 경유지",
+  "locale": "ko-KR",
+  "timezone": "Asia/Seoul",
+  "created_on": "2026-11-21",
+  "place_count": 38,
+  "original_place_count": 20,
+  "additional_place_count": 18,
+  "regions": {
+    "gwanghwamun": "광화문·경복궁",
+    "seochon": "서촌·효자동",
+    "anguk": "안국·북촌·인사동",
+    "cityhall": "시청·정동·청계천",
+    "sinchon": "신촌·연세대",
+    "ewha": "이대",
+    "yeonnam": "연남동",
+    "hongdae": "홍대",
+    "yeonhui": "연희동·홍제천",
+    "dongnimmun": "독립문",
+    "sangam": "상암·월드컵경기장",
+    "mangwon": "망원동",
+    "dongdaemun_design": "동대문역사문화공원"
+  },
+  "taxonomy": {
+    "category": {
+      "landmark": "랜드마크",
+      "bookstore": "서점",
+      "museum": "박물관",
+      "art_museum": "미술관",
+      "culture_center": "복합문화시설",
+      "palace": "궁궐·전통건축",
+      "market": "시장",
+      "neighborhood": "골목·거리",
+      "trail": "산책로",
+      "observatory": "전망대",
+      "park": "공원",
+      "cafe": "카페",
+      "shop": "소품·편집숍",
+      "campus": "캠퍼스 명소",
+      "library": "도서관"
+    },
+    "interests": {
+      "books": "책·문학",
+      "history": "역사",
+      "art": "미술",
+      "craft": "공예",
+      "design": "디자인",
+      "architecture": "건축",
+      "nature": "자연",
+      "photography": "사진",
+      "food": "먹거리",
+      "coffee": "커피·디저트",
+      "shopping": "쇼핑",
+      "local_culture": "지역문화",
+      "science": "과학",
+      "performance": "공연",
+      "urban_exploration": "도시탐방",
+      "study": "공부"
+    },
+    "activities": {
+      "walk": "산책",
+      "browse_books": "책 구경",
+      "view_exhibition": "전시 관람",
+      "take_photos": "사진 촬영",
+      "rest": "휴식",
+      "eat": "식사·간식",
+      "drink_coffee": "카페 이용",
+      "shop": "쇼핑",
+      "view_scenery": "풍경 감상",
+      "learn": "학습·탐방",
+      "watch_performance": "공연 관람",
+      "study": "공부"
+    },
+    "mood": {
+      "relaxing": "휴식",
+      "quiet": "차분함",
+      "refreshing": "기분전환",
+      "creative": "영감",
+      "nostalgic": "고즈넉함",
+      "lively": "활기",
+      "discovery": "새로운 발견",
+      "romantic": "낭만",
+      "scenic": "풍경",
+      "reflective": "사색"
+    },
+    "visit_context": {
+      "before_appointment": "약속 전",
+      "after_class": "수업 후",
+      "solo": "혼자",
+      "with_friends": "친구와",
+      "date": "데이트",
+      "short_stop": "짧은 경유",
+      "weekend": "주말",
+      "study_break": "공부 중 휴식"
+    },
+    "weather": {
+      "clear": "맑음",
+      "cloudy": "흐림",
+      "rain": "비",
+      "hot": "더위",
+      "cold": "추위"
+    },
+    "accessibility": {
+      "near_transit": "역 근접",
+      "bus_recommended": "버스 권장",
+      "slope_possible": "경사 가능",
+      "stairs_possible": "계단 가능",
+      "crowding_possible": "혼잡 가능",
+      "large_site": "넓은 장소",
+      "seating_possible": "앉을 공간 가능",
+      "indoor_shelter": "실내 대피 가능",
+      "entrance_check": "진입 지점 확인",
+      "campus_access_check": "교내 출입 확인",
+      "limited_access": "방문 제한 확인"
+    },
+    "fatigue": {
+      "low": "낮은 장소 내부 보행 부담",
+      "medium": "보통 장소 내부 보행 부담",
+      "high": "높은 장소 내부 보행 부담"
+    },
+    "duration": {
+      "quick": "권장 30분 이하",
+      "standard": "권장 31~60분",
+      "extended": "권장 61분 이상"
+    },
+    "cost": {
+      "free": "기본 방문 무료",
+      "optional_spend": "구매 선택",
+      "paid": "일반적으로 유료",
+      "mixed": "무료·유료 혼합",
+      "unknown": "미확인"
+    }
+  },
+  "data_policy": {
+    "purpose": "모도 이동 계획에서 지역별로 고를 수 있는 경유지 후보.",
+    "null_means": "미확인 또는 미수집. false나 0으로 치환하지 말 것.",
+    "coordinates": "WGS84. 선택 시 지도 API에서 검색 지점 이름과 자치구를 확인한다. route_address가 있으면 주소까지 일치해야 한다. 주소 지점은 해당 건물 주소로 조회한다. 원자료 좌표가 있는 경우 시설 참조값이다.",
+    "source_scope": "기존 34개 항목을 바탕으로 검색 지점을 점검하고 공식 안내에서 확인한 일부 방문 정보와 후보를 추가했다.",
+    "editorial_fields": "태그 및 체류시간, 내부 보행 부담은 기획용 추정. 법적/의학적 접근성 판정 아님.",
+    "user_state": "saved, visited, rating은 이용자별 별도 데이터로 관리.",
+    "weekly_hours": "공개 문서에 명시된 일부 장소만 구조화. 운영시간의 공휴일·행사·예약 예외를 hours_note와 공식 페이지로 확인. 24:00은 당일 종료 표기."
+  },
+  "recommendation_rules": {
+    "selection": "지역별 후보 중 한 곳을 선택하고 권장 체류 시간을 조정할 수 있다.",
+    "route": "지도 API로 직행과 선택한 지점을 거치는 두 구간의 이동 시간을 조회한다.",
+    "time_calculation": {
+      "extra_travel_min": "via_route_travel_min - direct_route_travel_min",
+      "arrival": "depart_at + via_route_travel_min + stay_min",
+      "note": "추가 이동 허용 시간은 이동 시간 차이에 적용한다. 도착 목표를 비교할 때는 체류 시간도 합한다."
+    },
+    "operations": "운영 시간, 예약 및 구역별 출입 조건은 장소 안내에서 확인한다."
+  },
+  "places": [
+    {
+      "id": "seoul_001",
+      "name": "광화문광장",
+      "region": "gwanghwamun",
+      "category": "landmark",
+      "setting": "outdoor",
+      "description": "동상과 도심 경관을 감상하는 넓은 광장. 짧은 사진 경유에 적합.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 세종대로 172 일대",
+        "search_query": "광화문광장 세종대왕 동상",
+        "route_target": "광화문광장 세종대왕 동상",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "photography",
+          "architecture"
+        ],
+        "activities": [
+          "walk",
+          "take_photos",
+          "view_scenery"
+        ],
+        "mood": [
+          "refreshing",
+          "scenic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "crowding_possible",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 15,
+        "max": 25,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "광화문역",
+          "lines": [
+            "5"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "행사·강풍·햇빛 노출, 지정한 동상 위치 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "행사·강풍·햇빛 노출, 지정한 동상 위치 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.visitseoul.net/attractions--/Gwanghwamun-Square/ENP001899",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_002",
+      "name": "교보문고 광화문점",
+      "region": "gwanghwamun",
+      "category": "bookstore",
+      "setting": "indoor",
+      "description": "책, 문구, 굿즈를 구경하며 약속 전 짧게 머물기 좋은 대형 서점.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 종로 1 교보생명빌딩 지하 1층",
+        "search_query": "교보문고 광화문점",
+        "route_target": "교보문고 광화문점",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "books",
+          "design",
+          "shopping"
+        ],
+        "activities": [
+          "browse_books",
+          "shop"
+        ],
+        "mood": [
+          "quiet",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter",
+          "crowding_possible",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 25,
+        "max": 45,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "광화문역",
+          "lines": [
+            "5"
+          ],
+          "exit": "4",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "지하 매장 진입 경로와 혼잡 확인.",
+        "operator_reported_facilities": [
+          "장애인 화장실 안내"
+        ]
+      },
+      "operations": {
+        "hours_note": "매일 09:30~22:00, 설·추석 당일 휴무 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "지하 매장 진입 경로와 혼잡 확인.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "09:30",
+            "close": "22:00"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://store.kyobobook.co.kr/store-info/001",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://korean.visitseoul.net/area/교보문고-광화문점/KOP040172",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://www.kyobobook.co.kr/",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_003",
+      "name": "대한민국역사박물관",
+      "region": "gwanghwamun",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "한국 근현대사의 주요 사건과 생활사를 살펴보는 전시 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 세종대로 198",
+        "search_query": "대한민국역사박물관",
+        "route_target": "대한민국역사박물관",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture",
+          "urban_exploration"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "quiet",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter"
+        ],
+        "fatigue": "low",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 40,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "광화문역",
+          "lines": [
+            "5"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "층별 관람 동선 및 입장 마감 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "층별 관람 동선 및 입장 마감 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.much.go.kr/MUCH/contents/M01010000000.do",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_004",
+      "name": "세종문화회관 세종라운지",
+      "region": "gwanghwamun",
+      "category": "culture_center",
+      "setting": "indoor",
+      "description": "광화문광장과 공연장을 잇는 실내 라운지. 약속 전 카페나 굿즈 매장에 잠깐 들를 수 있어요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 세종대로 175",
+        "search_query": "세종문화회관 세종라운지 서비스플라자",
+        "route_target": "세종문화회관 세종라운지 서비스플라자",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "performance",
+          "art",
+          "architecture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "rest",
+          "watch_performance"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "mixed"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 25,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "광화문역",
+          "lines": [
+            "5"
+          ],
+          "exit": "1",
+          "reported_walk_distance_m": 200,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "라운지 안의 매장과 공연장 운영 시간은 시설마다 달라요."
+      },
+      "operations": {
+        "hours_note": "카페 08:00~21:30, 서비스플라자 10:00~20:00(13:00~14:00 휴식).",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "mixed",
+        "special_conditions": "라운지 안의 매장과 공연장 운영 시간은 시설마다 달라요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.sejongpac.or.kr/portal/main/contents.do?menuNo=200364",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://www.sejongpac.or.kr/portal/main/contents.do?menuNo=200082",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_005",
+      "name": "경복궁",
+      "region": "gwanghwamun",
+      "category": "palace",
+      "setting": "outdoor",
+      "description": "궁궐 건축과 정원을 감상하는 역사 경유지.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 사직로 161",
+        "search_query": "경복궁 광화문",
+        "route_target": "광화문",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "learn",
+          "take_photos"
+        ],
+        "mood": [
+          "nostalgic",
+          "scenic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "large_site",
+          "entrance_check"
+        ],
+        "fatigue": "high",
+        "duration": "standard",
+        "cost": "paid"
+      },
+      "visit_duration_min": {
+        "min": 40,
+        "recommended": 60,
+        "max": 90,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "경복궁역",
+          "lines": [
+            "3"
+          ],
+          "exit": "5",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": 2,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 4,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "넓은 경내, 자갈길 및 휴궁일·입장 마감 확인."
+      },
+      "operations": {
+        "hours_note": "화요일 휴궁. 계절별 관람 시간과 입장 마감은 궁능유적본부 안내를 확인해 주세요.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "paid",
+        "special_conditions": "넓은 경내, 자갈길 및 휴궁일·입장 마감 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": [
+          "tue"
+        ],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://royal.khs.go.kr/ROYAL/contents/R702000000.do",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://royal.khs.go.kr/ROYAL/contents/R701000000.do",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_006",
+      "name": "서울역사박물관",
+      "region": "gwanghwamun",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "서울의 역사와 도시 변화, 모형 전시를 살펴보는 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 새문안로 55",
+        "search_query": "서울역사박물관",
+        "route_target": "서울역사박물관",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "urban_exploration",
+          "architecture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "quiet",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "indoor_shelter",
+          "seating_possible"
+        ],
+        "fatigue": "medium",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 30,
+        "recommended": 50,
+        "max": 90,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "광화문역",
+          "lines": [
+            "5"
+          ],
+          "exit": "7",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": 10,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": false,
+        "notes": "역에서 추가 이동과 전시별 동선 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "역에서 추가 이동과 전시별 동선 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://museum.seoul.go.kr/www/board/NR_boardView.do?bbsCd=1075&seq=20140224165400931&sso=ok",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_007",
+      "name": "통인시장",
+      "region": "seochon",
+      "category": "market",
+      "setting": "mixed",
+      "description": "전통시장 먹거리와 소규모 미식 체험.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 자하문로15길 18 일대",
+        "search_query": "통인시장",
+        "route_target": "통인시장",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "food",
+          "local_culture"
+        ],
+        "activities": [
+          "eat",
+          "shop",
+          "walk"
+        ],
+        "mood": [
+          "lively",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "crowding_possible",
+          "entrance_check"
+        ],
+        "fatigue": "medium",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 45,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "경복궁역",
+          "lines": [
+            "3"
+          ],
+          "exit": "2",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "엽전도시락 운영 여부·대기시간 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "엽전도시락 운영 여부·대기시간 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.visitseoul.net/PalaceArea/A-journey-through-time-in-Tongin-Market/ENN033191",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_008",
+      "name": "서촌 통의동 골목",
+      "region": "seochon",
+      "category": "neighborhood",
+      "setting": "outdoor",
+      "description": "통의동 보안여관 앞에서 시작해 한옥과 작은 전시 공간이 있는 서촌 골목을 걸어요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 효자로 33",
+        "search_query": "통의동 보안여관",
+        "route_target": "보안여관",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "architecture",
+          "coffee",
+          "local_culture",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "take_photos",
+          "shop"
+        ],
+        "mood": [
+          "nostalgic",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "slope_possible",
+          "entrance_check"
+        ],
+        "fatigue": "high",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 35,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "경복궁역",
+          "lines": [
+            "3"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 4,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "개별 전시 공간과 가게는 방문 전에 운영을 확인해 주세요."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "개별 전시 공간과 가게는 방문 전에 운영을 확인해 주세요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://culture.seoul.go.kr/culture/culture/cultureSpace/view.do?facCode=101931&menuNo=200119",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://korean.visitseoul.net/area/SeochonHanokVillage/KOPhyd9ee",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_009",
+      "name": "청와대 사랑채",
+      "region": "seochon",
+      "category": "culture_center",
+      "setting": "indoor",
+      "description": "전시와 휴식이 결합된 관광 문화공간. 역보다 효자동 버스정류장 접근도 고려.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 효자로13길 45",
+        "search_query": "청와대 사랑채",
+        "route_target": "청와대 사랑채",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "local_culture",
+          "art"
+        ],
+        "activities": [
+          "view_exhibition",
+          "rest",
+          "learn"
+        ],
+        "mood": [
+          "relaxing",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "bus_recommended",
+          "indoor_shelter",
+          "seating_possible"
+        ],
+        "fatigue": "low",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 40,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "경복궁역",
+          "lines": [
+            "3"
+          ],
+          "exit": "4",
+          "reported_walk_distance_m": 800,
+          "reported_walk_duration_min": 12,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": true,
+        "notes": "운영일 확인. 버스 정류장 효자동에서 공식 안내 약 350m.",
+        "operator_reported_facilities": [
+          "엘리베이터",
+          "장애인 화장실",
+          "휠체어 대여 안내"
+        ]
+      },
+      "operations": {
+        "hours_note": "09:00~18:00, 17:30 입장마감, 화요일·1월 1일 휴관 안내. 공휴일 예외 확인.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "운영일 확인. 버스 정류장 효자동에서 공식 안내 약 350m.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "09:00",
+            "close": "18:00"
+          }
+        ],
+        "regular_closed_days": [
+          "tue"
+        ],
+        "last_admission_time": "17:30",
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.cwdsarangchae.kr/ko/staticpage/introduction/directions/page.kto",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://cwdsarangchae.kr/ko/staticpage/guide/accessible_tourism/page.kto",
+          "reference_type": "prior_document"
+        },
+        {
+          "url": "https://korean.visitseoul.net/area/청와대-사랑채/KOP006007",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_010",
+      "name": "서울공예박물관",
+      "region": "anguk",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "전통 및 현대 공예와 디자인을 살펴볼 수 있는 역 근접 전시 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 율곡로3길 4",
+        "search_query": "서울공예박물관",
+        "route_target": "서울공예박물관",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "craft",
+          "design",
+          "art",
+          "history"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "creative",
+          "quiet"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 35,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "안국역",
+          "lines": [
+            "3"
+          ],
+          "exit": "1",
+          "reported_walk_distance_m": 60,
+          "reported_walk_duration_min": 1,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "관람동·입장조건 개별 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "관람동·입장조건 개별 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://craftmuseum.seoul.go.kr/preview/visit",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_011",
+      "name": "국립현대미술관 서울",
+      "region": "anguk",
+      "category": "art_museum",
+      "setting": "indoor",
+      "description": "현대미술 기획전과 건축 공간을 감상하는 문화 경유지.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 삼청로 30",
+        "search_query": "국립현대미술관 서울",
+        "route_target": "국립현대미술관 서울",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "art",
+          "design",
+          "architecture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "rest"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "indoor_shelter",
+          "large_site"
+        ],
+        "fatigue": "medium",
+        "duration": "standard",
+        "cost": "mixed"
+      },
+      "visit_duration_min": {
+        "min": 30,
+        "recommended": 60,
+        "max": 90,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "안국역",
+          "lines": [
+            "3"
+          ],
+          "exit": "1",
+          "reported_walk_distance_m": 1000,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "역에서의 보행과 전시별 티켓·입장 시간 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "mixed",
+        "special_conditions": "역에서의 보행과 전시별 티켓·입장 시간 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.mmca.go.kr/visitingInfo/seoulInfo.do",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_012",
+      "name": "북촌한옥마을",
+      "region": "anguk",
+      "category": "neighborhood",
+      "setting": "outdoor",
+      "description": "북촌문화센터에서 출발해 한옥과 언덕길을 둘러보는 산책이에요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 계동길 37",
+        "search_query": "북촌문화센터",
+        "route_target": "북촌문화센터",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture",
+          "photography",
+          "local_culture"
+        ],
+        "activities": [
+          "walk",
+          "take_photos",
+          "view_scenery"
+        ],
+        "mood": [
+          "nostalgic",
+          "scenic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "slope_possible",
+          "stairs_possible",
+          "crowding_possible",
+          "entrance_check",
+          "limited_access"
+        ],
+        "fatigue": "high",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 40,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "안국역",
+          "lines": [
+            "3"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 5,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": true,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "문화센터에서 출발해 방문하려는 골목의 제한 구역과 시간을 먼저 확인해 주세요."
+      },
+      "operations": {
+        "hours_note": "북촌로11길 일대 적색구역 관광객 방문은 10:00~17:00에만 가능해요.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "문화센터에서 출발해 방문하려는 골목의 제한 구역과 시간을 먼저 확인해 주세요.",
+        "restricted_zone": {
+          "scope": "북촌 특별관리지역 적색구역 관광객",
+          "allowed_from": "10:00",
+          "allowed_until": "17:00",
+          "must_confirm_zone_geometry": true
+        },
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://news.seoul.go.kr/culture/archives/526017",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://korean.visitseoul.net/area/북촌문화센터-k/KOP018916",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://english.seoul.go.kr/notice-on-restrictions-for-tourist-visits-to-bukchon-special-management-area-effective-from-november-2024/",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_013",
+      "name": "인사동 문화의 거리",
+      "region": "anguk",
+      "category": "neighborhood",
+      "setting": "mixed",
+      "description": "남인사마당에서 출발해 공예품 가게, 갤러리와 전통 찻집이 있는 거리를 걸어요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 인사동길 6",
+        "search_query": "남인사마당",
+        "route_target": "남인사마당",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "craft",
+          "shopping",
+          "local_culture",
+          "coffee"
+        ],
+        "activities": [
+          "walk",
+          "shop",
+          "eat"
+        ],
+        "mood": [
+          "lively",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "crowding_possible",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 50,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "종로3가역",
+          "lines": [
+            "1",
+            "3",
+            "5"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "남인사마당은 거리의 남쪽 진입점이에요. 개별 매장 운영 시간은 다를 수 있어요."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "남인사마당은 거리의 남쪽 진입점이에요. 개별 매장 운영 시간은 다를 수 있어요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.ijongno.co.kr/www/124",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://korean.visitseoul.net/palace/인사동길/KOP000080",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://english.visitseoul.net/dongdaemunarea/Insa-dong/ENP000080",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_014",
+      "name": "운현궁",
+      "region": "anguk",
+      "category": "palace",
+      "setting": "outdoor",
+      "description": "비교적 압축적인 전통 건축과 마당을 감상할 수 있는 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 삼일대로 464",
+        "search_query": "운현궁",
+        "route_target": "운현궁",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture",
+          "photography"
+        ],
+        "activities": [
+          "learn",
+          "walk",
+          "take_photos"
+        ],
+        "mood": [
+          "quiet",
+          "nostalgic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 25,
+        "max": 40,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "안국역",
+          "lines": [
+            "3"
+          ],
+          "exit": "4",
+          "reported_walk_distance_m": 103,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "관람시간·휴관·공사 여부 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "관람시간·휴관·공사 여부 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.visitseoul.net/walking-tour/Unhyeongung%20Palace_/478",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_015",
+      "name": "익선동 한옥거리",
+      "region": "anguk",
+      "category": "neighborhood",
+      "setting": "mixed",
+      "description": "한옥을 활용한 카페와 상점이 모인 골목.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 익선동 일대",
+        "search_query": "익선동 한옥거리",
+        "route_target": "익선동 한옥거리",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "coffee",
+          "food",
+          "architecture",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "eat",
+          "drink_coffee",
+          "take_photos"
+        ],
+        "mood": [
+          "romantic",
+          "lively"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "crowding_possible",
+          "entrance_check"
+        ],
+        "fatigue": "medium",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 50,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "종로3가역",
+          "lines": [
+            "1",
+            "3",
+            "5"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "정확한 개별 점포를 선택하고 대기·좁은 통로 고려."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "정확한 개별 점포를 선택하고 대기·좁은 통로 고려.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.visitseoul.net/attractions/IkseongdongHanokVillage/ENP037008",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_016",
+      "name": "덕수궁",
+      "region": "cityhall",
+      "category": "palace",
+      "setting": "outdoor",
+      "description": "전통 궁궐과 근대 건축이 공존하는 도심 역사 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 중구 세종대로 99",
+        "search_query": "덕수궁 대한문",
+        "route_target": "덕수궁 대한문",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "중구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "learn",
+          "take_photos"
+        ],
+        "mood": [
+          "nostalgic",
+          "scenic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "standard",
+        "cost": "paid"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 40,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "시청역",
+          "lines": [
+            "1",
+            "2"
+          ],
+          "exit": "2",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": 2,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "자갈길과 입장마감·휴궁일 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "paid",
+        "special_conditions": "자갈길과 입장마감·휴궁일 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://royal.khs.go.kr/ROYAL/contents/R707000000.do?schGroupCode=dsg",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_017",
+      "name": "덕수궁 돌담길",
+      "region": "cityhall",
+      "category": "trail",
+      "setting": "outdoor",
+      "description": "궁궐 담장을 따라 가볍게 걸으며 도시 풍경을 감상하는 길.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": null,
+        "search_query": "덕수궁 돌담길",
+        "route_target": "덕수궁 돌담길",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "중구"
+      },
+      "tags": {
+        "interests": [
+          "architecture",
+          "photography",
+          "local_culture"
+        ],
+        "activities": [
+          "walk",
+          "take_photos"
+        ],
+        "mood": [
+          "romantic",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 35,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "시청역",
+          "lines": [
+            "1",
+            "2"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "시청 쪽 돌담길 지점을 기준으로 경로를 계산해요."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "시청 쪽 돌담길 지점을 기준으로 경로를 계산해요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.visitseoul.net/attractions/Deoksugung-Stone-Wall-Path/ENP023563",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_018",
+      "name": "서울시립미술관 서소문본관",
+      "region": "cityhall",
+      "category": "art_museum",
+      "setting": "indoor",
+      "description": "옛 법원 건축과 현대미술 전시를 경험하는 미술관.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 중구 덕수궁길 61",
+        "search_query": "서울시립미술관 서소문본관",
+        "route_target": "서울시립미술관 서소문본관",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "중구"
+      },
+      "tags": {
+        "interests": [
+          "art",
+          "architecture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "creative",
+          "quiet"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "indoor_shelter",
+          "slope_possible",
+          "seating_possible"
+        ],
+        "fatigue": "medium",
+        "duration": "standard",
+        "cost": "mixed"
+      },
+      "visit_duration_min": {
+        "min": 25,
+        "recommended": 50,
+        "max": 80,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "시청역",
+          "lines": [
+            "1"
+          ],
+          "exit": "1",
+          "reported_walk_distance_m": 380,
+          "reported_walk_duration_min": 6,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": false,
+        "notes": "진입로 오르막, 특별전 비용·입장마감 확인.",
+        "operator_reported_facilities": [
+          "엘리베이터",
+          "휠체어 대여",
+          "접이식 관람 의자"
+        ]
+      },
+      "operations": {
+        "hours_note": "월요일·1월 1일 휴관(월요일 공휴일 예외), 종료 1시간 전 입장마감.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "mixed",
+        "special_conditions": "진입로 오르막, 특별전 비용·입장마감 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://sema.seoul.go.kr/kr/visit/seosomun",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_019",
+      "name": "정동전망대",
+      "region": "cityhall",
+      "category": "observatory",
+      "setting": "indoor",
+      "description": "덕수궁 일대를 내려다보는 실내 전망 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 중구 덕수궁길 15 서소문청사 1동 13층",
+        "search_query": "정동전망대",
+        "route_target": "정동전망대",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "candidate_from_prior_list_verify",
+        "district": "중구"
+      },
+      "tags": {
+        "interests": [
+          "architecture",
+          "photography",
+          "coffee"
+        ],
+        "activities": [
+          "view_scenery",
+          "rest",
+          "take_photos"
+        ],
+        "mood": [
+          "scenic",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 30,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "시청역",
+          "lines": [
+            "1",
+            "2"
+          ],
+          "exit": "12",
+          "reported_walk_distance_m": 186,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "청사 출입 및 엘리베이터·공휴일 운영 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "청사 출입 및 엘리베이터·공휴일 운영 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.seoul.go.kr/city-hall/overview-city-hall/jeong-dong-observatory/",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_020",
+      "name": "청계천(청계광장 시작점)",
+      "region": "cityhall",
+      "category": "trail",
+      "setting": "outdoor",
+      "description": "도심 물길과 하천변 풍경을 즐기는 짧은 산책.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": null,
+        "search_query": "청계광장",
+        "route_target": "청계광장",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "중구"
+      },
+      "tags": {
+        "interests": [
+          "nature",
+          "photography",
+          "urban_exploration"
+        ],
+        "activities": [
+          "walk",
+          "view_scenery",
+          "take_photos"
+        ],
+        "mood": [
+          "refreshing",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "stairs_possible",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 40,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "광화문역",
+          "lines": [
+            "5"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": true,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "하천변 진입 계단·경사로 및 강우 시 출입 통제 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "하천변 진입 계단·경사로 및 강우 시 출입 통제 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://english.visitseoul.net/dongdaemunarea/CheonggyecheonStream/ENP000034",
+          "reference_type": "prior_document"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "prior_document_plus_selected_web_checks",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": null,
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_021",
+      "name": "연세대학교 청송대",
+      "region": "sinchon",
+      "category": "campus",
+      "setting": "outdoor",
+      "description": "캠퍼스 내 나무가 있는 문학 산책길, 수업 사이 기분전환에 적합.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 연세로 50 연세대학교 교내",
+        "search_query": "연세대학교 청송대",
+        "route_target": "연세대학교 청송대",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "nature",
+          "books",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "rest",
+          "view_scenery"
+        ],
+        "mood": [
+          "quiet",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "campus_access_check",
+          "slope_possible",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 15,
+        "max": 25,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "신촌역",
+          "lines": [
+            "2"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only_not_nearest_verified"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "교내 출입 가능 여부와 구체적인 진입점 확인."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "교내 출입 가능 여부와 구체적인 진입점 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://yoondongju.yonsei.ac.kr/yoondongju_m/view/ydj_3_3_4.do",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_022",
+      "name": "연세대학교 윤동주기념관",
+      "region": "sinchon",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "윤동주의 생애와 문학을 만나는 캠퍼스 전시 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 연세로 50 핀슨관",
+        "search_query": "윤동주기념관",
+        "route_target": "연세대학교 윤동주기념관",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "books",
+          "history",
+          "architecture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "quiet",
+          "nostalgic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "campus_access_check",
+          "entrance_check",
+          "indoor_shelter"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "unknown"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 45,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "신촌역",
+          "lines": [
+            "2"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only_not_nearest_verified"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "일반 방문자는 예약 조건 확인. 재학생 등은 신분 확인 후 자유관람 안내."
+      },
+      "operations": {
+        "hours_note": "연세대 교직원·재학생·동문 11:00~16:00(15:30 입장마감) 안내. 일반 예약·야간개관 별도.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "unknown",
+        "special_conditions": "일반 방문자는 예약 조건 확인. 재학생 등은 신분 확인 후 자유관람 안내.",
+        "reservation_note": "일반 방문자 예약 조건 확인; 연세대 구성원 신분 확인 후 자유관람 안내.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://lawschool.yonsei.ac.kr/yoondongju_m/view/ydj_3_1.do",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://bce.yonsei.ac.kr/yoondongju_m/intro/location01.do",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_023",
+      "name": "신촌문화발전소",
+      "region": "sinchon",
+      "category": "culture_center",
+      "setting": "indoor",
+      "description": "청년 예술인의 소공연장, 갤러리와 창작 공간을 갖춘 문화시설.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 연세로2나길 57",
+        "search_query": "신촌문화발전소",
+        "route_target": "신촌문화발전소",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "art",
+          "performance",
+          "local_culture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "watch_performance",
+          "learn"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "indoor_shelter",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "mixed"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "신촌역",
+          "lines": [
+            "2"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "당일 전시·공연·시설별 입장 조건 확인."
+      },
+      "operations": {
+        "hours_note": "화~일 10:00~22:00, 월요일 휴관 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "mixed",
+        "special_conditions": "당일 전시·공연·시설별 입장 조건 확인.",
+        "weekly_hours": [
+          {
+            "days": [
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ],
+        "regular_closed_days": [
+          "mon"
+        ],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.sdm.go.kr/culture/culture/sub4010_2.do",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_024",
+      "name": "이화여자대학교 박물관",
+      "region": "ewha",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "한국 문화유산과 미술 전시를 감상할 수 있는 대학 박물관.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 이화여대길 52 이화여자대학교박물관",
+        "search_query": "이화여자대학교 100주년기념박물관",
+        "route_target": "이화여자대학교 100주년기념박물관",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "craft",
+          "art"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "quiet",
+          "creative"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "campus_access_check",
+          "indoor_shelter",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 35,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "이대역",
+          "lines": [
+            "2"
+          ],
+          "exit": "2,3",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "정문까지 약 200m 이후 추가 이동, 교내 출입 및 전시 교체기 확인."
+      },
+      "operations": {
+        "hours_note": "월~금 09:30~17:00, 토·일·공휴일 휴관. 매월 마지막 수요일 연장 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "정문까지 약 200m 이후 추가 이동, 교내 출입 및 전시 교체기 확인.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri"
+            ],
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ],
+        "regular_closed_days": [
+          "sat",
+          "sun"
+        ],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://awcms.ewha.ac.kr/museum/watching/come.do",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://lawschool.ewha.ac.kr/museum/watching/info.do",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_025",
+      "name": "경의선숲길 연남동 구간",
+      "region": "yeonnam",
+      "category": "park",
+      "setting": "outdoor",
+      "description": "폐철길을 활용한 선형 녹지, 짧게 산책하거나 주변 카페와 연결하기 좋음.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 마포구 연남동 일대",
+        "search_query": "경의선숲길 연남동",
+        "route_target": "경의선숲길",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "area_or_target_needs_confirmation",
+        "district": "마포구",
+        "route_address": "서울 마포구 연남동 375"
+      },
+      "tags": {
+        "interests": [
+          "nature",
+          "coffee",
+          "local_culture",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "rest",
+          "take_photos"
+        ],
+        "mood": [
+          "refreshing",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "crowding_possible",
+          "seating_possible",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 40,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "홍대입구역",
+          "lines": [
+            "2",
+            "공항철도",
+            "경의중앙"
+          ],
+          "exit": "3",
+          "reported_walk_distance_m": 447,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": false,
+        "notes": "연남동 산책로의 지점을 기준으로 경로를 계산해요. 주말에는 보행자가 많을 수 있어요."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "연남동 산책로의 지점을 기준으로 경로를 계산해요. 주말에는 보행자가 많을 수 있어요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://korean.visitseoul.net/nature/경의선-숲길/KOP037160",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_026",
+      "name": "경의선 책거리 산책로",
+      "region": "hongdae",
+      "category": "trail",
+      "setting": "outdoor",
+      "description": "홍대입구역 6번 출구에서 시작하는 옛 철길 산책로예요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 마포구 와우산로37길 35",
+        "search_query": "홍대입구역 6번출구",
+        "route_target": "홍대입구역 공항철도 6번출구",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "마포구"
+      },
+      "tags": {
+        "interests": [
+          "books",
+          "local_culture",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "take_photos",
+          "rest"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 35,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "홍대입구역",
+          "lines": [
+            "2",
+            "공항철도",
+            "경의중앙"
+          ],
+          "exit": "6",
+          "reported_walk_distance_m": 54,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "경로는 6번 출구까지 안내해요. 책 관련 행사와 시설은 개별 운영 일정을 확인해 주세요."
+      },
+      "operations": {
+        "hours_note": null,
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "경로는 6번 출구까지 안내해요. 책 관련 행사와 시설은 개별 운영 일정을 확인해 주세요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://korean.visitseoul.net/area/%E4%BA%AC%E4%B9%89%E7%BA%BF%E4%B9%A6%E8%A1%97/KOP037162",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_027",
+      "name": "유어마인드",
+      "region": "yeonhui",
+      "category": "bookstore",
+      "setting": "indoor",
+      "description": "독립출판물과 아트북을 전문으로 다루는 작은 책방.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 연희로11라길 10-6 은는 202호",
+        "search_query": "서울 서대문구 연희로11라길 10-6",
+        "route_target": "유어마인드 건물",
+        "target_type": "address",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_building_address",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구",
+        "route_address": "서울 서대문구 연희로11라길 10-6"
+      },
+      "tags": {
+        "interests": [
+          "books",
+          "design",
+          "art"
+        ],
+        "activities": [
+          "browse_books",
+          "shop"
+        ],
+        "mood": [
+          "quiet",
+          "creative"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "bus_recommended",
+          "stairs_possible",
+          "indoor_shelter",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 25,
+        "max": 40,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "홍대입구역",
+          "lines": [
+            "2",
+            "공항철도",
+            "경의중앙"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": true,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": true,
+        "notes": "2층 진입수단 확인. 인물 사진과 서적 내지 촬영 금지."
+      },
+      "operations": {
+        "hours_note": "13:00~20:00, 화요일 및 지정 명절 휴무.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "2층 진입수단 확인. 인물 사진과 서적 내지 촬영 금지.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "13:00",
+            "close": "20:00"
+          }
+        ],
+        "regular_closed_days": [
+          "tue"
+        ],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://m.your-mind.com/yourmind/offline.html",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_028",
+      "name": "카페 폭포",
+      "region": "yeonhui",
+      "category": "cafe",
+      "setting": "mixed",
+      "description": "홍제천 인공폭포를 바라보며 쉬어갈 수 있는 수변 카페.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 연희로 262-24",
+        "search_query": "카페폭포 서대문",
+        "route_target": "카페폭포",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "coffee",
+          "nature",
+          "photography"
+        ],
+        "activities": [
+          "drink_coffee",
+          "rest",
+          "view_scenery",
+          "take_photos"
+        ],
+        "mood": [
+          "relaxing",
+          "scenic"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "bus_recommended",
+          "seating_possible",
+          "crowding_possible"
+        ],
+        "fatigue": "low",
+        "duration": "standard",
+        "cost": "paid"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 35,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "홍제역",
+          "lines": [
+            "3"
+          ],
+          "exit": "3",
+          "reported_walk_distance_m": 1200,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": true,
+        "notes": "역에서 멀어 버스 권장. 좌석 대기 가능, 폭포 가동 여부 확인."
+      },
+      "operations": {
+        "hours_note": "09:00~21:00 연중무휴 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "paid",
+        "special_conditions": "역에서 멀어 버스 권장. 좌석 대기 가능, 폭포 가동 여부 확인.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://korean.visitseoul.net/etc-area/CAFEPOKPO/KOPaahwxc",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_029",
+      "name": "서대문자연사박물관",
+      "region": "yeonhui",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "자연사와 생물, 지구과학 전시를 체험할 수 있는 박물관.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 연희로32길 51",
+        "search_query": "서대문자연사박물관",
+        "route_target": "서대문자연사박물관",
+        "target_type": "venue",
+        "lat": 37.57675199,
+        "lng": 126.937836,
+        "coordinate_status": "official_facility_coordinate_verify_entrance",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "science",
+          "nature"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "discovery",
+          "quiet"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "bus_recommended",
+          "slope_possible",
+          "indoor_shelter",
+          "seating_possible"
+        ],
+        "fatigue": "medium",
+        "duration": "standard",
+        "cost": "paid"
+      },
+      "visit_duration_min": {
+        "min": 30,
+        "recommended": 60,
+        "max": 90,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "신촌역",
+          "lines": [
+            "2"
+          ],
+          "exit": "3,4",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": true,
+        "notes": "신촌역에서 서대문03 버스 등 이용 권장. 오르막과 입장마감 확인."
+      },
+      "operations": {
+        "hours_note": "월요일 등 휴관, 계절별 관람시간 변화 확인.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "paid",
+        "special_conditions": "신촌역에서 서대문03 버스 등 이용 권장. 오르막과 입장마감 확인.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://namu.sdm.go.kr/web/main/contents/guide_directions_bus",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://www.data.go.kr/data/15017323/standard.do",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_030",
+      "name": "서대문독립공원",
+      "region": "dongnimmun",
+      "category": "park",
+      "setting": "outdoor",
+      "description": "독립문과 독립운동 기념물을 볼 수 있는 공원.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 통일로 251",
+        "search_query": "서대문독립공원 독립문",
+        "route_target": "독립문",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture",
+          "nature"
+        ],
+        "activities": [
+          "walk",
+          "learn",
+          "take_photos"
+        ],
+        "mood": [
+          "quiet",
+          "reflective"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "entrance_check"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 35,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "독립문역",
+          "lines": [
+            "3"
+          ],
+          "exit": "4",
+          "reported_walk_distance_m": 150,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "역에서 독립문 쪽 진입점 선택. 역사관과 별도 운영."
+      },
+      "operations": {
+        "hours_note": "24시간 개방 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "역에서 독립문 쪽 진입점 선택. 역사관과 별도 운영.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "00:00",
+            "close": "24:00"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true,
+        "hours_scope": "야외공간에만 적용; 시설 개별 운영 및 기상 통제 예외"
+      },
+      "sources": [
+        {
+          "url": "https://korean.visitseoul.net/area/서대문독립공원/KOP001753",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_031",
+      "name": "서대문형무소역사관",
+      "region": "dongnimmun",
+      "category": "museum",
+      "setting": "mixed",
+      "description": "독립운동 역사와 옛 수감시설을 돌아보는 역사 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 서대문구 통일로 251",
+        "search_query": "서대문형무소역사관",
+        "route_target": "서대문형무소역사관",
+        "target_type": "venue",
+        "lat": 37.57460851,
+        "lng": 126.9556118,
+        "coordinate_status": "official_facility_reference",
+        "address_status": "reference_address_verify_before_use",
+        "district": "서대문구"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "architecture"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "quiet",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "large_site",
+          "stairs_possible",
+          "entrance_check"
+        ],
+        "fatigue": "medium",
+        "duration": "standard",
+        "cost": "paid"
+      },
+      "visit_duration_min": {
+        "min": 30,
+        "recommended": 60,
+        "max": 90,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "독립문역",
+          "lines": [
+            "3"
+          ],
+          "exit": "5",
+          "reported_walk_distance_m": 209,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": true,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "역사적 고통 관련 전시, 실내외 이동과 입장마감 고려."
+      },
+      "operations": {
+        "hours_note": "월요일 등 휴관. 계절별 마감 상이.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "paid",
+        "special_conditions": "역사적 고통 관련 전시, 실내외 이동과 입장마감 고려.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://korean.visitseoul.net/attractions/서대문형무소역사관/KOP001831",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://www.data.go.kr/data/15017323/standard.do",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_032",
+      "name": "문화비축기지",
+      "region": "sangam",
+      "category": "park",
+      "setting": "outdoor",
+      "description": "옛 석유비축 시설의 외부 산업유산과 공원을 감상하는 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 마포구 증산로 87",
+        "search_query": "문화비축기지",
+        "route_target": "문화비축기지",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "마포구"
+      },
+      "tags": {
+        "interests": [
+          "architecture",
+          "nature",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "view_scenery",
+          "take_photos"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "large_site",
+          "slope_possible",
+          "entrance_check",
+          "limited_access"
+        ],
+        "fatigue": "medium",
+        "duration": "standard",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 20,
+        "recommended": 40,
+        "max": 70,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "월드컵경기장역",
+          "lines": [
+            "6"
+          ],
+          "exit": "2,3",
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": 10,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "2025년 4월 이후 T1~T6 내부 상시 관람 불가. 야외 중심 추천."
+      },
+      "operations": {
+        "hours_note": "야외공원 24시간. 탱크 내부는 별도 프로그램·운영 확인.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "2025년 4월 이후 T1~T6 내부 상시 관람 불가. 야외 중심 추천.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "00:00",
+            "close": "24:00"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true,
+        "hours_scope": "야외공간에만 적용; 시설 개별 운영 및 기상 통제 예외"
+      },
+      "sources": [
+        {
+          "url": "https://parks.seoul.go.kr/content.do?key=2604300014",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_033",
+      "name": "망원한강공원",
+      "region": "mangwon",
+      "category": "park",
+      "setting": "outdoor",
+      "description": "한강 경치와 잔디, 강변 산책로를 즐기는 휴식 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 마포구 마포나루길 467",
+        "search_query": "망원안내센터",
+        "route_target": "미래한강본부 망원안내센터",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "마포구"
+      },
+      "tags": {
+        "interests": [
+          "nature",
+          "photography"
+        ],
+        "activities": [
+          "walk",
+          "rest",
+          "view_scenery",
+          "take_photos"
+        ],
+        "mood": [
+          "scenic",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "study_break",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "bus_recommended",
+          "entrance_check",
+          "large_site",
+          "seating_possible"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "망원역",
+          "lines": [
+            "6"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": true,
+        "bus_recommended": true,
+        "notes": "역에서의 추가 보행 및 나들목·강우 통제 확인."
+      },
+      "operations": {
+        "hours_note": "상시 개방 안내. 기상 통제 예외.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "역에서의 추가 보행 및 나들목·강우 통제 확인.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "00:00",
+            "close": "24:00"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true,
+        "hours_scope": "야외공간에만 적용; 시설 개별 운영 및 기상 통제 예외"
+      },
+      "sources": [
+        {
+          "url": "https://hangang.seoul.go.kr/www/contents/666.do?mid=468&tr_code=sweb",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://access.visitkorea.or.kr/ms/detail.do?cotId=b3df606a-caad-4152-9d69-3ea630bcabb3",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_034",
+      "name": "쌈지길",
+      "region": "anguk",
+      "category": "shop",
+      "setting": "mixed",
+      "description": "공방과 작은 상점이 모인 복합 쇼핑 공간.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 인사동길 44",
+        "search_query": "쌈지길",
+        "route_target": "쌈지길",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "coordinate_status": "resolve_keyword_at_runtime",
+        "address_status": "reference_address_verify_before_use",
+        "district": "종로구"
+      },
+      "tags": {
+        "interests": [
+          "craft",
+          "design",
+          "shopping",
+          "local_culture"
+        ],
+        "activities": [
+          "shop",
+          "walk",
+          "take_photos"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "short_stop",
+          "with_friends",
+          "date"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "slope_possible",
+          "crowding_possible"
+        ],
+        "fatigue": "medium",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 45,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "안국역",
+          "lines": [
+            "3"
+          ],
+          "exit": "6",
+          "reported_walk_distance_m": 245,
+          "reported_walk_duration_min": null,
+          "basis": "published_reference_approximate"
+        },
+        "on_site_walk_effort": 3,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": true,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": false,
+        "notes": "경사형 순환 동선 및 개별 점포 운영 확인."
+      },
+      "operations": {
+        "hours_note": "10:30~20:30, 설·추석 당일 휴무 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "경사형 순환 동선 및 개별 점포 운영 확인.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "10:30",
+            "close": "20:30"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://korean.visitseoul.net/shopping/쌈지길-_/37934",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "source_scope": "web_reference",
+        "recommendation_tags_are_editorial": true,
+        "checked_on": "2026-11-21",
+        "requires_live_route_check": true
+      }
+    },
+    {
+      "id": "seoul_035",
+      "name": "국립고궁박물관",
+      "region": "gwanghwamun",
+      "category": "museum",
+      "setting": "indoor",
+      "description": "조선 왕실 유물을 만나는 박물관이에요. 짧게 들를 땐 상설전시실 한 층부터 둘러보세요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 종로구 효자로 12",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "address_status": "public_reference",
+        "search_query": "국립고궁박물관",
+        "route_target": "국립고궁박물관",
+        "district": "종로구",
+        "coordinate_status": "resolve_keyword_at_runtime"
+      },
+      "tags": {
+        "interests": [
+          "history",
+          "craft"
+        ],
+        "activities": [
+          "view_exhibition",
+          "learn"
+        ],
+        "mood": [
+          "discovery",
+          "quiet"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "short_stop"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 15,
+        "recommended": 30,
+        "max": 60,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "경복궁역",
+          "lines": [
+            "3"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": null,
+        "notes": "관람은 무료이며, 입장은 폐관 30분 전에 마감해요."
+      },
+      "operations": {
+        "hours_note": "월~금·일 09:30~17:30, 토요일·마지막 수요일 21:00까지. 매월 마지막 월요일과 지정 휴일 휴관.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "관람은 무료이며, 입장은 폐관 30분 전에 마감해요.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sun"
+            ],
+            "open": "09:30",
+            "close": "17:30"
+          },
+          {
+            "days": [
+              "sat"
+            ],
+            "open": "09:30",
+            "close": "21:00"
+          }
+        ],
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://www.gogung.go.kr/gogung/main/contents.do?menuNo=800011",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "recommendation_tags_are_editorial": true,
+        "requires_live_route_check": true,
+        "source_scope": "web_reference",
+        "checked_on": "2026-11-21"
+      }
+    },
+    {
+      "id": "seoul_036",
+      "name": "서울도서관",
+      "region": "cityhall",
+      "category": "library",
+      "setting": "indoor",
+      "description": "옛 서울시청 건물 안에서 책을 펼쳐 보거나 일반자료실에서 쉬어 갈 수 있어요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 중구 세종대로 110",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "address_status": "public_reference",
+        "search_query": "서울도서관",
+        "route_target": "서울도서관",
+        "district": "중구",
+        "coordinate_status": "resolve_keyword_at_runtime"
+      },
+      "tags": {
+        "interests": [
+          "books",
+          "architecture",
+          "study"
+        ],
+        "activities": [
+          "browse_books",
+          "rest"
+        ],
+        "mood": [
+          "quiet",
+          "relaxing"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "short_stop"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "free"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 40,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "시청역",
+          "lines": [
+            "1",
+            "2"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": null,
+        "notes": "자료실마다 운영 시간이 달라요."
+      },
+      "operations": {
+        "hours_note": "일반자료실 화~금 09:00~21:00, 토·일 09:00~18:00. 월요일·공휴일 휴관.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "free",
+        "special_conditions": "자료실마다 운영 시간이 달라요.",
+        "weekly_hours": [
+          {
+            "days": [
+              "tue",
+              "wed",
+              "thu",
+              "fri"
+            ],
+            "open": "09:00",
+            "close": "21:00"
+          },
+          {
+            "days": [
+              "sat",
+              "sun"
+            ],
+            "open": "09:00",
+            "close": "18:00"
+          }
+        ],
+        "regular_closed_days": [
+          "mon"
+        ],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true,
+        "hours_scope": "일반자료실"
+      },
+      "sources": [
+        {
+          "url": "https://culture.seoul.go.kr/culture/cmmn/file/fileDown.do?atchFileId=ffdd136f8309408f8eab5f5d95982d8c&bbsId=B0000009&fileSn=1",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "recommendation_tags_are_editorial": true,
+        "requires_live_route_check": true,
+        "source_scope": "web_reference",
+        "checked_on": "2026-11-21"
+      }
+    },
+    {
+      "id": "seoul_037",
+      "name": "망원시장",
+      "region": "mangwon",
+      "category": "market",
+      "setting": "mixed",
+      "description": "한강에 가기 전 시장에서 간식을 사거나 점포를 구경하기 좋은 경유지예요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 마포구 망원동 일대",
+        "target_type": "entrance_or_segment",
+        "lat": null,
+        "lng": null,
+        "address_status": "public_reference",
+        "search_query": "망원시장",
+        "route_target": "망원시장 입구",
+        "district": "마포구",
+        "coordinate_status": "resolve_keyword_at_runtime"
+      },
+      "tags": {
+        "interests": [
+          "food",
+          "local_culture",
+          "shopping"
+        ],
+        "activities": [
+          "eat",
+          "shop",
+          "walk"
+        ],
+        "mood": [
+          "lively",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "short_stop"
+        ],
+        "weather": [
+          "clear",
+          "cloudy"
+        ],
+        "accessibility": [
+          "near_transit",
+          "crowding_possible"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 20,
+        "max": 40,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "망원역",
+          "lines": [
+            "6"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 2,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": null,
+        "notes": "주말에는 인기 점포에 대기 줄이 생길 수 있어요."
+      },
+      "operations": {
+        "hours_note": "영업 여부와 마감 시간은 점포별로 달라요.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "주말에는 인기 점포에 대기 줄이 생길 수 있어요.",
+        "weekly_hours": null,
+        "regular_closed_days": null,
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://french.visitkorea.or.kr/svc/whereToGo/locIntrdn/rgnContentsView.do?vcontsId=64603",
+          "reference_type": "public_or_operator_reference"
+        },
+        {
+          "url": "https://mediahub.seoul.go.kr/archives/2004600",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "recommendation_tags_are_editorial": true,
+        "requires_live_route_check": true,
+        "source_scope": "web_reference",
+        "checked_on": "2026-11-21"
+      }
+    },
+    {
+      "id": "seoul_038",
+      "name": "DDP디자인스토어",
+      "region": "dongdaemun_design",
+      "category": "shop",
+      "setting": "indoor",
+      "description": "DDP 어울림광장 쪽에서 서울 굿즈와 국내 디자이너의 문구·생활용품을 둘러볼 수 있어요.",
+      "location": {
+        "country": "KR",
+        "city": "서울특별시",
+        "address": "서울 중구 을지로 281 디자인랩 지하 2층",
+        "target_type": "venue",
+        "lat": null,
+        "lng": null,
+        "address_status": "public_reference",
+        "search_query": "DDP디자인스토어",
+        "route_target": "DDP디자인스토어",
+        "district": "중구",
+        "route_address": "서울 중구 을지로 281",
+        "coordinate_status": "resolve_keyword_at_runtime"
+      },
+      "tags": {
+        "interests": [
+          "design",
+          "shopping"
+        ],
+        "activities": [
+          "shop"
+        ],
+        "mood": [
+          "creative",
+          "discovery"
+        ],
+        "visit_context": [
+          "before_appointment",
+          "after_class",
+          "solo",
+          "weekend",
+          "short_stop"
+        ],
+        "weather": [
+          "clear",
+          "cloudy",
+          "rain",
+          "hot",
+          "cold"
+        ],
+        "accessibility": [
+          "near_transit",
+          "indoor_shelter",
+          "crowding_possible"
+        ],
+        "fatigue": "low",
+        "duration": "quick",
+        "cost": "optional_spend"
+      },
+      "visit_duration_min": {
+        "min": 10,
+        "recommended": 15,
+        "max": 30,
+        "basis": "editorial_estimate_excludes_travel_and_queue"
+      },
+      "accessibility": {
+        "nearest_transit_reference": {
+          "station": "동대문역사문화공원역",
+          "lines": [
+            "2",
+            "4",
+            "5"
+          ],
+          "exit": null,
+          "reported_walk_distance_m": null,
+          "reported_walk_duration_min": null,
+          "basis": "station_reference_only"
+        },
+        "on_site_walk_effort": 1,
+        "effort_basis": "editorial_estimate_not_route_measurement",
+        "slope_possible": null,
+        "stairs_possible": null,
+        "step_free_verified": null,
+        "wheelchair_access_verified": null,
+        "seating_possible": null,
+        "bus_recommended": null,
+        "notes": "디자인랩 지하 2층 어울림광장 매장을 기준으로 안내해요."
+      },
+      "operations": {
+        "hours_note": "10:00~20:00. 설·추석 당일 미운영 안내.",
+        "live_open_status": null,
+        "requires_current_check": true,
+        "reservation_required": null,
+        "cost_type": "optional_spend",
+        "special_conditions": "디자인랩 지하 2층 어울림광장 매장을 기준으로 안내해요.",
+        "weekly_hours": [
+          {
+            "days": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "open": "10:00",
+            "close": "20:00"
+          }
+        ],
+        "regular_closed_days": [],
+        "last_admission_time": null,
+        "holiday_or_event_override_possible": true
+      },
+      "sources": [
+        {
+          "url": "https://culture.seoul.go.kr/culture/bbs/B0000014/view.do?menuNo=200118&nttId=15202&pageIndex=1",
+          "reference_type": "public_or_operator_reference"
+        }
+      ],
+      "data_quality": {
+        "recommendation_tags_are_editorial": true,
+        "requires_live_route_check": true,
+        "source_scope": "web_reference",
+        "checked_on": "2026-11-21"
+      }
+    }
+  ],
+  "updated_on": "2026-11-21"
+}

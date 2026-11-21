@@ -1,66 +1,196 @@
-import { searchPlaceCandidates } from '../calendar/location.js';
-import { SAMPLE_EVENTS, SAMPLE_NOW } from '../calendar/sample.js';
-import { resolvePlace, resolveTripPlaces } from '../map/places.js';
-import { api, savePlace } from '../preferences/account-api.js';
-import { placeAliasKey } from '../preferences/place-alias.js';
-import { prepareTrip } from './trip.js';
+import { requireSession, signOut } from './login-session.js';
+import { fetchGoogleEvents } from '../calendar/calendar.js';
+import { exportSavedPlaces, isPersonalLabel, locateCandidates, placeKey, pushMyPlaces, savedPlace, savePlace, syncMyPlaces } from '../calendar/location.js';
+import { SAMPLE_EVENTS, SAMPLE_NOW, SAMPLE_ORIGIN } from '../calendar/sample.js';
+import { resolvePlace } from '../map/places.js';
+import { loadRecommendedStops, resolveRecommendedStop } from '../places/recommended-stops.js';
+import { isDirect } from '../routing/compare.js';
+import { queryTransit } from '../routing/transit.js';
+import { createDepartureReminder, planDepartureReminder } from './departure-reminder.js';
+import { renderRoutes } from './route-results.js';
+import { planTrip, prepareTrip } from './trip.js';
 
 const form = document.querySelector('#trip-form');
 const sampleButton = document.querySelector('#load-sample');
 const checkButton = document.querySelector('#check-places');
 const summary = document.querySelector('#trip-summary');
+const scheduleArrival = document.querySelector('#schedule-arrival');
+const arrivalBuffer = document.querySelector('#arrival-buffer');
+const arrivalReason = document.querySelector('#arrival-reason');
+const arrivalTarget = document.querySelector('#arrival-target');
+const manualArrival = form.elements.arriveBy;
+const manualArrivalOption = arrivalBuffer.querySelector('[value="manual"]');
+const routeResults = document.querySelector('#route-results');
 const routeStatus = document.querySelector('#route-status');
 const confirmedPlaces = document.querySelector('#confirmed-places');
 const destination = form.elements.destination;
-const login = document.querySelector('#google-login');
+const stopSelect = form.elements.savedStop;
+const stayMinutes = form.elements.stayMinutes;
+const stopCatalogStatus = document.querySelector('#stop-catalog-status');
+const stopInfo = document.querySelector('#stop-info');
+const stopDescription = document.querySelector('#stop-description');
+const stopVisitNote = document.querySelector('#stop-visit-note');
+const stopSource = document.querySelector('#stop-source');
 const calendarButton = document.querySelector('#google-calendar');
 const logout = document.querySelector('#logout');
 const accountStatus = document.querySelector('#account-status');
 const candidates = document.querySelector('#calendar-place-candidates');
+const previewDeparture = document.querySelector('#preview-departure');
 const timeFormat = new Intl.DateTimeFormat('ko-KR', {
   hour: '2-digit',
   minute: '2-digit',
   timeZone: 'Asia/Seoul',
 });
+const scheduleTimeFormat = new Intl.DateTimeFormat('ko-KR', {
+  month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul',
+});
+const departureReminder = createDepartureReminder(timeFormat);
 
-let signedIn = false;
 let events = [];
 let source = null;
 let scheduleVersion = 0;
-const saved = new Map();
+let scheduleAppointmentKey = null;
+let routeVersion = 0;
+let sampleReminder = null;
+let stopCatalog = null;
+const sampleStopId = 'seoul_002';
+const seoulTimeField = (date) => new Date(+date + 9 * 60 * 60_000).toISOString().slice(0, 16);
+const sampleDeparture = seoulTimeField(SAMPLE_NOW);
 
 function accountMessage(message) {
-  accountStatus.textContent = message;
-  accountStatus.hidden = !message;
+  accountStatus.textContent = message || 'Google 계정이 연결됐어요.';
 }
 
-function readTrip() {
+// ‘회사’가 / ‘집’이 — 받침에 맞춰 조사를 붙인다.
+function subject(label) {
+  const code = label.charCodeAt(label.length - 1) - 0xac00;
+  return `‘${label}’${code >= 0 && code <= 11171 && code % 28 ? '이' : '가'}`;
+}
+
+function readTiming() {
+  const localTime = (value) => value ? new Date(`${value}+09:00`) : undefined;
+  const buffer = arrivalBuffer.value;
+  return {
+    departAt: localTime(form.elements.departAt.value),
+    arriveBy: localTime(manualArrival.value),
+    arrivalBufferMinutes: buffer && buffer !== 'manual' ? Number(buffer) : undefined,
+  };
+}
+
+function readTrip(stop) {
   const fields = new FormData(form);
   const fatigue = fields.get('fatigue');
   return prepareTrip({
     origin: fields.get('origin'),
     destination: fields.get('destination'),
-    preferences: { fatigueLevel: fatigue === null ? null : Number(fatigue) },
+    ...readTiming(),
+    preferences: {
+      fatigueLevel: fatigue === null ? null : Number(fatigue),
+      priority: fields.get('priority') || null,
+      avoidLine: fields.get('avoidLine') || null,
+      maxExtraTravelMinutes: Number(fields.get('maxExtra')),
+      savedStop: stop ? { query: stop.name, stayMinutes: Number(fields.get('stayMinutes')) } : null,
+    },
   }, events, source === 'sample' ? SAMPLE_NOW : new Date());
 }
 
+// 내 장소에 있으면 그 장소를 쓰고, ‘회사’처럼 사용자만 아는 이름은 검색하지 않는다.
 function lookup(query) {
-  return saved.get(placeAliasKey(query)) ?? resolvePlace(query);
+  return savedPlace(query) ?? (isPersonalLabel(query) ? null : resolvePlace(query));
 }
 
+// 이 브라우저에 먼저 기억하고, Google에 연결돼 있으면 계정에도 올린다. 화면에 보여 줄 안내를 돌려준다.
 async function storePlace(alias, place) {
-  const entry = await savePlace(alias, place);
-  saved.set(placeAliasKey(entry.alias), entry);
+  savePlace(alias, place);
+  // 저장소가 막힌 브라우저에서는 기억되지 않는다. 그대로 계정에 올리면 계정의 내 장소가 빈 목록으로 덮인다.
+  if (!savedPlace(alias)) throw new Error('이 브라우저에 장소를 기억하지 못했어요.');
+  updateStopOptions();
+  const token = requireSession();
+  if (token) {
+    try {
+      await pushMyPlaces(token);
+    } catch (error) {
+      console.warn(error);
+      return `‘${alias}’ 장소를 이 브라우저에만 기억했어요. Google 계정에는 반영하지 못했어요.`;
+    }
+  }
+  return `‘${alias}’ 장소를 기억했어요.`;
 }
 
-async function loadSaved() {
-  const entries = await api('/api/saved-places');
-  saved.clear();
-  for (const entry of entries) saved.set(placeAliasKey(entry.alias), entry);
+function updateStopOptions() {
+  const selected = stopSelect.value;
+  const groups = [];
+  const aliases = Object.keys(exportSavedPlaces());
+  if (aliases.length) {
+    const group = document.createElement('optgroup');
+    group.label = '내 장소';
+    for (const alias of aliases) group.append(new Option(alias, `saved:${alias}`));
+    groups.push(group);
+  }
+  for (const [region, label] of Object.entries(stopCatalog?.regions ?? {})) {
+    const group = document.createElement('optgroup');
+    group.label = `추천 후보 · ${label}`;
+    for (const place of stopCatalog.places.filter((item) => item.region === region)) {
+      group.append(new Option(place.name, place.id));
+    }
+    if (group.childElementCount) groups.push(group);
+  }
+  stopSelect.replaceChildren(stopSelect.options[0], ...groups);
+  stopSelect.value = selected;
+  if (stopSelect.selectedIndex === -1) stopSelect.selectedIndex = 0;
+  showStopInfo();
+}
+
+function selectedRecommendation() {
+  return stopCatalog?.places.find(({ id }) => id === stopSelect.value);
+}
+
+function selectedStop() {
+  const recommendation = selectedRecommendation();
+  if (recommendation) return { name: recommendation.name, recommendation };
+  const alias = stopSelect.value.startsWith('saved:') ? stopSelect.value.slice('saved:'.length) : '';
+  const place = alias && savedPlace(alias);
+  return place ? { name: alias, place } : null;
+}
+
+function showStopInfo() {
+  const place = selectedRecommendation();
+  stopInfo.hidden = !place;
+  stopDescription.textContent = place ? `${place.description} 권장 체류 ${place.visit_duration_min.recommended}분.` : '';
+  if (!place) return;
+  stopVisitNote.textContent = [place.operations.hours_note, place.operations.special_conditions].filter(Boolean).join(' ');
+  const page = place.sources[0]?.url;
+  stopSource.hidden = !page;
+  if (page) stopSource.href = page;
+}
+
+async function initializeStopCatalog() {
+  try {
+    stopCatalog = await loadRecommendedStops();
+    updateStopOptions();
+  } catch {
+    stopCatalogStatus.textContent = '추천 경유지 목록을 불러오지 못했어요.';
+    stopCatalogStatus.hidden = false;
+  }
+
 }
 
 function scheduleTrip() {
-  return prepareTrip({}, events, source === 'sample' ? SAMPLE_NOW : new Date());
+  return prepareTrip(readTiming(), events, source === 'sample' ? SAMPLE_NOW : new Date());
+}
+
+function showArrivalTarget(trip) {
+  scheduleArrival.hidden = !trip.arrivalAdvice;
+  if (!trip.arrivalAdvice) return;
+
+  const { minutes, reason } = trip.arrivalAdvice;
+  arrivalBuffer.options[0].textContent = `추천 · ${minutes === 0 ? '시작 시각에 도착' : `${minutes}분 전`}`;
+  manualArrivalOption.hidden = !manualArrival.value;
+  if (manualArrival.value) arrivalBuffer.value = 'manual';
+  else if (arrivalBuffer.value === 'manual') arrivalBuffer.value = '';
+  arrivalReason.textContent = manualArrival.value ? '이동 계획에서 입력한 시각을 적용했어요.' : reason;
+  const tooLate = trip.arriveBy <= trip.departAt ? ' 출발 시각이나 도착 여유를 조정해 주세요.' : '';
+  arrivalTarget.textContent = `도착 목표 · ${scheduleTimeFormat.format(trip.arriveBy)}까지${tooLate}`;
 }
 
 function offerConfirmation(alias, places, version) {
@@ -77,12 +207,13 @@ function offerConfirmation(alias, places, version) {
       const choices = [...candidates.children];
       for (const choice of choices) choice.disabled = true;
       try {
-        await storePlace(alias, place);
+        const message = await storePlace(alias, place);
         if (version === scheduleVersion) {
           destination.value = alias;
+          clearRouteResults();
           await refreshSchedule();
         }
-        accountMessage(`‘${alias}’ 장소를 기억했어요.`);
+        accountMessage(message);
       } catch (error) {
         accountMessage(error.message);
       } finally {
@@ -96,15 +227,24 @@ async function refreshSchedule() {
   if (!source) return;
   const version = ++scheduleVersion;
   candidates.replaceChildren();
-  const trip = scheduleTrip();
-  const alias = trip.destination;
-  if (!trip.arriveBy) {
+  let trip = scheduleTrip();
+  const next = trip.calendar.nextAppointment;
+  const key = next ? JSON.stringify([source, next.start, next.title, next.location]) : null;
+  if (scheduleAppointmentKey && scheduleAppointmentKey !== key) {
+    arrivalBuffer.value = '';
+    manualArrival.value = '';
+    trip = scheduleTrip();
+  }
+  scheduleAppointmentKey = key;
+  showArrivalTarget(trip);
+  if (!next) {
     summary.textContent = '장소가 있는 다음 일정이 없어요.';
     return;
   }
 
-  const appointment = `${alias} · ${timeFormat.format(trip.arriveBy)}까지 도착`;
-  const remembered = source === 'google' && saved.get(placeAliasKey(alias));
+  const alias = next.location;
+  const appointment = `${scheduleTimeFormat.format(new Date(next.start))} · ${next.title || '약속'} · ${alias}`;
+  const remembered = savedPlace(alias);
   if (remembered) {
     summary.textContent = `${appointment} · ${remembered.name ? remembered.name + ' · ' : ''}${remembered.address}`;
     return;
@@ -112,127 +252,182 @@ async function refreshSchedule() {
 
   summary.textContent = `${appointment} · 주소 확인 중…`;
   try {
-    if (source === 'google' && signedIn) {
-      const places = (await searchPlaceCandidates(alias)).filter((place) => place.address &&
-        Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
-      if (version !== scheduleVersion) return;
-      summary.textContent = `${appointment} · ${places.length ? '일정 장소를 확인해 주세요.' : '목적지에 주소를 직접 입력해 주세요.'}`;
+    const places = (await locateCandidates(alias)).filter((place) => place.address &&
+      Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
+    if (version !== scheduleVersion) return;
+    if (!places.length && isPersonalLabel(alias)) {
+      summary.textContent = `${appointment} · ${subject(alias)} 어디인지 목적지에 주소를 입력해 알려 주세요.`;
+    } else if (source === 'google') {
+      summary.textContent = `${appointment} · ${places.length
+        ? `일정 장소를 확인해 주세요. 맞는 곳이 없으면 목적지에 실제 장소를 입력해 확인하면 ‘${alias}’(으)로 기억해요.`
+        : `목적지에 실제 장소나 주소를 입력해 확인하면 ‘${alias}’(으)로 기억해요.`}`;
       offerConfirmation(alias, places, version);
     } else {
-      const place = await resolvePlace(alias);
-      if (version === scheduleVersion) {
-        summary.textContent = `${appointment} · ${place?.address || '주소를 찾지 못했어요.'}`;
-      }
+      summary.textContent = `${appointment} · ${places[0]?.address || '주소를 찾지 못했어요.'}`;
     }
   } catch {
     if (version === scheduleVersion) summary.textContent = `${appointment} · 위치 검색에 실패했어요.`;
   }
 }
 
+function clearRouteResults() {
+  routeVersion++;
+  sampleReminder = null;
+  previewDeparture.hidden = source !== 'sample';
+  departureReminder.set(null);
+  confirmedPlaces.hidden = true;
+  routeResults.replaceChildren();
+  routeStatus.textContent = '현재 조건으로 경로를 찾아보세요.';
+}
+
 function showSchedule(items, kind) {
+  if (source === 'sample' && kind !== 'sample') {
+    if (form.elements.departAt.value === sampleDeparture) form.elements.departAt.value = '';
+  }
   events = items;
   source = kind;
   destination.value = scheduleTrip().destination;
-  confirmedPlaces.hidden = true;
+  clearRouteResults();
   void refreshSchedule();
 }
 
-async function importCalendar(afterRedirect = false) {
+async function importCalendar() {
+  const granted = requireSession();
+  if (!granted) return;
   calendarButton.disabled = true;
   try {
-    showSchedule(await api('/api/calendar'), 'google');
-  } catch (error) {
-    if (error.status === 401 && !afterRedirect) {
-      window.location.assign('/auth/google?calendar=1');
-      return;
+    const items = await fetchGoogleEvents(granted);
+    let message = '';
+    // 계정의 내 장소를 받지 못해도 일정은 보여 준다. 이 브라우저에 기억한 장소는 그대로 쓴다.
+    try {
+      await syncMyPlaces(granted);
+    } catch (error) {
+      console.warn(error);
+      message = 'Google 계정의 내 장소를 불러오지 못했어요. 이 브라우저에 기억한 장소만 써요.';
     }
-    accountMessage(error.message);
+    if (requireSession() !== granted) return;
+    updateStopOptions();
+    accountMessage(message);
+    showSchedule(items, 'google');
+  } catch (error) {
+    console.warn(error);
+    if (error.message === 'Calendar API 401') signOut();
+    else accountMessage('Google 일정을 불러오지 못했어요. 다시 시도해 주세요.');
   } finally {
     calendarButton.disabled = false;
   }
 }
 
-sampleButton.addEventListener('click', () => showSchedule(SAMPLE_EVENTS, 'sample'));
+sampleButton.addEventListener('click', () => {
+  form.elements.origin.value = SAMPLE_ORIGIN;
+  form.elements.departAt.value = sampleDeparture;
+  manualArrival.value = '';
+  arrivalBuffer.value = '';
+  showSchedule(SAMPLE_EVENTS, 'sample');
+  if (stopSelect.value === sampleStopId) stayMinutes.value = 10;
+});
+previewDeparture.addEventListener('click', () => {
+  const reminder = sampleReminder ?? planDepartureReminder(scheduleTrip(), {
+    route: { travelMinutes: 24 },
+    reason: '환승 없이 가는 예시 경로예요.',
+  });
+  if (reminder) departureReminder.preview(reminder, previewDeparture);
+});
 calendarButton.addEventListener('click', () => importCalendar());
-logout.addEventListener('click', async () => {
-  logout.disabled = true;
-  try {
-    await api('/auth/logout', 'POST');
-    window.location.replace(window.location.pathname);
-  } catch (error) {
-    accountMessage(error.message);
-    logout.disabled = false;
+logout.addEventListener('click', signOut);
+
+form.addEventListener('input', ({ target }) => {
+  if (target === arrivalBuffer && arrivalBuffer.value !== 'manual') manualArrival.value = '';
+  if (target === arrivalBuffer || target === manualArrival || target === form.elements.departAt) {
+    showArrivalTarget(scheduleTrip());
   }
+  clearRouteResults();
+});
+stopSelect.addEventListener('change', () => {
+  const place = selectedRecommendation();
+  if (place) stayMinutes.value = source === 'sample' && place.id === sampleStopId
+    ? 10 : place.visit_duration_min.recommended;
+  showStopInfo();
 });
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const trip = readTrip();
+  const stop = selectedStop();
+  const trip = readTrip(stop);
   if (!trip.origin || !trip.destination) {
     routeStatus.textContent = '출발지와 목적지를 입력해 주세요.';
     return;
   }
 
-  const version = scheduleVersion;
-  const alias = source === 'google' && signedIn ? trip.calendar.nextAppointment?.location : null;
-  const corrected = alias && placeAliasKey(alias) !== placeAliasKey(trip.destination);
+  if (trip.arriveBy && trip.arriveBy <= trip.departAt) {
+    routeStatus.textContent = '도착 목표는 출발 시각보다 늦어야 해요.';
+    return;
+  }
+
+  const version = ++routeVersion;
+  const schedule = scheduleVersion;
+  const alias = source === 'google' ? trip.calendar.nextAppointment?.location : null;
+  const corrected = alias && placeKey(alias) !== placeKey(trip.destination);
+  const isCurrent = () => version === routeVersion && schedule === scheduleVersion;
   confirmedPlaces.hidden = true;
+  routeResults.replaceChildren();
   routeStatus.textContent = '장소를 찾는 중이에요.';
   checkButton.disabled = true;
   try {
-    const places = await resolveTripPlaces(trip, source === 'sample' ? resolvePlace : lookup);
-    if (version !== scheduleVersion) return;
-    document.querySelector('#origin-result').textContent = places.origin.address || places.origin.name;
-    document.querySelector('#destination-result').textContent = places.destination.address || places.destination.name;
-    confirmedPlaces.hidden = false;
-    routeStatus.textContent = '장소를 확인했어요. 경로 조회는 준비 중이에요.';
-    if (corrected && places.destination.address && destination.value.trim() === trip.destination) {
-      offerConfirmation(alias, [places.destination], version);
+    const { places, routes, fastestDirect, fastestVia } = await planTrip(trip, {
+      resolvePlace: source === 'sample' ? resolvePlace : lookup,
+      resolveStop: stop && (() => stop.recommendation
+        ? resolveRecommendedStop(stop.recommendation).catch(() => null) : stop.place),
+      queryRoutes: (request) => {
+        if (!isCurrent()) return [];
+        const { places } = request;
+        document.querySelector('#origin-result').textContent = places.origin.address || places.origin.name;
+        document.querySelector('#destination-result').textContent = places.destination.address || places.destination.name;
+        confirmedPlaces.hidden = false;
+        routeStatus.textContent = '대중교통 경로를 찾는 중이에요.';
+        if (corrected && places.destination.address) offerConfirmation(alias, [places.destination], schedule);
+        return queryTransit(request);
+      },
+    });
+    if (!isCurrent()) return;
+    const messages = [];
+    if (routes.some(isDirect)) messages.push('이동 시간과 혼잡도는 예상치예요.');
+    else if (fastestDirect && trip.arriveBy && fastestDirect.arrivalAt > trip.arriveBy) {
+      const late = Math.ceil((fastestDirect.arrivalAt - trip.arriveBy) / 60_000);
+      messages.push(`가장 이른 직행은 ${timeFormat.format(fastestDirect.arrivalAt)} 도착으로, 도착 목표보다 ${late}분 늦어요.`);
+    } else messages.push('조건을 만족하는 대중교통 직행 경로를 찾지 못했어요.');
+    if (stop && !routes.some((route) => route.viaStop)) {
+      const stopLabel = stop.recommendation ? `‘${stop.name}’` : '저장 장소';
+      if (!places.stop) messages.push(`${stopLabel}의 경유 지점을 지도에서 확인하지 못했어요.`);
+      else if (!fastestVia) messages.push(`${stopLabel} 경유 경로를 찾지 못했어요.`);
+      else if (trip.arriveBy && fastestVia.arrivalAt > trip.arriveBy) {
+        const late = Math.ceil((fastestVia.arrivalAt - trip.arriveBy) / 60_000);
+        messages.push(`${stopLabel}에 ${fastestVia.stayMinutes}분 머무르면 도착 목표보다 최소 ${late}분 늦어요.`);
+      } else {
+        const extra = Math.ceil(fastestVia.extraTravelMinutes - trip.preferences.maxExtraTravelMinutes);
+        messages.push(`${stopLabel}에 들르면 추가 이동 한도를 최소 ${extra}분 넘어요.`);
+      }
     }
-  } catch {
-    if (version === scheduleVersion) {
-      routeStatus.textContent = '장소를 확인하지 못했어요. 장소 이름이나 주소를 다시 확인해 주세요.';
+    routeStatus.textContent = messages.join(' ');
+    const recommendation = renderRoutes(routeResults, routes, timeFormat, trip.preferences.priority, stop?.name);
+    const reminder = planDepartureReminder(trip, recommendation);
+    if (source === 'google') departureReminder.set(reminder);
+    if (source === 'sample') {
+      sampleReminder = reminder;
+      previewDeparture.hidden = !reminder;
+    }
+  } catch (error) {
+    if (isCurrent()) {
+      const unknown = [trip.origin, trip.destination].find((query) => isPersonalLabel(query) && !savedPlace(query));
+      routeStatus.textContent = confirmedPlaces.hidden
+        ? (unknown ? `${subject(unknown)} 어디인지 주소를 입력해 주세요.` : '장소를 확인하지 못했어요. 장소 이름이나 주소를 다시 확인해 주세요.')
+        : error.message;
     }
   } finally {
     checkButton.disabled = false;
   }
 });
 
-async function initializeAccount() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.has('auth') || params.has('calendar')) {
-    window.history.replaceState(null, '', window.location.pathname);
-  }
-  try {
-    const account = await api('/api/account');
-    signedIn = account.signedIn;
-    login.hidden = signedIn || !account.ready;
-    logout.hidden = !signedIn;
-    calendarButton.hidden = !signedIn;
-    if (!account.ready) accountMessage('Google OAuth 설정이 필요해요.');
-    if (signedIn) {
-      try {
-        await loadSaved();
-      } catch (error) {
-        accountMessage(error.message);
-      }
-    }
-    if (params.get('auth') === 'account') accountMessage('로그인에 사용한 Google 계정으로 일정을 연결해 주세요.');
-    if (params.get('auth') === 'failed') accountMessage('Google 연결을 완료하지 못했어요. 다시 시도해 주세요.');
-    if (signedIn && params.get('calendar') === '1') await importCalendar(true);
-  } catch (error) {
-    accountMessage(error.message);
-  }
-}
-
-window.addEventListener('pageshow', async (event) => {
-  if (!event.persisted) return;
-  try {
-    const account = await api('/api/account');
-    if (account.signedIn !== signedIn || signedIn) window.location.reload();
-  } catch (error) {
-    accountMessage(error.message);
-  }
-});
-
-void initializeAccount();
+window.addEventListener('pageshow', updateStopOptions);
+updateStopOptions();
+void initializeStopCatalog();

@@ -57,6 +57,23 @@ function localTime(value) {
 
 const placeMode = () => mode === 'demo' ? 'demo' : 'live';
 const hasCalendar = () => mode !== 'live';
+const scoreLabel = score => `${score}점 · ${FATIGUE_LABELS[score]}`;
+
+// The checked fatigue radio as a number from 1 to 5, or null when none is checked.
+function selectedFatigue() {
+  return Number(fields.fatigue.value) || null;
+}
+
+// Checks the radio for a score from 1 to 5 and clears the choice when there is no score.
+function selectFatigue(score) {
+  for (const radio of fields.fatigue) radio.checked = Number(radio.value) === score;
+}
+
+// The server accepts only three strings, so the score is converted when the request is sent:
+// 1 -> relaxed, 2 or 3 -> normal, 4 or 5 -> tired, and normal when there is no score.
+function serverFatigue(score) {
+  return score >= 4 ? 'tired' : score === 1 ? 'relaxed' : 'normal';
+}
 
 function setStatus(message = '', error = false) {
   status.textContent = message;
@@ -134,8 +151,8 @@ function switchMode(next) {
   fields.origin.placeholder = '예. 서울시청';
   fields.destination.placeholder = '예. 교보문고 광화문점';
   fields.arrive.value = localTime(Date.now() + 60 * 60_000);
-  fields.fatigue.value = hasCalendar() ? '' : 'relaxed';
-  byId('fatigue-note').textContent = '';
+  selectFatigue(hasCalendar() ? null : 1);
+  byId('fatigue-note').textContent = hasCalendar() ? '' : scoreLabel(1);
   byId('route-fatigue').textContent = '';
   byId('departure').textContent = '지금 출발하는 경로를 비교합니다.';
   byId('trip-label').textContent = hasCalendar() ? '다음 약속 경로를 여기에 표시해요.' : '출발지와 목적지를 입력해 주세요.';
@@ -201,9 +218,9 @@ function showAppointment(events, now = Date.now()) {
   fields.origin.value = origin?.location ?? '';
   fields.destination.value = next.location;
   fields.arrive.value = localTime(next.start);
-  fields.fatigue.value = fatigue?.value ?? '';
+  selectFatigue(fatigue?.value);
   byId('fatigue-note').textContent = fatigue
-    ? `캘린더 제안 · ${fatigue.reasons.join(' · ')}`
+    ? `캘린더 제안 · ${scoreLabel(fatigue.value)} · ${fatigue.reasons.join(' · ')}`
     : '컨디션을 선택할 수 있어요.';
   byId('departure').textContent = mode === 'demo' ? `샘플 시각 · ${fullDate.format(now)}` :
     summary.departAt > now ? `진행 중인 일정이 끝나는 ${clock.format(summary.departAt)}부터 출발할 수 있어요.` :
@@ -332,14 +349,14 @@ function arrivalTime(value) {
 function forecastFatigue(now, deadline) {
   if (!appointment?.next || !Number.isFinite(+deadline)) return null;
   return summarize(mode === 'demo' ? sampleEvents : calendarEvents, now, {
-    currentFatigue: fatigueEdited ? fields.fatigue.value : undefined,
+    currentFatigue: fatigueEdited ? selectedFatigue() : undefined,
     arriveBy: +deadline
   }).projectedFatigue;
 }
 
 function showRouteFatigue(fatigue) {
   byId('route-fatigue').textContent = fatigue
-    ? `약속 전 예상 컨디션 · ${FATIGUE_LABELS[fatigue.value]} (${fatigue.reasons.join(' · ')})`
+    ? `약속 전 예상 컨디션 · ${scoreLabel(fatigue.value)} (${fatigue.reasons.join(' · ')})`
     : '';
 }
 
@@ -369,7 +386,7 @@ async function compare(userAction) {
       headers: { 'Content-Type': 'application/json' },
       signal: request.signal,
       body: JSON.stringify({
-        ...trip, mode: placeMode(), fatigue: forecast?.value ?? values.fatigue ?? 'normal', allowance: Number(values.budget),
+        ...trip, mode: placeMode(), fatigue: serverFatigue(forecast?.value ?? selectedFatigue()), allowance: Number(values.budget),
         calendar: hasCalendar(), locations,
         departAt: depart.toISOString(), arriveBy: deadline.toISOString(),
         places: displayedPlaces().filter(place => selected[placeMode()].has(place.id))
@@ -488,7 +505,7 @@ form.addEventListener('input', event => {
   }
   if (event.target.name === 'fatigue') {
     fatigueEdited = true;
-    byId('fatigue-note').textContent = '';
+    byId('fatigue-note').textContent = scoreLabel(selectedFatigue());
   }
   if (['fatigue', 'arrive'].includes(event.target.name)) {
     const now = mode === 'demo' ? Date.parse(demo.departAt) : Date.now();

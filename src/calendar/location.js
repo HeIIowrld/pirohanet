@@ -25,6 +25,7 @@ const queriesFor = (text) => {
 };
 
 const STORE_KEY = 'pirohanet.myPlaces';
+const PENDING_KEY = 'pirohanet.myPlaces.pending'; // 이 브라우저에서 바꾸고 아직 계정에 올리지 못한 글자(기억·삭제)의 키 목록
 // 검색하지 않고 사용자에게 물어야 하는 이름. 여기 없는 별명은 사용자가 후보를 고쳐 저장하면 그 뒤로 맞게 나온다.
 const PERSONAL_LABELS = new Set(['회사', '직장', '사무실', '오피스', '집', '우리집', '우리 집', '본가', '자취방', '기숙사', '학교', '학원', '헬스장', 'home', 'work', 'office', 'school']);
 
@@ -58,7 +59,27 @@ const writeSaved = (all, store) => {
   }
 };
 
+const readPending = (store) => {
+  try {
+    const keys = JSON.parse(store?.getItem(PENDING_KEY) ?? '[]');
+    return Array.isArray(keys) ? keys.filter((key) => typeof key === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+const writePending = (keys, store) => {
+  try {
+    store?.setItem(PENDING_KEY, JSON.stringify(keys));
+  } catch {
+    // 저장이 막힌 브라우저
+  }
+};
+
 export const isPersonalLabel = (text) => PERSONAL_LABELS.has(keyOf(text));
+
+// 두 위치 글자가 같은 내 장소를 가리키는지 비교할 때 쓰는 키(앞뒤 공백 제거, 공백 정리, 소문자).
+export const placeKey = keyOf;
 
 // 저장된 내 장소 전체 { 위치 글자: 장소 }. 계정과 맞출 때 쓴다.
 export const exportSavedPlaces = (store = defaultStore()) => readSaved(store);
@@ -82,6 +103,8 @@ export function savePlace(text, place, store = defaultStore()) {
   if (place) all[key] = { name: place.name, address: place.address, latitude: place.latitude, longitude: place.longitude };
   else delete all[key];
   writeSaved(all, store);
+  // 계정에 올릴 때까지 기록해 둔다. 그래야 다음에 계정과 맞출 때 계정의 옛 값으로 되돌아가지 않는다.
+  writePending([...new Set([...readPending(store), key])], store);
 }
 
 const get = (path, query, fetchFn) => fetchFn(`${path}?${new URLSearchParams({ query })}`, { headers: { Accept: 'application/json' } });
@@ -96,7 +119,7 @@ async function geocode(query, fetchFn) {
   }));
 }
 
-async function searchPlaces(query, fetchFn) {
+export async function searchPlaces(query, fetchFn = fetch) {
   const res = await get('/api/place', query, fetchFn);
   if (!res.ok) return []; // 장소 검색 키가 없는 서버에서는 주소로 찾는 단계까지만 동작한다
   return ((await res.json()).documents ?? []).map((hit) => ({
@@ -200,19 +223,31 @@ async function upload(token, fileId, places, fetchFn) {
   );
 }
 
-// 로그인 직후에 부른다. 계정에 저장된 내 장소를 받아 이 브라우저의 것과 합치고, 달라졌으면 계정에 다시 저장한다.
-// 합친 내 장소 { 위치 글자: 장소 }를 돌려준다. 같은 글자가 양쪽에 있으면 계정 쪽을 따른다.
-export async function syncMyPlaces(token, fetchFn = fetch, store) {
+// 계정에 저장된 내 장소를 받아 이 브라우저의 것과 합치고, 달라졌으면 계정에 다시 저장한다. 합친 내 장소 { 위치 글자: 장소 }를 돌려준다.
+// 같은 글자가 양쪽에 있으면 계정 쪽을 따른다. 단, 이 브라우저에서 바꾸고 아직 계정에 올리지 못한 글자(삭제 포함)는 이 브라우저 쪽을 따른다.
+// 계정의 파일을 통째로 덮어쓰는 일은 없다. 그래서 맞추지 못한 상태에서 불러도 계정에만 있는 장소가 지워지지 않는다.
+export async function syncMyPlaces(token, fetchFn = fetch, store = defaultStore()) {
   const fileId = await findFileId(token, fetchFn);
   const remote = fileId ? await (await call(token, `${FILES}/${fileId}?alt=media`, undefined, fetchFn)).json() : {};
-  importSavedPlaces({ ...exportSavedPlaces(store), ...remote }, store);
-  const merged = exportSavedPlaces(store);
+  const local = readSaved(store);
+  const pending = readPending(store);
+  const all = { ...local, ...remote };
+  for (const key of pending) {
+    if (key in local) all[key] = local[key];
+    else delete all[key];
+  }
+  // 저장소에서 다시 읽지 않고 합친 값을 그대로 올린다. 저장이 막힌 브라우저에서 다시 읽으면 빈 목록이 계정을 덮어쓴다.
+  const merged = Object.fromEntries(Object.entries(all).filter(([, place]) => validPlace(place)));
+  writeSaved(merged, store);
   if (JSON.stringify(merged) !== JSON.stringify(remote)) await upload(token, fileId, merged, fetchFn);
+  // 올리는 동안 같은 글자를 또 바꿨으면 그 변경은 아직 올라가지 않았으니 남겨 둔다.
+  const uploaded = new Map(pending.map((key) => [key, JSON.stringify(merged[key] ?? null)]));
+  const now = readSaved(store);
+  writePending(readPending(store).filter((key) => !uploaded.has(key) || JSON.stringify(now[key] ?? null) !== uploaded.get(key)), store);
   return merged;
 }
 
-// 내 장소를 기억하거나 지운 직후에 부른다. 이 브라우저의 내 장소로 계정의 것을 덮어쓴다.
-// ponytail: 로그인하지 않은 채 지운 기억은 계정에 남아 다음 로그인 때 돌아온다. 지운 기록을 따로 남겨야 고쳐진다
-export async function pushMyPlaces(token, fetchFn = fetch, store) {
-  await upload(token, await findFileId(token, fetchFn), exportSavedPlaces(store), fetchFn);
+// 내 장소를 기억하거나 지운 직후에 부른다. 방금 바꾼 것을 계정에 반영한다(syncMyPlaces와 같은 합치기).
+export async function pushMyPlaces(token, fetchFn = fetch, store = defaultStore()) {
+  await syncMyPlaces(token, fetchFn, store);
 }

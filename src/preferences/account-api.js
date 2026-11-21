@@ -10,8 +10,8 @@ export async function api(path, method = 'GET', body) {
   return response.json();
 }
 
-export function savePlace(alias, { name, address, latitude, longitude }) {
-  return api('/api/saved-places', 'PUT', {
+export function savePlace(alias, { name, address, latitude, longitude }, method = 'PUT') {
+  return api('/api/saved-places', method, {
     alias, name: name ?? '', address, latitude, longitude,
   });
 }

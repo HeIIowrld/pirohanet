@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 · 모도</title>
+  <link rel="stylesheet" href="./app.css">
+  <script src="https://accounts.google.com/gsi/client" defer></script>
+</head>
+<body>
+  <main class="app">
+    <section class="panel" aria-labelledby="login-heading">
+      <h1 id="login-heading">모도 로그인</h1>
+      <p>Google로 로그인하면 일정과 내 장소를 연결해 이동을 계획할 수 있어요.</p>
+      <button type="button" id="login" class="primary" disabled>Google로 로그인</button>
+      <p id="login-status" class="status" role="status"></p>
+    </section>
+  </main>
+  <script>import(`./login.js?t=${Date.now()}`);</script>
+</body>
+</html>

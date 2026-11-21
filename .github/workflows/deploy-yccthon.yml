@@ -44,8 +44,18 @@ jobs:
             echo "The published tree must contain only regular files and directories." >&2
             exit 1
           fi
+          test -s "$stage/site/src/main/index.html"
           test -s "$stage/site/src/calendar/demo.html"
           chmod -R a+rX "$stage/site"
+
+          for endpoint in transit walk bus-information; do
+            code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "http://127.0.0.1/api/$endpoint")
+            if [ "$code" != 400 ]; then
+              echo "Expected coordinate validation at /api/$endpoint, got HTTP $code." >&2
+              exit 1
+            fi
+          done
+          curl -fsS --max-time 10 http://127.0.0.1/api/account | grep -F '"signedIn"' >/dev/null
 
           release="releases/$GITHUB_SHA"
           if [ ! -d "$deploy_dir/$release" ]; then
@@ -54,15 +64,22 @@ jobs:
           previous=$(readlink "$deploy_dir/current" || true)
           ln -s -- "$release" "$stage/next"
           mv -Tf -- "$stage/next" "$deploy_dir/current"
-          if ! curl -fsS --max-time 10 http://127.0.0.1/src/calendar/demo.html \
-              | cmp -s "$deploy_dir/$release/src/calendar/demo.html" -; then
+          check_published_file() {
+            local url_path=$1 file_path=$2
+            curl -fsS --max-time 10 -o "$stage/response" "http://127.0.0.1$url_path" \
+              && cmp "$deploy_dir/$release/$file_path" "$stage/response"
+          }
+          if ! check_published_file /src/main/ src/main/index.html \
+              || ! check_published_file /src/routing/transit.js src/routing/transit.js \
+              || ! check_published_file /src/main/saved-places.js src/main/saved-places.js \
+              || ! check_published_file /src/calendar/demo.html src/calendar/demo.html; then
             if [ -n "$previous" ]; then
               ln -s -- "$previous" "$stage/previous"
               mv -Tf -- "$stage/previous" "$deploy_dir/current"
             else
               rm -f -- "$deploy_dir/current"
             fi
-            echo "Nginx did not return the deployed file." >&2
+            echo "Nginx did not return the expected deployed files." >&2
             exit 1
           fi
           echo "Deployed $GITHUB_SHA"
