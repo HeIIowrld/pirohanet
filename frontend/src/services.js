@@ -60,10 +60,17 @@ export function routeCategory(route) {
   return null;
 }
 
+export function hasLateNightBusLeg(route) {
+  return (route.steps ?? []).some(step => step.type === 'BUS' && step.vehicles?.length &&
+    step.vehicles.every(vehicle => vehicle.name?.includes('(심야)')));
+}
+
 function alternateRoutes(direct, recommended) {
   const shown = new Set(recommended.map(routeCategory));
   const alternatives = [];
-  for (const route of [...direct].sort((a,b) => a.arrivalAt - b.arrivalAt)) {
+  const byPracticality = (a,b) => Number(hasLateNightBusLeg(a)) - Number(hasLateNightBusLeg(b)) ||
+    a.arrivalAt - b.arrivalAt;
+  for (const route of [...direct].sort(byPracticality)) {
     const category = routeCategory(route);
     if (!category || shown.has(category)) continue;
     shown.add(category);
