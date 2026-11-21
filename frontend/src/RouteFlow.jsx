@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {addBusInformation} from '../../src/main/bus-information.js';
 import {isDirect} from '../../src/routing/compare.js';
-import {clock} from './services.js';
+import {clock, routeCategory, hasLateNightBusLeg} from './services.js';
 import {loadRailDoorData, railDoorHints} from './rail-doors.js';
 import {Actions, Art, Badge, Button, Sheet, Summary} from './design.jsx';
 
@@ -14,7 +14,34 @@ function crowding(route) {
     : '혼잡도 정보 없음';
 }
 
+function boardingLines(step) {
+  return [...new Set((step.vehicles ?? []).map(vehicle => vehicle.name).filter(Boolean))]
+    .sort((a,b) => Number(a.includes('(심야)')) - Number(b.includes('(심야)')))
+    .map(name => step.type === 'BUS' && /^[0-9]+$/.test(name) ? name+'번' : name);
+}
+
+function summarizeBoarding(lines) {
+  if (lines.length <= 1) return lines[0];
+  return `${lines[0]} 외 ${lines.length-1}개 노선`;
+}
+
+function RouteCard({item,label,selected,onSelect}) {
+  const category = routeCategory(item);
+  const lines = (item.steps ?? []).flatMap(step => summarizeBoarding(boardingLines(step)) ?? []);
+  return <button className={`route-card ${selected ? 'selected' : ''}`}
+    aria-pressed={selected} onClick={onSelect}>
+    <h3>{label}</h3>
+    {category && category !== label && <span className="route-mode">{category}</span>}
+    <div><strong>{minutes(item.travelMinutes)}분</strong><span>{clock(item.arrivalAt)} 도착</span></div>
+    {!!lines.length && <div className="route-line-summary">{lines.join(' → ')}</div>}
+    <p>도보 {minutes(item.walkMinutes)}분 · 환승 {item.transfers ?? 0}회 · {crowding(item)}</p>
+    {hasLateNightBusLeg(item) && <small className="status">심야 노선 포함 · 운행 시간 확인</small>}
+  </button>;
+}
+
 export function RouteComparison({result, route, trip, demo, select, choose, changeCondition, changeTrip, showLate}) {
+  const alternatives = result?.alternatives ?? [];
+  const [expanded,setExpanded] = useState(() => alternatives.some(item => item.id === route?.id));
   if (!result?.direct.length) {
     const fastest = result?.all.filter(isDirect).reduce((best, item) =>
       !best || item.arrivalAt < best.arrivalAt ? item : best, null);
@@ -34,14 +61,19 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
   return <Sheet className="comparison-sheet">
     <div className="sheet-body">
       <div className="heading-row"><h2>어떤 길로 갈까요?</h2>{demo && <Badge/>}</div>
-      {result.direct.map((item, index) => (
-        <button key={item.id} className={`route-card ${route?.id === item.id ? 'selected' : ''}`}
-          aria-pressed={route?.id === item.id} onClick={() => select(item)}>
-          <h3>{index === 0 ? '빠른 길' : '편한 길'}</h3>
-          <div><strong>{minutes(item.travelMinutes)}분</strong><span>{clock(item.arrivalAt)} 도착</span></div>
-          <p>도보 {minutes(item.walkMinutes)}분 · 환승 {item.transfers ?? 0}회 · {crowding(item)}</p>
+      {result.direct.map((item,index) => <RouteCard key={item.id} item={item}
+        label={index === 0 ? '빠른 길' : '편한 길'} selected={route?.id === item.id} onSelect={() => select(item)}/>)}
+      {alternatives.length > 0 && <>
+        <button type="button" className="route-alternatives-toggle" aria-expanded={expanded}
+          aria-controls="route-alternatives" onClick={() => setExpanded(!expanded)}>
+          <strong>{expanded ? '다른 경로 접기' : '다른 경로 보기'}</strong>
+          <small>{alternatives.map(routeCategory).join(' · ')}</small>
         </button>
-      ))}
+        <div id="route-alternatives" hidden={!expanded}>
+          {alternatives.map(item => <RouteCard key={item.id} item={item}
+            label={routeCategory(item)} selected={route?.id === item.id} onSelect={() => select(item)}/>)}
+        </div>
+      </>}
     </div>
     <Actions>
       <Button kind="text" onClick={changeCondition}>컨디션 변경</Button>
@@ -90,7 +122,10 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell})
           ({BUS:'var(--state-success)',SUBWAY:'var(--brand-sky-deep)',WALKING:'var(--walk)'})[step.type]}}/></span>
         <div><strong>{step.guidance || step.title}</strong>
           <small>{step.description || (Number.isFinite(step.time) ? `약 ${minutes(step.time / 60)}분` : '')}</small>
-          {step.type === 'BUS' && <BusInformation step={step}/>}
+          {step.type === 'BUS' && <>
+            {boardingLines(step).length > 1 && <small>이 구간의 노선 후보 · {boardingLines(step).join(' / ')}</small>}
+            <BusInformation step={step}/>
+          </>}
           {doors[index] && <div className="rail-door-hint">
             <strong>{doors[index].title}</strong>
             <small>{doors[index].instruction}</small>
