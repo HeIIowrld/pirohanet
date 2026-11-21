@@ -57,7 +57,9 @@
     if (loaded.placeError) return `\n    위치 변환 실패: ${loaded.placeError}`;
     if (!loaded.places) return '\n    위치 찾는 중…';
     const candidates = loaded.places.get(location.trim()) ?? [];
-    if (savedPlace(location)) return `\n    ★ 내 장소: ${candidateLine(candidates[0], 0).slice(3)}`;
+    // 저장된 장소 자체를 보여 준다. 대소문자나 띄어쓰기만 다른 위치 글자는 같은 내 장소를 가리키지만 후보 목록은 따로라서 비어 있을 수 있다.
+    const saved = savedPlace(location);
+    if (saved) return `\n    ★ 내 장소: ${candidateLine(saved, 0).slice(3)}`;
     if (!candidates.length) return isPersonalLabel(location) ? '\n    어디인지 물어봐야 하는 이름' : '\n    위치를 찾지 못함';
     return candidates.map((place, i) => `\n    ${candidateLine(place, i)}`).join('');
   };
