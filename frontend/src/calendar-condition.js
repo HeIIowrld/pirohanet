@@ -16,7 +16,7 @@ export async function calendarCondition(token, horizon, destinationEventId) {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ horizon: +horizon, destinationEventId }),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(5500),
     });
     return response.ok ? await response.json() : null;
   } catch {

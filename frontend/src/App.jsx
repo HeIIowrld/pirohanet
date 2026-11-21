@@ -19,7 +19,6 @@ import {FATIGUE_SCALE as scale} from './copy.js';
 import {designRoutes} from './design-demo.js';
 import {api,clock,localInput,fromInput,suggestedLevel,makeTrip,queryRoutes,searchWithFallback,validateTimes,timeDraftFromInput,applyTimeDraft} from './services.js';
 import {Icon,Art,Button,Actions,AppBar,Welcome,CalendarIntro,PlaceRow,Field,FatigueScale,Sheet,Badge,Summary,ListRow,MapSurface} from './design.jsx';
-const CONDITION_AI_KEY='modo.calendar-condition-ai';
 const DAY_MS=24*60*60*1000;
 const kstNow=()=>localInput(new Date());
 const designDemo=import.meta.env.DEV && new URLSearchParams(location.search).get('demo')==='1';
@@ -40,10 +39,6 @@ export default function App(){
  const [naming,setNaming]=useState(null);
  const retry=useRef(null);
  const [expiresAt,setExpiresAt]=useState(null);
- const [conditionAi,setConditionAi]=useState(()=>{
-  const expires=readSession()?.expiresAt;
-  try{return Boolean(expires)&&sessionStorage.getItem(CONDITION_AI_KEY)===String(expires)}catch{return false}
- });
  const [levelDraft,setLevelDraft]=useState(null);
  const [avoidLine,setAvoidLine]=useState('');
  const [directChoice,setDirectChoice]=useState(null);
@@ -101,13 +96,6 @@ export default function App(){
  function openOverlay(overlay){navigation.move({...view,overlay})}
  function finishOnboarding(answers){const preferences=normalizeTravelPreferences(answers??DEFAULT_TRAVEL_PREFERENCES);const stored=completeOnboarding(preferences,designDemo);setOnboarding({completed:true,preferences});navigation.reset({screen:'home'});if(!stored)setToast('이 브라우저에서는 선호를 저장하지 못했어요.');}
 
- function changeConditionAi(enabled) {
-  setConditionAi(enabled);
-  try{
-   if(enabled)sessionStorage.setItem(CONDITION_AI_KEY,String(readSession()?.expiresAt));
-   else sessionStorage.removeItem(CONDITION_AI_KEY);
-  }catch{/* 이번 화면에서만 설정을 사용해요. */}
- }
  function disconnect() {
   request.current++;
   clearSession();
@@ -115,7 +103,6 @@ export default function App(){
   if(synced.current)clearSyncedPlaces();
   synced.current=false;
   setLinked(false);
-  changeConditionAi(false);
   setEvents([]);
   setSaved([]);
   setEvent(null);
@@ -331,6 +318,17 @@ export default function App(){
    await routes(false,level,resolved);
   }catch(e){if(request.current===id){setError(e.message);setBusy(false)}}
  }
+ async function applyCalendarCondition(baseTrip,manualLevel){
+  const now=new Date();
+  const horizon=baseTrip.departAt;
+  const token=linked && readSession()?.token;
+  const inference=token ? await calendarCondition(token,horizon,event?.id) : null;
+  const condition=tripCondition(events,now,horizon,manualLevel,inference);
+  return {...baseTrip,condition,preferences:{
+   ...baseTrip.preferences,mobility:condition.mobility,fatigueLevel:condition.level,
+   normalizedFatigue:condition.level===null?null:(condition.level-1)/4,
+  }};
+ }
  async function routes(withStops=false,overrideLevel=level,places=points){
   const id=++request.current;
   retry.current={withStops,level:overrideLevel};
@@ -340,20 +338,13 @@ export default function App(){
   navigation.move({screen:'loading'},{replace});
   try {
    const preferences={...onboarding.preferences,avoidLine:avoidLine||null};
-   let t=withStops ? trip : makeTrip({...form,preferences},event,overrideLevel);
-   if(!withStops && !designDemo){
-    const now=new Date();
-    const horizon=t.departAt;
-    const token=conditionAi && linked && readSession()?.token;
-    const inference=token ? await calendarCondition(token,horizon,event?.id) : null;
-    if(id!==request.current)return;
-    const condition=tripCondition(events,now,horizon,overrideLevel,inference);
-    t={...makeTrip({...form,preferences:{...preferences,mobility:condition.mobility}},event,condition.level,now),condition};
-   }
-   setTrip(t);
+   const baseTrip=withStops ? trip : makeTrip({...form,preferences},event,overrideLevel);
+   const conditionedTrip=withStops||designDemo ? null : applyCalendarCondition(baseTrip,overrideLevel);
    if(!withStops){setDepartureAlert(null);setRoute(null);setProgress(null)}
-   const r=designDemo?designRoutes(t,stay):await queryRoutes(t,{places,previous:result,stops:withStops,saved,stayMinutes:stay});
+   const r=designDemo?designRoutes(baseTrip,stay):await queryRoutes(baseTrip,{places,conditionedTrip,previous:result,stops:withStops,saved,stayMinutes:stay});
+   const resolvedTrip=conditionedTrip ? await conditionedTrip : baseTrip;
    if(id!==request.current)return;
+   setTrip(resolvedTrip);
    setResult(r);
    setStopIndex(0);
    if(withStops){
@@ -484,7 +475,7 @@ export default function App(){
   openDetails={()=>go('details')} openDwell={!trip.arriveBy&&!route.viaStop&&progress.index===0?()=>openOverlay('dwell'):null} position={journeyPosition} setPosition={setJourneyPosition}/>}
  {screen==='details'&&route&&trip&&<RouteDetails route={route} trip={trip} demo={demo} start={()=>startJourney()} openDwell={(!progress||progress.index===0)?()=>openOverlay('dwell'):null} resume={progress&&navigation.previous?.screen==='journey'?goBack:null}/>}
  {screen==='my'&&<section className="page list-page"><ListRow title="내 장소" subtitle="저장한 장소 관리" onClick={()=>go('saved')}/><ListRow title="캘린더 설정" subtitle="Google 캘린더 연결" onClick={()=>go('settings')}/></section>}
- {screen==='settings'&&<section className="page list-page"><ListRow title="Google 캘린더" subtitle="일정은 읽기만 해요." tail={<small>연결됨</small>}/>{linked&&!designDemo&&<label className="calendar-ai-setting"><strong>AI 컨디션 추천</strong><input type="checkbox" checked={conditionAi} onChange={e=>changeConditionAi(e.target.checked)}/><small>이번 Google 로그인 동안 경로를 찾을 때 관련 일정 제목과 메모 일부를 OpenAI에 보내요.</small></label>}<ListRow title="약속 장소가 있는 일정만 보기" onClick={()=>setLocatedOnly(v=>!v)} tail={<span className={`toggle ${locatedOnly?'on':''}`} role="switch" aria-checked={locatedOnly} aria-label="약속 장소가 있는 일정만 보기"/>}/><Actions><Button kind="danger" onClick={disconnect}>연결 해제 및 로그아웃</Button></Actions></section>}
+ {screen==='settings'&&<section className="page list-page"><ListRow title="Google 캘린더" subtitle="OpenAI가 관련 일정 제목과 메모 일부를 분석해 컨디션을 추천해요." tail={<small>연결됨</small>}/><ListRow title="약속 장소가 있는 일정만 보기" onClick={()=>setLocatedOnly(v=>!v)} tail={<span className={`toggle ${locatedOnly?'on':''}`} role="switch" aria-checked={locatedOnly} aria-label="약속 장소가 있는 일정만 보기"/>}/><Actions><Button kind="danger" onClick={disconnect}>연결 해제 및 로그아웃</Button></Actions></section>}
  {screen==='saved'&&!naming&&<section className={`page saved-page ${saved.length?'':'empty'}`}>{saved.length?(()=>{const row=(p,i)=><div className="saved-place-row" key={p.alias||i}><PlaceRow place={p} onClick={()=>{setEvent(null);setLevel(null);update('arrival','');choose(p,'destination')}} tail={p.distance}/><button aria-label={`${p.alias||p.name} 이름 바꾸기`} disabled={busy} className="saved-edit" onClick={()=>setNaming({place:p,name:p.alias||p.name||'',from:p.alias||p.name||'',group:p.group||''})}>수정</button><button className="saved-delete" aria-label={`${p.alias||p.name} 삭제`} disabled={busy} onClick={()=>remove(p)}>삭제</button></div>;return placeGroups.some(Boolean)?placeGroups.map(g=><details className="place-group" key={g||'-'} open><summary>{g||'그룹 없음'}<small>{saved.filter(p=>(p.group||'')===g).length}</small></summary>{saved.filter(p=>(p.group||'')===g).map(row)}</details>):saved.map(row)})():<><Art name="empty-saved"/><h2>저장한 장소가 없어요.</h2><p>자주 가는 곳을 저장해 두면 빠르게 찾을 수 있어요.</p></>}<Actions><Button kind="sky" onClick={()=>openSearch('save')}>장소 추가</Button></Actions></section>}
  {error&&!['confirm','route-error','calendar'].includes(screen)&&<div className="toast" role="alert">{error}<button onClick={()=>setError('')} aria-label="오류 안내 닫기">×</button></div>}
  </main>{navScreen&&<nav><button className={screen==='home'?'active':''} onClick={screen==='my'?goBack:undefined}><Icon name="map"/>지도</button><button className={screen==='my'?'active':''} onClick={screen==='home'?()=>go('my'):undefined}><Icon name="user"/>마이</button></nav>}

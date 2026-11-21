@@ -80,18 +80,18 @@ export function routeResult(candidates, trip, places) {
   };
 }
 
-export async function queryRoutes(trip, {places, previous, stops=false, saved=[], stayMinutes=20}={}) {
+export async function queryRoutes(trip, {places, previous, stops=false, saved=[], stayMinutes=20, conditionedTrip=null}={}) {
   if (!places?.origin || !places?.destination) throw new Error('출발지와 목적지를 다시 선택해 주세요.');
   if (!stops) {
-    const all = await queryTransit({...trip, places});
+    const [all, rankedTrip] = await Promise.all([queryTransit({...trip, places}), conditionedTrip ?? trip]);
     const candidates = all.map(item => ({...item,id:routeKey(item),stayMinutes:0}));
-    const initial = routeResult(candidates,trip,places);
+    const initial = routeResult(candidates,rankedTrip,places);
     const fastest = initial.direct[0];
     const ordered = initial.eligible.filter(route => isDirect(route) && route.id !== fastest?.id);
     const candidatesWithData = [fastest,...ordered].filter(Boolean);
     const withData = await addBusObservations(candidatesWithData);
     const byId = new Map(withData.map(item => [item.id,item]));
-    return routeResult(candidates.map(item => byId.get(item.id) ?? item),trip,places);
+    return routeResult(candidates.map(item => byId.get(item.id) ?? item),rankedTrip,places);
   }
   const baseline = previous?.direct[0];
   const freeMinutes = baseline && trip.arriveBy
