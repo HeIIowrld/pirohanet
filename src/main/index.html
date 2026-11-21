@@ -31,7 +31,14 @@
             <h2 id="schedule-heading">일정</h2>
             <button id="load-sample" type="button" class="secondary">샘플 일정 불러오기</button>
           </div>
+          <div class="account-actions">
+            <a id="google-login" href="/auth/google" hidden>Google 로그인</a>
+            <button id="google-calendar" class="secondary" type="button" hidden>Google 일정 불러오기</button>
+            <button id="logout" class="secondary" type="button" hidden>로그아웃</button>
+          </div>
+          <p id="account-status" class="status" role="status" hidden></p>
           <p id="trip-summary" class="status" role="status">선택한 일정이 없어요.</p>
+          <button id="confirm-calendar-place" type="button" class="secondary" hidden></button>
         </section>
 
         <fieldset class="panel">
@@ -48,6 +55,11 @@
           <button id="check-places" class="primary" type="submit">출발지와 목적지 확인</button>
         </div>
       </form>
+
+      <section id="saved-places" class="panel" aria-labelledby="saved-places-heading" hidden>
+        <h2 id="saved-places-heading">저장한 장소</h2>
+        <ul id="saved-place-list"></ul>
+      </section>
 
       <section class="panel" aria-labelledby="results-heading">
         <h2 id="results-heading">이동 결과</h2>

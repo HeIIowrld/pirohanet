@@ -81,3 +81,10 @@ main { padding: 0 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
 .sr-only, .options input { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 dt { margin-top: .75rem; font-size: .85rem; font-weight: 650; }
 dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
+
+.account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .55rem; }
+#confirm-calendar-place { margin-top: .55rem; text-align: left; }
+#saved-place-list { display: grid; gap: .75rem; padding: 0; list-style: none; }
+#saved-place-list p { overflow-wrap: anywhere; }
+.saved-place-edit { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+.saved-place-edit input { flex: 1 1 12rem; min-width: 0; padding: .6rem; border: 1px solid var(--line); border-radius: .7rem; }

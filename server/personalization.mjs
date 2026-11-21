@@ -4,12 +4,12 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { OAuth2Client } from 'google-auth-library';
 import { calendarEventParams } from '../src/calendar/calendar.js';
+import { placeAliasKey } from '../src/preferences/place-alias.js';
 
 const calendarScope = 'https://www.googleapis.com/auth/calendar.readonly';
 const sessionAge = 30 * 24 * 60 * 60;
 const nonce = () => randomBytes(32).toString('base64url');
 const hash = (value) => createHash('sha256').update(value).digest('hex');
-const normalize = (text) => text?.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 const mainPage = '/src/main/index.html';
 
 async function readJson(req) {
@@ -191,7 +191,7 @@ export function createPersonalization({ root, origin, clientId, clientSecret, se
     }
     const body = await readJson(req);
     const alias = typeof body?.alias === 'string' ? body.alias.trim() : '';
-    const key = normalize(alias);
+    const key = placeAliasKey(alias);
     if (!key || key.length > 200 || alias.length > 200) return sendJson(res, 400, { error: '장소 이름을 확인해 주세요.' });
     if (req.method === 'DELETE') {
       db.prepare('DELETE FROM places WHERE user_id = ? AND key = ?').run(userId, key);

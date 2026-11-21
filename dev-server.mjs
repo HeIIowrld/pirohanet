@@ -8,6 +8,7 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
+import { createPersonalization } from './server/personalization.mjs';
 
 const ROOT = import.meta.dirname;
 const PORT = Number(process.env.PORT ?? 5173);
@@ -49,15 +50,35 @@ async function proxy(upstream, query, res) {
   }
 }
 
+const config = { ...env, ...process.env };
+const handlePersonalization = createPersonalization({
+  root: ROOT,
+  origin: new URL(config.APP_ORIGIN ?? `http://localhost:${PORT}`).origin,
+  clientId: config.GOOGLE_CLIENT_ID,
+  clientSecret: config.GOOGLE_CLIENT_SECRET,
+  sendJson,
+});
+
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
-  const upstream = UPSTREAMS[url.pathname];
+  if (await handlePersonalization(req, res, url)) return;
+  const upstream = Object.hasOwn(UPSTREAMS, url.pathname) && UPSTREAMS[url.pathname];
+  if (url.pathname === '/') {
+    res.writeHead(302, { Location: '/src/main/index.html' });
+    return res.end();
+  }
   if (upstream) return proxy(upstream, url.searchParams.get('query'), res);
 
-  const file = path.join(ROOT, path.normalize(decodeURIComponent(url.pathname)));
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return sendJson(res, 400, { error: '잘못된 주소입니다.' });
+  }
+  const file = path.join(ROOT, path.normalize(pathname));
   // .env, .git처럼 점으로 시작하는 파일과 폴더는 내보내지 않는다. 키가 들어 있다.
   const hidden = path.relative(ROOT, file).split(path.sep).some((part) => part.startsWith('.'));
-  if (hidden || !file.startsWith(ROOT + path.sep)) return sendJson(res, 403, { error: 'forbidden' });
+  if (hidden || !file.startsWith(path.join(ROOT, 'src') + path.sep)) return sendJson(res, 403, { error: 'forbidden' });
   try {
     const data = await readFile(file);
     res.writeHead(200, { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream' });
@@ -65,4 +86,4 @@ createServer(async (req, res) => {
   } catch {
     sendJson(res, 404, { error: 'not found' });
   }
-}).listen(PORT, 'localhost', () => console.log(`http://localhost:${PORT}/src/calendar/demo.html`));
+}).listen(PORT, 'localhost', () => console.log(`http://localhost:${PORT}/src/main/index.html`));

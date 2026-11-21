@@ -114,16 +114,19 @@ function load(events, dayStart, until, prefix) {
   };
 }
 
-// 브라우저 전용. 페이지에 <script src="https://accounts.google.com/gsi/client"></script>가 있어야 하고,
-// 팝업이 막히지 않도록 버튼 클릭 핸들러 안에서 호출한다. 실패하면 reject하니 호출부에서 sample.js로 대체한다.
-export function fetchGoogleEvents(clientId = GOOGLE_CLIENT_ID, now = new Date()) {
+export function calendarEventParams(now = new Date()) {
   const dayStart = kstDayStart(+now);
-  const params = new URLSearchParams({
+  return new URLSearchParams({
     timeMin: new Date(dayStart - DAY).toISOString(), // 어제 늦은 일정까지
     timeMax: new Date(dayStart + 7 * DAY).toISOString(), // 오늘과 이후 6일
     singleEvents: 'true',
     orderBy: 'startTime',
   });
+}
+
+// Google Identity Services가 로드된 데모 페이지에서 버튼 클릭으로 호출한다.
+export function fetchGoogleEvents(clientId = GOOGLE_CLIENT_ID, now = new Date()) {
+  const params = calendarEventParams(now);
   return new Promise((resolve, reject) => {
     google.accounts.oauth2
       .initTokenClient({
