@@ -68,7 +68,8 @@ function mapData(points, route, candidate, position) {
     const points = mapStepPoints(step).filter(isCoordinate);
     return points.length > 1 ? [{points,color:routeColor(step),walking:step.type === 'WALKING',approximate:step.approximate}] : [];
   });
-  return {markers,lines,osmGeometry:route?.steps?.some(step => step.osmGeometry),gbisGeometry:route?.steps?.some(step => step.gbisGeometry)};
+  return {markers,lines,osmGeometry:route?.steps?.some(step => step.osmGeometry),gbisGeometry:route?.steps?.some(step => step.gbisGeometry),
+    incheonGeometry:route?.steps?.some(step => step.incheonGeometry)};
 }
 
 function RouteSketch({data}) {
@@ -245,8 +246,9 @@ export default function LiveMap({points,route,candidate,state,position}) {
   return <div className="map-placeholder live-map" aria-label="이동 지도">
     <div ref={host} className="live-map-canvas naver-map-canvas" data-provider={ready&&!loadError?'naver':undefined} hidden={Boolean(loadError)} inert={!ready||Boolean(loadError)}/>
     {!ready && !loadError && <RouteSketch data={data}/>}
-    {(data.osmGeometry || data.gbisGeometry) && !loadError && <div className="route-shape-credit">
+    {(data.osmGeometry || data.gbisGeometry || data.incheonGeometry) && !loadError && <div className="route-shape-credit">
       {data.osmGeometry && <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
+      {data.incheonGeometry && <a href="https://bus.incheon.go.kr/" target="_blank" rel="noreferrer">인천 버스정보</a>}
       {data.gbisGeometry && <a href="https://www.gbis.go.kr/" target="_blank" rel="noreferrer">경기버스정보</a>}
     </div>}
     {loadError && <div className="map-message">

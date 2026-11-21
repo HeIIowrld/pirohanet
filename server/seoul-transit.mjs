@@ -1,3 +1,7 @@
+import { busRideRange } from '../src/routing/bus-ride-range.js';
+import turnStops from '../src/routing/bus-turn-stops.json' with { type: 'json' };
+import seoulBusStops from '../frontend/public/assets/data/seoul-bus-stops.json' with { type: 'json' };
+import incheonBusStops from '../frontend/public/assets/data/incheon-bus-stops.json' with { type: 'json' };
 import stationPoints from '../src/routing/seoul-station-points.json' with { type: 'json' };
 
 const ENDPOINT = 'http://ws.bus.go.kr/api/rest/pathinfo';
@@ -29,7 +33,8 @@ function rideStep(leg) {
       type: subway ? 'SUBWAY' : 'BUS',
       guidance: `${leg.fname}에서 ${name} 탑승 · ${leg.tname} 하차`,
       vehicles: [{ name }],
-      ...(!subway && { seoulBusStopId: leg.fid, seoulBusRouteId: leg.routeId }),
+      ...(!subway && { seoulBusStopId: leg.fid, seoulBusRouteId: leg.routeId,
+        ...(leg.tid && { seoulBusAlightStopId: leg.tid }) }),
       stops: [{ name: leg.fname }, { name: leg.tname }],
       ...(subway && leg.railLinkList?.length ? { railSegments: leg.railLinkList.length } : {}),
       distance: metersBetween(from, to),
@@ -124,7 +129,12 @@ export function createSeoulTransit({ serviceKey, fetchFn = fetch }) {
     const extraWalk = metersBetween(origin, start) + metersBetween(end, destination);
     const routes = rows.map(item => normalizeRoute(item, origin, destination, extraWalk)).filter(Boolean);
     if (rows.length && !routes.length) throw providerError(502, '서울시 경로 응답을 처리하지 못했어요.');
-    return routes;
+    return routes.filter(route => route.steps.every(({properties,path}) => {
+      const id = properties.seoulBusRouteId;
+      if (!turnStops[id]) return true;
+      const stops = seoulBusStops.routes[id] ?? incheonBusStops.routes[id];
+      return busRideRange({...properties,points:path.points},stops) !== null;
+    }));
   };
 
   const subwayRoutes = async (origin, destination) => {
@@ -153,7 +163,8 @@ export function createSeoulTransit({ serviceKey, fetchFn = fetch }) {
       if (result.status !== 'fulfilled') continue;
       for (const route of result.value) {
         const key = JSON.stringify(route.steps.map(({ properties, path }) =>
-          [properties.type, properties.vehicles?.[0]?.name, properties.seoulBusRouteId, path.points]));
+          [properties.type, properties.vehicles?.[0]?.name, properties.seoulBusRouteId,
+            properties.seoulBusStopId, properties.seoulBusAlightStopId, path.points]));
         if (!unique.has(key) || route.properties.totalTime < unique.get(key).properties.totalTime) unique.set(key, route);
       }
     }

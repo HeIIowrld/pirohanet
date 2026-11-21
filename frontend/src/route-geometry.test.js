@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {addRailGeometry,addMapGeometry,mapStepPoints} from './route-geometry.js';
 
 const rail = {
@@ -41,7 +42,7 @@ test('the map uses actual walk coordinates for a nearby route and keeps the exis
   assert.deepEqual(outage.steps,addRailGeometry(route).steps);
 });
 
-test('bus sketches use ordered stops and hide a two-point ride when stops cannot be matched', async () => {
+test('ordered bus stops alone do not draw a road segment', async () => {
   const step = {type:'BUS',approximate:true,seoulBusRouteId:'100100112',seoulBusStopId:'113000420',
     points:[[126.93588,37.55535],[126.96656,37.56553]]};
   const middle = [126.953,37.559];
@@ -51,7 +52,7 @@ test('bus sketches use ordered stops and hide a two-point ride when stops cannot
   const route = {steps:[step,{...step,seoulBusRouteId:'unknown'}]};
   const signal = new AbortController().signal;
   const result = await addMapGeometry(route,signal,async () => Response.json({routes}));
-  assert.deepEqual(mapStepPoints(result.steps[0]),[step.points[0],middle,step.points[1]]);
+  assert.deepEqual(mapStepPoints(result.steps[0]),[]);
   assert.equal(result.steps[0].approximate,true);
   assert.deepEqual(mapStepPoints(result.steps[1]),[]);
   assert.deepEqual(mapStepPoints(rail),[]);
@@ -76,27 +77,30 @@ test('shown station access walks can exceed the short walking-only candidate lim
   assert.equal(mapped.approximate,false);
 });
 
-test('a Seoul to Incheon bus transfer draws both the adjacent stop pair and the Incheon bus', async () => {
-  const bus = (route,stop,points) => ({type:'BUS',approximate:true,seoulBusRouteId:route,seoulBusStopId:stop,points});
-  const cityBus = bus('100100551','112000015',[[126.93891,37.56008],[126.93549,37.56011]]);
-  const incheonBus = bus('165000381','112000031',[[126.9353,37.55977],[126.91384,37.54949]]);
-  const missing = bus('165000399','112000031',incheonBus.points);
-  const sources = {
-    seoul:{'100100551':[[112000015,...cityBus.points[0]],[112000013,...cityBus.points[1]]]},
-    incheon:{
-      '165000381':[[112000031,...incheonBus.points[0]],[113000414,126.92432,37.55732],[113000412,...incheonBus.points[1]]],
-      '165000399':[[112000031,...incheonBus.points[0]],[113000414,null,null],[113000412,...incheonBus.points[1]]],
-    },
-  };
-  const result = await addMapGeometry({steps:[cityBus,incheonBus,missing]},new AbortController().signal,
-    async url=>Response.json({routes:sources[url.includes('incheon')?'incheon':'seoul']}));
-  assert.deepEqual(mapStepPoints(result.steps[0]),cityBus.points);
-  assert.deepEqual(mapStepPoints(result.steps[1]),[incheonBus.points[0],[126.92432,37.55732],incheonBus.points[1]]);
-  assert.deepEqual(mapStepPoints(result.steps[2]),[]);
+test('M6724 uses its official Incheon road only after the first return-direction stop', async () => {
+  const boarding = [126.935306,37.559819];
+  const alighting = [126.913856,37.549532];
+  const step = {type:'BUS',approximate:true,seoulBusRouteId:'165000381',seoulBusStopId:'112000031',
+    seoulBusAlightStopId:'113000412',vehicles:[{name:'M6724인천'}],points:[boarding,alighting]};
+  const invalid = {...step,seoulBusStopId:'113000419',points:[[126.940153,37.556107],alighting]};
+  const wrongAlighting = {...step,seoulBusAlightStopId:'113000424'};
+  const result = await addMapGeometry({steps:[step,invalid,wrongAlighting]},new AbortController().signal,
+    async url => {
+      assert.match(url,/incheon-bus-(?:stops|shapes)\.json$/);
+      return new Response(await readFile(new URL('../public'+url,import.meta.url)));
+    });
+  const [mapped,wrongDirection,wrongStop] = result.steps;
+  const points = mapStepPoints(mapped);
+  assert.equal(mapped.incheonGeometry,true);
+  assert.equal(mapped.approximate,false);
+  assert.ok(points.length > 30);
+  assert.ok(points.every(([lon]) => lon < 126.9372));
+  assert.ok(points.some(([lon,lat]) => lon > 126.9368 && lat > 37.5570 && lat < 37.5591));
+  assert.deepEqual(mapStepPoints(wrongDirection),[]);
+  assert.deepEqual(mapStepPoints(wrongStop),[]);
 });
 
 test('the Sinchon to Hongik University rail segment has actual track points', async () => {
-  const {readFile} = await import('node:fs/promises');
   const shapes = await readFile(new URL('../public/assets/data/osm-subway-shapes.json',import.meta.url));
   const rail = {type:'SUBWAY',approximate:true,railSegments:1,vehicles:[{name:'2호선'}],
     stops:[{name:'신촌역'},{name:'홍대입구역'}],points:[[126.93698,37.5552],[126.92378,37.55687]]};
@@ -116,7 +120,7 @@ test('roads supplied by GBIS are clipped to the selected bus boarding and alight
     vehicles:[{name:'7101파주'}],points:[from,to]};
   const signal = new AbortController().signal;
   const [step] = (await addMapGeometry({steps:[bus]},signal,async url =>
-    Response.json(url.includes('shapeRouteId=229000273') ? {lines:[road]} : {}))).steps;
+    Response.json(url.includes('shapeRouteId=229000273') ? {lines:[road.toReversed(),road]} : {}))).steps;
   assert.ok(mapStepPoints(step).some(([lon,lat]) => lon===middle[0] && lat===middle[1]));
   assert.ok(mapStepPoints(step).every(([lon]) => lon>=to[0] && lon<=from[0]));
   assert.equal(step.approximate,false);

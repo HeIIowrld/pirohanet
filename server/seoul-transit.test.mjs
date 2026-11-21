@@ -120,3 +120,23 @@ test('walks to a nearby station when the subway service cannot route from the or
   assert.deepEqual(route.steps[0].path.points[0],[places.start_x,places.start_y]);
   assert.deepEqual(route.steps.at(-1).path.points.at(-1),[places.end_x,places.end_y]);
 });
+
+
+test('known turnover boundaries reject wrong-direction bus candidates and keep the verified returns', async () => {
+  const m6724 = {...bus,routeId:'165000381',routeNm:'M6724인천',tid:'113000412',
+    tname:'합정역',tx:126.913856,ty:37.549532};
+  const city602 = {...m6724,routeId:'100100087',routeNm:'602'};
+  const at = (leg,fid,fx,fy) => ({...leg,fid,fx,fy});
+  const candidates = [
+    at(m6724,'113000419',126.940153,37.556107),
+    at(m6724,'112000031',126.935306,37.559819),
+    at(city602,'113000419',126.940153,37.556107),
+    at(city602,'113000417',126.93869,37.55573),
+  ];
+  const city = createSeoulTransit({serviceKey:'fixture',fetchFn:url =>
+    response(url.includes('getPathInfoBySubway') ? [] : candidates.map(leg => ({time:'17',pathList:[leg]})))});
+  const result = await city({start_x:126.937,start_y:37.556,end_x:126.914,end_y:37.5496});
+  const rides = result.routes.map(route => route.steps.find(step => step.properties.type === 'BUS').properties);
+  assert.deepEqual(rides.map(ride => ride.seoulBusStopId),['112000031','113000417']);
+  assert.deepEqual(rides.map(ride => ride.seoulBusAlightStopId),['113000412','113000412']);
+});

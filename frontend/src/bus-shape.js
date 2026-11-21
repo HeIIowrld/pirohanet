@@ -33,7 +33,7 @@ export function matchBusShape(step, shapes) {
   return clipBusShape(step,shapes?.[name] ?? shapes?.[ref] ?? []);
 }
 
-export function clipBusShape(step, lines = []) {
+export function clipBusShape(step, lines = [], {forwardOnly = false} = {}) {
   const [from,...remainder] = step.points;
   const to = remainder.at(-1);
   const stops = remainder.slice(0,-1);
@@ -46,6 +46,7 @@ export function clipBusShape(step, lines = []) {
     const length = Math.abs(finish.along-start.along);
     if (length < directDistance*.6 || length > directDistance*2.2+150) continue;
     const direction = Math.sign(finish.along-start.along);
+    if (!direction || (forwardOnly && direction < 0)) continue;
     let previous = start.along;
     let stopsMatch = true;
     for (const stop of stops) {
