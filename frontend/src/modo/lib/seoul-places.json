@@ -1,0 +1,583 @@
+[
+  {
+    "name": "광화문광장",
+    "region": "gwanghwamun",
+    "area": "광화문·경복궁",
+    "category": "랜드마크",
+    "description": "동상과 도심 경관을 감상하는 넓은 광장. 짧은 사진 경유에 적합.",
+    "address": "서울 종로구 세종대로 172 일대",
+    "target": "광화문광장 세종대왕 동상",
+    "minStay": 10,
+    "preferredStay": 15,
+    "effort": 1,
+    "interests": [
+      "역사",
+      "사진",
+      "건축"
+    ]
+  },
+  {
+    "name": "교보문고 광화문점",
+    "region": "gwanghwamun",
+    "area": "광화문·경복궁",
+    "category": "서점",
+    "description": "책, 문구, 굿즈를 구경하며 약속 전 짧게 머물기 좋은 대형 서점.",
+    "address": "서울 종로구 종로 1 지하 1층",
+    "target": "교보문고 광화문점",
+    "minStay": 10,
+    "preferredStay": 25,
+    "effort": 1,
+    "interests": [
+      "책·문학",
+      "디자인",
+      "쇼핑"
+    ]
+  },
+  {
+    "name": "대한민국역사박물관",
+    "region": "gwanghwamun",
+    "area": "광화문·경복궁",
+    "category": "박물관",
+    "description": "한국 근현대사의 주요 사건과 생활사를 살펴보는 전시 공간.",
+    "address": "서울 종로구 세종대로 198",
+    "target": "대한민국역사박물관",
+    "minStay": 20,
+    "preferredStay": 40,
+    "effort": 2,
+    "interests": [
+      "역사",
+      "건축",
+      "도시탐방"
+    ]
+  },
+  {
+    "name": "세종문화회관",
+    "region": "gwanghwamun",
+    "area": "광화문·경복궁",
+    "category": "복합문화시설",
+    "description": "공연과 전시를 만나는 복합문화시설. 라운지 중심의 짧은 경유도 검토 가능.",
+    "address": "서울 종로구 세종대로 175",
+    "target": "세종문화회관 세종라운지",
+    "minStay": 10,
+    "preferredStay": 25,
+    "effort": 2,
+    "interests": [
+      "공연",
+      "미술",
+      "건축"
+    ]
+  },
+  {
+    "name": "경복궁",
+    "region": "gwanghwamun",
+    "area": "광화문·경복궁",
+    "category": "궁궐·전통건축",
+    "description": "궁궐 건축과 정원을 감상하는 역사 경유지.",
+    "address": "서울 종로구 사직로 161",
+    "target": "경복궁 광화문 입구",
+    "minStay": 40,
+    "preferredStay": 60,
+    "effort": 4,
+    "interests": [
+      "역사",
+      "건축",
+      "사진"
+    ]
+  },
+  {
+    "name": "서울역사박물관",
+    "region": "gwanghwamun",
+    "area": "광화문·경복궁",
+    "category": "박물관",
+    "description": "서울의 역사와 도시 변화, 모형 전시를 살펴보는 공간.",
+    "address": "서울 종로구 새문안로 55",
+    "target": "서울역사박물관",
+    "minStay": 30,
+    "preferredStay": 50,
+    "effort": 3,
+    "interests": [
+      "역사",
+      "도시탐방",
+      "건축"
+    ]
+  },
+  {
+    "name": "통인시장",
+    "region": "seochon",
+    "area": "서촌·효자동",
+    "category": "시장",
+    "description": "전통시장 먹거리와 소규모 미식 체험.",
+    "address": "서울 종로구 자하문로15길 18 일대",
+    "target": "통인시장 입구",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 3,
+    "interests": [
+      "먹거리",
+      "지역문화"
+    ]
+  },
+  {
+    "name": "서촌한옥마을·통의동 골목",
+    "region": "seochon",
+    "area": "서촌·효자동",
+    "category": "골목·거리",
+    "description": "한옥, 작은 가게와 전시 공간을 연결하는 생활 골목.",
+    "address": null,
+    "target": "서촌 통의동 골목",
+    "minStay": 15,
+    "preferredStay": 35,
+    "effort": 4,
+    "interests": [
+      "건축",
+      "커피·디저트",
+      "지역문화"
+    ]
+  },
+  {
+    "name": "청와대 사랑채",
+    "region": "seochon",
+    "area": "서촌·효자동",
+    "category": "복합문화시설",
+    "description": "전시와 휴식이 결합된 관광 문화공간. 역보다 효자동 버스정류장 접근도 고려.",
+    "address": "서울 종로구 효자로13길 45",
+    "target": "청와대 사랑채",
+    "minStay": 20,
+    "preferredStay": 40,
+    "effort": 2,
+    "interests": [
+      "역사",
+      "지역문화",
+      "미술"
+    ]
+  },
+  {
+    "name": "서울공예박물관",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "박물관",
+    "description": "전통 및 현대 공예와 디자인을 살펴볼 수 있는 역 근접 전시 공간.",
+    "address": "서울 종로구 율곡로3길 4",
+    "target": "서울공예박물관",
+    "minStay": 20,
+    "preferredStay": 35,
+    "effort": 1,
+    "interests": [
+      "공예",
+      "디자인",
+      "미술"
+    ]
+  },
+  {
+    "name": "국립현대미술관 서울",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "미술관",
+    "description": "현대미술 기획전과 건축 공간을 감상하는 문화 경유지.",
+    "address": "서울 종로구 삼청로 30",
+    "target": "국립현대미술관 서울",
+    "minStay": 30,
+    "preferredStay": 60,
+    "effort": 3,
+    "interests": [
+      "미술",
+      "디자인",
+      "건축"
+    ]
+  },
+  {
+    "name": "북촌한옥마을",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "골목·거리",
+    "description": "한옥 주거 경관과 언덕길 풍경을 감상하는 골목.",
+    "address": null,
+    "target": "북촌한옥마을 관광안내소",
+    "minStay": 20,
+    "preferredStay": 40,
+    "effort": 5,
+    "interests": [
+      "역사",
+      "건축",
+      "사진"
+    ]
+  },
+  {
+    "name": "인사동 문화의 거리",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "골목·거리",
+    "description": "공예품, 갤러리, 전통 찻집을 발견할 수 있는 상업 거리.",
+    "address": null,
+    "target": "쌈지길 입구",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 2,
+    "interests": [
+      "공예",
+      "쇼핑",
+      "지역문화"
+    ]
+  },
+  {
+    "name": "운현궁",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "궁궐·전통건축",
+    "description": "비교적 압축적인 전통 건축과 마당을 감상할 수 있는 공간.",
+    "address": "서울 종로구 삼일대로 464",
+    "target": "운현궁",
+    "minStay": 15,
+    "preferredStay": 25,
+    "effort": 2,
+    "interests": [
+      "역사",
+      "건축",
+      "사진"
+    ]
+  },
+  {
+    "name": "익선동 한옥거리",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "골목·거리",
+    "description": "한옥을 활용한 카페와 상점이 모인 골목.",
+    "address": null,
+    "target": "익선동 한옥거리",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 3,
+    "interests": [
+      "커피·디저트",
+      "먹거리",
+      "건축"
+    ]
+  },
+  {
+    "name": "덕수궁",
+    "region": "cityhall",
+    "area": "시청·정동·청계천",
+    "category": "궁궐·전통건축",
+    "description": "전통 궁궐과 근대 건축이 공존하는 도심 역사 공간.",
+    "address": "서울 중구 세종대로 99",
+    "target": "덕수궁 대한문",
+    "minStay": 20,
+    "preferredStay": 40,
+    "effort": 2,
+    "interests": [
+      "역사",
+      "건축",
+      "사진"
+    ]
+  },
+  {
+    "name": "덕수궁 돌담길",
+    "region": "cityhall",
+    "area": "시청·정동·청계천",
+    "category": "산책로",
+    "description": "궁궐 담장을 따라 가볍게 걸으며 도시 풍경을 감상하는 길.",
+    "address": null,
+    "target": "덕수궁 대한문 앞 돌담길 시작점",
+    "minStay": 10,
+    "preferredStay": 20,
+    "effort": 1,
+    "interests": [
+      "건축",
+      "사진",
+      "지역문화"
+    ]
+  },
+  {
+    "name": "서울시립미술관 서소문본관",
+    "region": "cityhall",
+    "area": "시청·정동·청계천",
+    "category": "미술관",
+    "description": "옛 법원 건축과 현대미술 전시를 경험하는 미술관.",
+    "address": "서울 중구 덕수궁길 61",
+    "target": "서울시립미술관 서소문본관",
+    "minStay": 25,
+    "preferredStay": 50,
+    "effort": 3,
+    "interests": [
+      "미술",
+      "건축"
+    ]
+  },
+  {
+    "name": "정동전망대",
+    "region": "cityhall",
+    "area": "시청·정동·청계천",
+    "category": "전망대",
+    "description": "덕수궁 일대를 내려다보는 실내 전망 공간.",
+    "address": "서울 중구 덕수궁길 15 서소문청사 1동 13층",
+    "target": "정동전망대",
+    "minStay": 10,
+    "preferredStay": 20,
+    "effort": 1,
+    "interests": [
+      "건축",
+      "사진",
+      "커피·디저트"
+    ]
+  },
+  {
+    "name": "청계천(청계광장 시작점)",
+    "region": "cityhall",
+    "area": "시청·정동·청계천",
+    "category": "산책로",
+    "description": "도심 물길과 하천변 풍경을 즐기는 짧은 산책.",
+    "address": null,
+    "target": "청계광장",
+    "minStay": 10,
+    "preferredStay": 20,
+    "effort": 2,
+    "interests": [
+      "자연",
+      "사진",
+      "도시탐방"
+    ]
+  },
+  {
+    "name": "연세대학교 청송대",
+    "region": "sinchon",
+    "area": "신촌·연세대",
+    "category": "캠퍼스 명소",
+    "description": "캠퍼스 내 나무가 있는 문학 산책길, 수업 사이 기분전환에 적합.",
+    "address": "서울 서대문구 연세로 50 연세대학교 교내",
+    "target": "연세대학교 청송대",
+    "minStay": 10,
+    "preferredStay": 15,
+    "effort": 2,
+    "interests": [
+      "자연",
+      "책·문학",
+      "사진"
+    ]
+  },
+  {
+    "name": "연세대학교 윤동주기념관",
+    "region": "sinchon",
+    "area": "신촌·연세대",
+    "category": "박물관",
+    "description": "윤동주의 생애와 문학을 만나는 캠퍼스 전시 공간.",
+    "address": "서울 서대문구 연세로 50 핀슨관",
+    "target": "연세대학교 윤동주기념관 핀슨관",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 2,
+    "interests": [
+      "책·문학",
+      "역사",
+      "건축"
+    ]
+  },
+  {
+    "name": "신촌문화발전소",
+    "region": "sinchon",
+    "area": "신촌·연세대",
+    "category": "복합문화시설",
+    "description": "청년 예술인의 소공연장, 갤러리와 창작 공간을 갖춘 문화시설.",
+    "address": "서울 서대문구 연세로2나길 57",
+    "target": "신촌문화발전소",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 2,
+    "interests": [
+      "미술",
+      "공연",
+      "지역문화"
+    ]
+  },
+  {
+    "name": "이화여자대학교 박물관",
+    "region": "ewha",
+    "area": "이대",
+    "category": "박물관",
+    "description": "한국 문화유산과 미술 전시를 감상할 수 있는 대학 박물관.",
+    "address": "서울 서대문구 이화여대길 52 이화여자대학교박물관",
+    "target": "이화여자대학교 박물관",
+    "minStay": 20,
+    "preferredStay": 35,
+    "effort": 2,
+    "interests": [
+      "역사",
+      "공예",
+      "미술"
+    ]
+  },
+  {
+    "name": "경의선숲길 연남동 구간",
+    "region": "yeonnam",
+    "area": "연남동",
+    "category": "공원",
+    "description": "폐철길을 활용한 선형 녹지, 짧게 산책하거나 주변 카페와 연결하기 좋음.",
+    "address": "서울 마포구 연남동 일대",
+    "target": "경의선숲길 연남동 구간",
+    "minStay": 10,
+    "preferredStay": 20,
+    "effort": 1,
+    "interests": [
+      "자연",
+      "커피·디저트",
+      "지역문화"
+    ]
+  },
+  {
+    "name": "경의선 책거리",
+    "region": "hongdae",
+    "area": "홍대",
+    "category": "산책로",
+    "description": "책을 테마로 조성된 선형 문화 산책 공간.",
+    "address": "서울 마포구 와우산로37길 35",
+    "target": "경의선 책거리 홍대입구역 6번 출구 쪽",
+    "minStay": 10,
+    "preferredStay": 20,
+    "effort": 1,
+    "interests": [
+      "책·문학",
+      "지역문화",
+      "사진"
+    ]
+  },
+  {
+    "name": "유어마인드",
+    "region": "yeonhui",
+    "area": "연희동·홍제천",
+    "category": "서점",
+    "description": "독립출판물과 아트북을 전문으로 다루는 작은 책방.",
+    "address": "서울 서대문구 연희로11라길 10-6 은는 202호",
+    "target": "유어마인드 연희동",
+    "minStay": 15,
+    "preferredStay": 25,
+    "effort": 2,
+    "interests": [
+      "책·문학",
+      "디자인",
+      "미술"
+    ]
+  },
+  {
+    "name": "카페 폭포",
+    "region": "yeonhui",
+    "area": "연희동·홍제천",
+    "category": "카페",
+    "description": "홍제천 인공폭포를 바라보며 쉬어갈 수 있는 수변 카페.",
+    "address": "서울 서대문구 연희로 262-24",
+    "target": "카페 폭포",
+    "minStay": 15,
+    "preferredStay": 35,
+    "effort": 1,
+    "interests": [
+      "커피·디저트",
+      "자연",
+      "사진"
+    ]
+  },
+  {
+    "name": "서대문자연사박물관",
+    "region": "yeonhui",
+    "area": "연희동·홍제천",
+    "category": "박물관",
+    "description": "자연사와 생물, 지구과학 전시를 체험할 수 있는 박물관.",
+    "address": "서울 서대문구 연희로32길 51",
+    "target": "서대문자연사박물관",
+    "minStay": 30,
+    "preferredStay": 60,
+    "effort": 3,
+    "interests": [
+      "과학",
+      "자연"
+    ],
+    "coordinate": [
+      126.937836,
+      37.57675199
+    ]
+  },
+  {
+    "name": "서대문독립공원",
+    "region": "dongnimmun",
+    "area": "독립문",
+    "category": "공원",
+    "description": "독립문과 독립운동 기념물을 볼 수 있는 공원.",
+    "address": "서울 서대문구 통일로 251",
+    "target": "서대문독립공원 독립문",
+    "minStay": 10,
+    "preferredStay": 20,
+    "effort": 1,
+    "interests": [
+      "역사",
+      "건축",
+      "자연"
+    ]
+  },
+  {
+    "name": "서대문형무소역사관",
+    "region": "dongnimmun",
+    "area": "독립문",
+    "category": "박물관",
+    "description": "독립운동 역사와 옛 수감시설을 돌아보는 역사 공간.",
+    "address": "서울 서대문구 통일로 251",
+    "target": "서대문형무소역사관 매표소",
+    "minStay": 30,
+    "preferredStay": 60,
+    "effort": 3,
+    "interests": [
+      "역사",
+      "건축"
+    ],
+    "coordinate": [
+      126.9556118,
+      37.57460851
+    ]
+  },
+  {
+    "name": "문화비축기지",
+    "region": "sangam",
+    "area": "상암·월드컵경기장",
+    "category": "공원",
+    "description": "옛 석유비축 시설의 외부 산업유산과 공원을 감상하는 공간.",
+    "address": "서울 마포구 증산로 87",
+    "target": "문화비축기지 문화마당 T0",
+    "minStay": 20,
+    "preferredStay": 40,
+    "effort": 3,
+    "interests": [
+      "건축",
+      "자연",
+      "사진"
+    ]
+  },
+  {
+    "name": "망원한강공원",
+    "region": "mangwon",
+    "area": "망원동",
+    "category": "공원",
+    "description": "한강 경치와 잔디, 강변 산책로를 즐기는 휴식 공간.",
+    "address": "서울 마포구 마포나루길 467",
+    "target": "망원한강공원 안내센터",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 2,
+    "interests": [
+      "자연",
+      "사진"
+    ]
+  },
+  {
+    "name": "쌈지길",
+    "region": "anguk",
+    "area": "안국·북촌·인사동",
+    "category": "소품·편집숍",
+    "description": "공방과 작은 상점이 모인 복합 쇼핑 공간.",
+    "address": "서울 종로구 인사동길 44",
+    "target": "쌈지길",
+    "minStay": 15,
+    "preferredStay": 30,
+    "effort": 3,
+    "interests": [
+      "공예",
+      "디자인",
+      "쇼핑"
+    ]
+  }
+]
