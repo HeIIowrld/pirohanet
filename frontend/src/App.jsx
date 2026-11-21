@@ -400,7 +400,7 @@ export default function App(){
  {mapScreen&&screen!=='home'&&navigation.previous&&<button className="map-back" aria-label="뒤로 가기" onClick={goBack}><Icon name="back"/></button>}
  {mapScreen&&(designDemo?<MapSurface routes={screen!=='home'} demo={demo} state={screen}/>:<LiveMap state={screen} points={points} route={['loading','route-error','home'].includes(screen)?null:screen==='waypoint'?activeStop:route} candidate={screen==='stops'?activeStop?.place:null} position={screen==='journey'?journeyPosition:null}/>)}
  {!mapScreen&&!['welcome','restoring','onboarding'].includes(screen)&&!(screen==='search'&&picker==='destination')&&<AppBar title={title} back={headerBack}/>}
- {screen==='welcome'&&<Welcome login={calendar} busy={busy}/>}
+ {screen==='welcome'&&<Welcome login={calendar} busy={busy} error={error}/>}
  {screen==='restoring'&&<p className="page" role="status">로그인 상태를 확인하고 있어요…</p>}
  {screen==='onboarding'&&linked&&<Onboarding initial={onboarding.preferences} step={onboardingStep} onStep={onboardingStep=>navigation.move({screen:'onboarding',onboardingStep})} onBack={navigation.previous?goBack:undefined} onComplete={finishOnboarding}/>}
  {screen==='calendar'&&<CalendarIntro state={calendarState} busy={busy} connect={calendar} error={error}/>}

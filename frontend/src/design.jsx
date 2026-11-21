@@ -6,7 +6,7 @@ export const Art=({name,className=''})=><img className={`art ${className}`} src=
 export const Button=({children,kind='primary',...props})=><button className={`button ${kind}`} {...props}>{children}</button>;
 export function Actions({children}){return <div className="actions">{children}</div>}
 export function AppBar({title='',back}){return <header>{back?<button aria-label="뒤로 가기" onClick={back}><Icon name="back"/></button>:<span/>}<strong>{title}</strong><span/></header>}
-export function Welcome({login,busy}) {
+export function Welcome({login,busy,error}) {
  return <section className="welcome" data-design-node="17:87">
   <div className="welcome-hero">
    <img src="/assets/brand/modo-wordmark.svg" width="206" height="51" alt="MODO"/>
@@ -16,7 +16,7 @@ export function Welcome({login,busy}) {
     <strong>모도</strong>
    </p>
   </div>
-  <Actions><GoogleSignInButton onClick={login} disabled={busy}/></Actions>
+  <Actions>{error&&<p role="alert">{error}</p>}<GoogleSignInButton onClick={login} disabled={busy}/></Actions>
  </section>
 }
 export function CalendarIntro({state='connect',busy,connect,error}){const copy={connect:['다음 약속을 불러올까요?',<>일정의 시간과 장소를 읽어서<br/>늦지 않는 길을 찾아요.</>,'캘린더 연결하기','나중에 연결하기','calendar'],failed:['캘린더를 연결하지 못했어요.','잠시 후 다시 시도해 주세요.','다시 시도','나중에','calendar-failed'],expired:['캘린더 연결이 끊어졌어요.','다시 연결해 주세요.','다시 연결','나중에','calendar-expired']}[state];return <section className={`calendar-intro ${state}`} data-design-node="17:105"><div className="calendar-hero"><Art name={copy[4]}/><h1>{copy[0]}</h1><p>{copy[1]}</p>{error&&<p role="alert">{error}</p>}</div><Actions><Button disabled={busy} onClick={connect}>{busy?'연결 확인 중…':copy[2]}</Button></Actions></section>}

@@ -1,8 +1,8 @@
-# 모도
+# 모도 (MODO)
 
-다음 일정에 맞춰 서울 대중교통 경로를 비교하는 웹 앱입니다. 덜 걷거나 환승이 적은 경로를 고르고, 약속 전에 들를 곳도 넣어볼 수 있습니다.
+모도는 다음 약속 시간과 오늘의 컨디션에 맞춰 서울 대중교통 경로를 비교하는 웹 앱입니다. 빠른 길과 도보·환승 부담이 적은 길을 비교하고, 시간이 남으면 들를 곳과 머물 수 있는 시간을 확인할 수 있습니다.
 
-## React 프론트엔드
+## 로컬 실행
 
 Node.js 22.13 이상이 필요합니다.
 
@@ -11,73 +11,70 @@ npm ci
 npm run dev
 ```
 
-[React 화면](http://localhost:5173)을 엽니다. Vite는 5173, API 서버는 5174 포트에서 실행됩니다. 개발용 시연은 [시연 화면](http://localhost:5173/?demo=1)에서 확인할 수 있습니다. 일반 주소에서 지도 홈을 열려면 Google 로그인과 캘린더 연결이 필요합니다.
+| 주소 | 용도 |
+| --- | --- |
+| [http://localhost:5173](http://localhost:5173) | React 앱. Google 로그인과 캘린더 연결 후 지도 홈으로 이동합니다. |
+| [http://localhost:5173/?demo=1](http://localhost:5173/?demo=1) | 개발용 시연. 샘플 일정과 경로로 선호 등록부터 길안내까지 확인합니다. |
+| [http://localhost:5174/src/main/index.html](http://localhost:5174/src/main/index.html) | 기존 HTML 화면. Google 로그인 후 샘플 일정이나 실제 일정을 불러옵니다. |
 
-`frontend/`에서 일정 선택, 장소 검색과 저장, 5단계 컨디션 입력, 대중교통 경로 비교, 경유지 선택, 지도 앱 길안내를 제공합니다. 경로는 네이버 지도에 표시됩니다.
+Vite는 5173 포트에서 React 앱을 제공하고 `/api`와 `/auth` 요청을 5174 포트의 Node 서버로 전달합니다. 기존 화면과 API만 실행하려면 `npm run dev` 대신 `npm start`를 사용합니다. 이때 기존 화면은 [5173 포트](http://localhost:5173/src/main/index.html)에서 엽니다.
 
-`npm test`로 테스트를 실행하고, `npm run build`로 `dist/`에 배포용 정적 파일을 생성합니다. `npm run preview`는 정적 빌드 확인용입니다. API가 필요한 로컬 확인에는 `npm run dev`를 사용하세요.
+`npm test`는 앱과 서버, 독립 예제의 테스트를 실행합니다. `npm run build`는 `dist/`에 정적 파일을 생성합니다. 빌드 결과만 확인하려면 `npm run preview`, 지도 설정과 API를 포함해 확인하려면 `npm run dev`를 사용합니다.
 
-## 기존 화면 실행
+## 환경 설정
 
 ```sh
-npm ci
-npm start
+test -e .env || cp .env.example .env
 ```
 
-[기존 화면](http://localhost:5173/src/main/index.html)을 열고 Google로 로그인하세요. `샘플 일정 불러오기`로 먼저 써보거나 `Google 일정 불러오기`로 캘린더를 연결할 수 있습니다.
+사용할 기능의 키를 저장소 루트의 `.env`에 채웁니다.
 
-## API 설정
-
-저장소 루트에 `.env`를 만들고 사용할 기능의 키를 넣습니다.
-
-| 기능 | `.env` 변수 |
+| 기능 | 변수 |
 | --- | --- |
-| 장소 검색, 현재 위치 주소 확인, 도보 경로 | `kakao-rest-api` |
-| 서울 대중교통 환승 경로 | `SEOUL_TRANSIT_PATH_INFO` 또는 같은 서비스 권한이 있는 `DATA_GO_KR_SERVICE_KEY` · `SEOUL_BUSSTATION_INFO` |
+| 카카오 장소 검색, 현재 위치 주소 확인, 도보 경로 | `kakao-rest-api` |
 | 네이버 주소 검색 | `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY` |
-| 네이버 지도 배경 (로컬) | `NAVER_MAP_CLIENT_ID` (생략하면 `X-NCP-APIGW-API-KEY-ID` 사용) |
-| 서울 버스 도착·혼잡 | `SEOUL_BUSSTATION_INFO` 또는 같은 서비스 권한이 있는 `DATA_GO_KR_SERVICE_KEY` |
+| 로컬 네이버 지도 배경 | `NAVER_MAP_CLIENT_ID`. 비워 두면 `X-NCP-APIGW-API-KEY-ID`를 사용합니다. |
+| 서울 대중교통 경로 | `SEOUL_TRANSIT_PATH_INFO`. 같은 API 권한이 있는 `DATA_GO_KR_SERVICE_KEY` 또는 `SEOUL_BUSSTATION_INFO`도 사용할 수 있습니다. |
+| 서울 버스 도착·혼잡 | `SEOUL_BUSSTATION_INFO` 또는 같은 API 권한이 있는 `DATA_GO_KR_SERVICE_KEY` |
+| 경기 버스 도착·잔여 좌석 | `GYEONGGI_BUS_INFO` |
+| Node 서버의 계정 API와 OAuth 콜백 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_ORIGIN` |
 
-Google OAuth 클라이언트를 직접 설정하려면 Calendar API와 Drive API를 켜고, 웹 클라이언트의 승인된 JavaScript 원본에 `http://localhost:5173`과 배포 주소를 등록합니다. 동의 화면이 테스트 모드면 로그인할 계정을 테스트 사용자로 추가하세요. 클라이언트 ID는 [`src/calendar/calendar.js`](src/calendar/calendar.js)의 `GOOGLE_CLIENT_ID`에 넣습니다.
+React 앱의 Google 로그인은 [캘린더 모듈](src/calendar/calendar.js)의 `GOOGLE_CLIENT_ID`를 사용합니다. 자체 클라이언트를 쓸 때는 Google Cloud에서 Calendar API와 Drive API를 켜고 웹 클라이언트의 승인된 JavaScript 원본에 `http://localhost:5173`과 운영 원본을 등록합니다. 5174 포트의 기존 화면에서도 로그인하려면 해당 원본을 추가합니다. OAuth 동의 화면이 테스트 모드면 사용할 계정을 테스트 사용자로 등록합니다.
 
-## 경로 찾기
+네이버 클라우드 Maps 앱에서 Web Dynamic Map을 활성화하고 로컬과 운영 호스트를 Web 서비스 URL에 등록합니다. 브라우저에는 지도 Client ID만 전달하고 Client Secret은 서버에 보관합니다. 지도 연결이 끊기면 화면에서 **지도 다시 불러오기**를 선택할 수 있습니다.
 
-출발지와 목적지를 입력하고 `경로 찾기`를 누르면 도보, 환승, 예상 혼잡을 고려한 경로가 나옵니다. `들를 장소`에서 경유지를 고르면 체류 시간까지 더해 도착 목표에 맞는지 확인합니다. 서울시의 응답은 전체 소요 시간과 승하차 좌표를 제공한다. 도보·단계별 시간과 지도 점선은 추정값이다. 같은 좌표 쌍의 응답을 서버에서 1분간 재사용한다. 경유지 목록은 [추천 경유지 데이터](src/places/recommended-stops.json)에서 관리합니다.
+## 앱에서 할 수 있는 일
 
-일정에 `1공`처럼 줄여 쓴 장소가 있다면 실제 주소를 한 번 골라두세요. 다음에 같은 이름이 나오면 저장한 주소를 씁니다. `내 장소`에서 주소를 바꾸거나 지울 수 있고, 로그인하면 Google Drive의 앱 저장소로 다른 기기와 동기화합니다.
+- **일정과 내 장소** — Google Calendar에서 다가오는 일정을 확인합니다. 날짜·시간이 있는 일정은 24시간 이내와 이후로 나눠 표시합니다. 일정에 쓰는 별칭을 **내 장소**에 저장하면 주소를 다시 찾을 때 사용할 수 있고, 저장한 장소는 Google Drive 앱 저장소로 동기화됩니다.
+- **경로 비교** — 출발·도착과 시간 조건을 확인하고 5단계 컨디션을 선택합니다. 처음 등록한 이동 선호, 추가 이동 한도, 도착 여유 시간과 피할 지하철 노선도 경로 비교에 반영합니다. 위치 권한을 거절하면 출발지를 직접 검색할 수 있습니다.
+- **경유와 이동 안내** — 약속 전 여유 시간에 들를 곳을 찾아 직행과 비교합니다. 선택하면 추가 이동 시간, 체류 가능 시간과 다시 출발할 시각을 확인할 수 있습니다. 이동 중에는 앱에서 도보·탑승·환승 단계를 보거나 지도 앱에서 길안내를 열 수 있습니다.
 
-버스 도착 시각과 차내 혼잡은 조회할 수 있을 때 경로 카드의 `이동 단계`에 표시합니다. 지하철 혼잡은 시간대별 공개 데이터를 바탕으로 추정합니다. [서울시 버스 정류장 정보](https://data.seoul.go.kr/dataList/OA-15331/L/1/datasetView.do) · [버스 혼잡 안내](https://news.seoul.go.kr/traffic/archives/512733) · [서울교통공사 혼잡도 정보](https://data.seoul.go.kr/dataList/OA-12928/S/1/datasetView.do)
+경로 제공처, 소요 시간 추정, 버스 혼잡과 지하철 빠른 하차 데이터는 [경로와 교통 데이터](docs/ROUTING.md)에 정리했습니다.
+
+## 저장소 구조
+
+| 경로 | 내용 |
+| --- | --- |
+| [frontend/src/](frontend/src/) | React 앱, 화면 이동, 지도, 선호 등록, 경유와 이동 안내 |
+| [frontend/public/](frontend/public/) | 로고, 아이콘, 일러스트, 시연 지도와 Pretendard 폰트 |
+| [src/](src/) | 캘린더·장소·경로 비교 공용 모듈과 기존 HTML 화면 |
+| [server/](server/) · [dev-server.mjs](dev-server.mjs) | 계정·장소·교통 API와 Node 서버 진입점 |
+| [src/calendar/modo/](src/calendar/modo/) | 캘린더 경로 플래너 예제와 개발 서버의 `/api/recommend` 로직 |
+| [packages/landmark-route-planner/](packages/landmark-route-planner/) | 독립 실행용 랜드마크 경로 플래너와 React 지도에서 함께 쓰는 지하철 역 순서 모듈 |
+| [deploy/](deploy/) · [.github/workflows/](.github/workflows/) | Nginx 라우팅과 yccthon 배포 |
+| [docs/](docs/) | [초기 기획안](docs/PRD.md), [Figma 디자인 명세](docs/MODO_DESIGN_SPEC.md), [선호 등록 명세](docs/A04_SPEC_DELTA.md), [경로와 교통 데이터](docs/ROUTING.md) |
+
+두 경로 플래너는 각각 독립 실행할 수 있습니다. 실행한 플래너는 기본적으로 [http://127.0.0.1:3000](http://127.0.0.1:3000)에서 열립니다.
+
+```sh
+npm --prefix src/calendar/modo run dev
+npm --prefix packages/landmark-route-planner run dev
+```
 
 ## yccthon 배포
 
-시연 화면은 `frontend/`의 React 앱이다. 로컬에서는 `npm ci` 후 `npm run dev`로 열고, Google 콘솔의 승인된 JavaScript 원본에 접속 주소를 등록한다. 본인 Google 계정으로 캘린더 읽기를 승인해야 지도 홈에 진입한다. 위치 권한을 거절하면 출발지를 검색해서 선택할 수 있다.
+`main`에 푸시하면 [GitHub Actions 워크플로](.github/workflows/deploy-yccthon.yml)가 테스트와 빌드를 실행합니다. Nginx 응답을 확인하며 `/var/www/pirohanet/current`에 정적 파일을 배포합니다. `/`는 `/src/main/`으로 이동하고, 이 주소가 React 앱을 제공합니다.
 
-GitHub 워크플로는 `main`의 커밋에서 테스트와 Vite 빌드를 실행한 뒤 `/var/www/pirohanet/current`에 정적 파일을 배포한다. `/src/main/`은 React 화면을 제공하고, 5173 포트의 Node 서비스는 장소·길찾기·버스 API를 제공한다. [Nginx 설정](deploy/yccthon-nginx.conf)이 두 경로를 연결한다.
+[Nginx 설정](deploy/yccthon-nginx.conf)은 API와 OAuth 요청을 5173 포트의 Node 서비스로 전달합니다. Node 코드를 변경한 경우 운영 서비스를 같은 버전으로 갱신하고 재시작합니다. 버스 관측 기록을 이어 쓰려면 운영 서비스의 `.data/`를 유지합니다.
 
-운영 Node 서비스를 같은 버전으로 갱신하고 5173 포트에서 재시작합니다. 버스 혼잡 관측 기록을 이어 쓰려면 `.data`를 유지하세요.
-
-배포본은 `/var/www/pirohanet/map-config.json`의 `naverClientId`를 사용합니다. 네이버 클라우드 Maps 앱에서 Web Dynamic Map을 활성화하고, Web 서비스 URL에 운영 호스트와 로컬 개발용 `http://localhost`를 각각 등록합니다. 포트와 경로는 빼고 등록합니다. Client ID는 브라우저에서 사용하며 Client Secret은 서버에만 둡니다. 지도 로딩에 실패하면 화면의 **지도 다시 불러오기**로 네이버 지도에 다시 연결할 수 있습니다.
-
-## 서울 버스 도착·혼잡
-
-`SEOUL_BUSSTATION_INFO`에 서울 버스 정류소 정보 서비스 키를 설정한다. 기존 `DATA_GO_KR_SERVICE_KEY`도 같은 서비스 권한이 있으면 사용할 수 있다. 경로 카드의 **이동 단계**에 서울시 정류장·노선·진행 방향을 확인한 버스의 도착 예정 시각과 차내 혼잡을 표시한다. 탑승 예상 시각이 조회 시각의 5분 전부터 30분 후까지이고, 3분 이내의 차량 보고가 있는 경우 실시간 정보를 제공한다. 서울시 환승경로의 전체 소요 시간으로 목적지 도착을 추정한다. 서울시 환승경로의 정류소 ID와 노선 ID를 도착 정보와 대조해 실시간 도착과 혼잡을 연결한다. 두 ID가 있어도 같은 정류소를 여러 차례 지나는 노선에서 순번을 확정할 수 없으면 정보를 표시하지 않는다. [서울시 정류장 정보](https://data.seoul.go.kr/dataList/OA-15331/L/1/datasetView.do) · [서울시 버스 혼잡 안내](https://news.seoul.go.kr/traffic/archives/512733)
-
-정류장 도착이 3분 이내인 차량의 혼잡을 노선·정류장·서울 시간 30분 구간별로 `.data/bus-crowding.sqlite`에 저장한다. 평일·토요일·일요일을 각각 집계하고, 최근 8주에서 오늘을 제외한 관측일이 3일 이상인 구간만 중앙값과 관측일 수를 표시한다. 경로 카드에서 버스 정보를 조회할 때 관측이 쌓인다. 운영 배포에서는 `.data`를 유지한다.
-
-## 첫 이용 선호 등록
-
-Google 로그인 → 캘린더 연결 → 선호 안내 → 평소 편한 길(빠른 길 이외에는 추가 이동 5/10/20분 선택) → 약속 전 여유 시간 → 계단 선호 → 지도 순서다. 캘린더를 나중에 연결하거나 로그인 없이 이용하는 버튼은 제공하지 않는다. 완료/건너뛰기 기록은 브라우저에 저장하며, 재방문에서도 캘린더 연결 상태는 별도로 확인한다. 시연 기록과 실제 이용 기록은 분리한다.
-
-질문은 `frontend/src/onboarding-questions.json`, 저장과 값 검증은 `onboarding.js`가 관리한다. 도착 목표에는 여유 시간을 반영하며, 경로 선택은 실제 데이터가 있는 도보/환승/계단/혼잡도 지표만 비교한다. 현재 도보 공급자에서 계단과 혼잡도 정보가 오지 않으면 해당 지표를 임의로 추정하지 않는다. 계정 간/기기 간 선호 동기화와 출발 10분 전 배너는 아직 구현하지 않았다.
-
-## 지하철 빠른 환승·하차
-
-경로 상세에 서울교통공사의 [도시철도 환승정보](https://data.seoul.go.kr/dataList/OA-22521/L/1/datasetView.do)와 [빠른하차정보](https://data.seoul.go.kr/dataList/OA-22749/A/1/datasetView.do)를 표시한다. 배포용 스냅샷은 각각 `seoul-transfer-doors.json`과 `seoul-exit-doors.json`이다. 환승역·호선·진행 방향이 일치할 때만 칸·문을 표시한다. 빠른하차는 계단·엘리베이터 등 승강장 설비를 기준으로 안내한다.
-
-## 구간별 편한 길 비교
-
-소요 시간, 도보와 환승에 구간별 탑승 부담을 더한다. 마을·지선·간선·광역버스와 지하철의 기본 가중치는 서비스에서 정한 비교용 기준이다. 지하철은 호선·방향·시간대 평균, 버스는 일치하는 노선의 실시간 차내 혼잡이나 누적 관측을 사용한다. 서울 정류소 정보로 탑승 방향을 확인할 수 있는 경기 노선은 경기버스정보 도착 API에서 같은 정류소 ID·노선 ID·순번이 일치하는 차량 정보만 사용한다. 빈자리 수는 탑승 예정 시각 근처의 차량에 제공된 조회값이다. 데이터가 제공되지 않는 구간에는 해당 교통수단의 기본값을 쓰며 예상 도착 시각에는 영향을 주지 않는다.
-
-편한 길은 빠른 길보다 편의 점수가 높고, 혼잡도나 잔여 좌석 관측이 편의 점수 차이에 유리하게 작용한 경로에 표시한다. 카드에는 점수 차이에 기여한 노선·구간과 관측값을 표시한다. 도보나 환승만 줄어드는 대안은 해당 항목으로 안내한다.
-
-경기 도착 조회는 서버의 GYEONGGI_BUS_INFO가 필요하다. 좌석 수를 제공하는 노선 유형 이외의 값은 비교에 사용하지 않는다.
+운영 지도 설정은 `/var/www/pirohanet/map-config.json`의 `naverClientId`입니다. Nginx가 이 파일을 `/assets/map-config.json`으로 제공합니다.

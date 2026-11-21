@@ -10,13 +10,6 @@ function strokeToken(step) {
   return lineColors[step.vehicles?.[0]?.name] ?? modeColors[step.type] ?? '--walk';
 }
 let sdkPromise;
-let sdkScript;
-
-function notifyAuthFailure() {
-  sdkScript?.remove();
-  sdkScript = undefined;
-  window.dispatchEvent(new Event(authFailure));
-}
 
 function loadNaverMaps() {
   if (sdkPromise) return sdkPromise;
@@ -34,24 +27,29 @@ function loadNaverMaps() {
     }
     const url = new URL('https://oapi.map.naver.com/openapi/v3/maps.js');
     url.searchParams.set('ncpKeyId',naverClientId.trim());
-    window.navermap_authFailure = notifyAuthFailure;
     return new Promise((resolve,reject) => {
       const script = document.createElement('script');
-      sdkScript = script;
+      let settled = false;
       script.src = url;
       function finish(error) {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         script.onload = null;
         script.onerror = null;
         if (error) {
           script.remove();
-          sdkScript = undefined;
           reject(error);
         } else {
           resolve(window.naver.maps);
         }
       }
       const timer = setTimeout(() => finish(new Error('네이버 지도 응답이 지연됐어요.')),7000);
+      window.navermap_authFailure = () => {
+        script.remove();
+        finish(new Error('네이버 지도 인증에 실패했어요.'));
+        window.dispatchEvent(new Event(authFailure));
+      };
       script.onload = () => finish(window.naver?.maps?.Map ? null : new Error('네이버 지도 SDK를 초기화하지 못했어요.'));
       script.onerror = () => finish(new Error('네이버 지도 SDK를 불러오지 못했어요.'));
       document.head.append(script);

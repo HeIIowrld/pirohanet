@@ -1,5 +1,5 @@
 import {requestWalk} from '../../src/routing/transit.js';
-import {railPath,stationName} from './modo/lib/rail-directions.js';
+import {railPath,stationName} from '../../packages/landmark-route-planner/lib/rail-directions.js';
 import stationPoints from './seoul-station-points.json' with {type:'json'};
 
 // 서울 열린데이터광장 역사마스터(OA-21232)의 호선별 역사 좌표.

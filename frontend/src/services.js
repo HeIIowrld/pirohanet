@@ -147,19 +147,3 @@ export function applyTimeDraft(form,kind,draft,event) {
  if(error)throw new Error(error);
  return value;
 }
-export function backScreen(screen,picker,searchReturn='home') {
- if(screen==='search')return picker==='save'?'saved':searchReturn;
- return {calendar:'welcome',settings:'my',saved:'my',my:'home',confirm:'home',condition:'confirm',routes:'condition',details:'routes',stops:'routes',waypoint:'stops','waypoint-confirmed':'waypoint','route-error':'confirm'}[screen]??'home';
-}
-export function preferredDirect(routes,preferences={}) {
- if(!routes.length)return null;
- const key={walking:'walkMinutes',transfers:'transfers',crowding:'crowdingScore'}[preferences.priority];
- const measure=route=>key==='walkMinutes'?(route.walkMinutes??route.travelMinutes):route[key];
- const known=key?routes.filter(route=>Number.isFinite(measure(route))):routes;
- const ranked=[...(known.length?known:routes)].sort((a,b)=>{
-  if(preferences.avoidStairs&&Number.isFinite(a.stairs)&&Number.isFinite(b.stairs)&&a.stairs!==b.stairs)return a.stairs-b.stairs;
-  if(key&&Number.isFinite(measure(a))&&Number.isFinite(measure(b))&&measure(a)!==measure(b))return measure(a)-measure(b);
-  return a.travelMinutes-b.travelMinutes;
- });
- return ranked[0];
-}

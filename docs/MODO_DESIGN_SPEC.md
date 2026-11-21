@@ -1,25 +1,13 @@
 # 모도(MODO) 디자인 명세 (개발 전달용)
 
-Figma 파일 `fxC3alx3BNxCgAOH156LaP`, 페이지 "모도 P1 화면"(13:44)을 기준으로 정리했다. 화면 크기는 390x844이다. 화면 아래의 설명 글은 Figma에 남아 있다.
+Figma 파일 `fxC3alx3BNxCgAOH156LaP`, 페이지 "모도 P1 화면"(13:44)을 기준으로 정리했다. 화면 크기는 390x844이다. 화면 목록과 프로토타입 연결은 Figma 기준이다. React 앱의 현재 동작과 코드 위치는 [구현 대응표](#5-현재-구현과-코드-위치)와 [README](../README.md)를 참고한다. 첫 이용 선호 등록은 [A04 명세](A04_SPEC_DELTA.md)에 정리했다.
 
 ## 0. 먼저 알아둘 것
 
-- 폰트는 Pretendard로 바꾼 뒤 개발한다. 토큰 파일의 `--font-sans`가 이미 Pretendard 우선이다. 텍스트 스타일 11개는 모두 자동 줄바꿈 높이라서 폰트를 바꿔도 레이아웃이 깨지지 않게 확인했다.
-- 화면에 보이는 숫자(40분, 18:35 등)는 모두 시연용 예시이며 화면의 `데모 예시` 배지로 표시한다. 실제 값은 `queryRoutes` 결과로 대체한다.
-- 지도 영역은 회색 자리표시자(`Map (placeholder, 지도 SDK 영역)`)이다. 지도 SDK가 들어갈 자리이고, 마커와 경로선은 Figma의 마커 컴포넌트와 노선색을 참고해 SDK 오버레이로 구현한다.
-- 컨디션은 피로의 정도를 1에서 5까지 고르는 5단계 슬라이더이다. 연속값이 아니라 5개 눈금에만 멈추는 방식(step 1)이다(1은 가장 가벼움, 5는 가장 피곤함). 기존 3단계(괜찮아요, 조금 피곤해요, 많이 피곤해요)에서 바꿨다. 화면 문구는 바뀔 예정이므로 코드에서는 숫자 값(1 to 5)으로 다루고, 제목과 양 끝 문구는 설정 한 곳에서만 정의한다. 선택하지 않은 상태는 `null`이다.
-
-```js
-// src/preferences/fatigueScale.js (문구만 바꾸면 되도록 분리)
-export const FATIGUE_SCALE = {
-  title: '피로의 정도를 알려 주세요.',
-  min: 1, max: 5,
-  minLabel: '괜찮아요',      // 1 아래 왼쪽 문구
-  maxLabel: '많이 피곤해요', // 5 아래 오른쪽 문구
-};
-```
-
-기존 `createPreferences`가 3단계 값을 받고 있다면 1 to 5를 받도록 맞추거나, 경로 가중치 계산 쪽에서 `(value - 1) / 4`로 0 to 1 값으로 정규화한다.
+- React 앱은 자체 호스팅 Pretendard Variable을 사용한다. `--font-sans`는 [토큰 파일](../frontend/src/tokens.css)에서 관리한다.
+- Figma에 표시된 시간과 경로는 시연값이다. React의 개발용 `?demo=1`에서도 샘플 경로에 `데모 예시` 배지를 표시한다. 일반 화면은 [경로 조회](../frontend/src/services.js)의 결과를 사용한다.
+- Figma의 지도 자리에는 운영 화면에서 네이버 지도가 들어간다. 지도 위에 출발·도착·경유·현재 위치 마커와 노선색 경로선을 표시한다. 개발용 시연은 Figma 경로 에셋을 사용한다.
+- 컨디션 슬라이더는 1에서 5까지의 정수와 미선택 상태를 받는다. 화면 문구는 [copy.js](../frontend/src/copy.js)에서 관리하고, 일정 기반 기본값과 최종 피로도는 [캘린더 모듈](../src/calendar/calendar.js)에서 계산한다.
 
 - 규칙: 테두리(border)를 쓰지 않는다. 선택 상태는 연한 배경색(`--brand-sky-low`)으로 표시한다. 그라데이션은 쓰지 않는다. 예외는 A01 시작 화면이며 직접 수정한 디자인 그대로 구현한다.
 - 규칙: 카피에 가운뎃점을 쓰지 않는다. 열거는 쉼표나 슬래시로 쓴다.
@@ -27,7 +15,7 @@ export const FATIGUE_SCALE = {
 
 ## 1. 토큰
 
-`tokens.css` 참고. 색, 간격, 둥근 정도, 그림자, 타이포를 CSS 변수로 옮겨 두었다.
+[tokens.css](../frontend/src/tokens.css) 참고. 색, 간격, 둥근 정도, 그림자, 타이포를 CSS 변수로 옮겨 두었다.
 
 | 타이포 | 크기 | 굵기 | 줄간격 |
 | --- | --- | --- | --- |
@@ -136,57 +124,26 @@ export const FATIGUE_SCALE = {
 - H02 파생: H02/TripConfirm의 출발, 도착, 출발 시간, 도착 목표 필드가 각각 OriginPicker, DestinationCandidates, TimePickerDeparture, TimePickerArrival로 이어진다. 확인, "지금", 선택 버튼은 H02/TripConfirm으로 돌아온다.
 - 경로 로딩은 1.2초 후 경로 비교로 자동 전환된다(시연용).
 
-## 5. 저장소와 연결할 때의 대응
+## 5. 현재 구현과 코드 위치
 
-현재 `HeIIowrld/pirohanet`은 바닐라 JS이며 React 화면은 아직 없다. 모듈별 대응은 다음과 같다.
+Google 로그인으로 캘린더를 불러온 뒤 처음 이용할 때는 A04 질문을 거쳐 지도 홈으로 가고, 완료한 브라우저에서는 홈으로 바로 간다. 도착 목표의 기본값은 약속 시각에서 도착 여유 시간을 뺀 값이며, 기본 여유 시간은 10분이다. 경로 안내를 시작하면 지도에서 이동 단계를 따라갈 수 있다.
 
-| 화면 요소 | 기존 코드 |
+| 화면 요소 | 코드 |
 | --- | --- |
-| 일정과 다음 약속 | `src/calendar/calendar.js` |
-| 일정 위치를 좌표로 확정, 후보 조회 | `src/calendar/location.js`의 `locate`, `locateCandidates` |
-| 내 장소 저장, 조회, 동기화 | `location.js`의 `savePlace`, `exportSavedPlaces`, `myplaces.js`의 `syncMyPlaces`, `pushMyPlaces` |
-| 이동 계획 구성 | `src/main/trip.js`의 `prepareTrip`, `planTrip` |
-| 컨디션과 선호 | `src/preferences/preferences.js`의 `createPreferences` |
-| 경로 후보 비교 | `src/routing/compare.js`의 `compareRoutes` |
-| 장소 검색 확정 | `src/map/places.js`의 `resolveTripPlaces` |
-
-React에서는 위 함수를 훅이나 서비스 계층으로 감싸서 쓰고, 화면은 `queryRoutes` 결과 모양(`travelMinutes`, `stayMinutes`, `viaStop`, 경로선, 안내 단계)을 그대로 받아 표시한다.
+| 지도 홈, 캘린더와 이동 흐름 | [App.jsx](../frontend/src/App.jsx), [HomeEvents.jsx](../frontend/src/HomeEvents.jsx), [screen-history.js](../frontend/src/screen-history.js) |
+| Google 로그인과 캘린더 | [GoogleSignInButton.jsx](../frontend/src/GoogleSignInButton.jsx), [calendar.js](../src/calendar/calendar.js), [login-session.js](../src/main/login-session.js) |
+| 목적지 후보, 내 장소와 Drive 동기화 | [location.js](../src/calendar/location.js), [places.js](../src/map/places.js) |
+| 피로도, 이동 선호 등록, 시각 선택 | [copy.js](../frontend/src/copy.js), [Onboarding.jsx](../frontend/src/Onboarding.jsx), [TimeWheel.jsx](../frontend/src/TimeWheel.jsx) |
+| 경로 조회와 비교 | [services.js](../frontend/src/services.js), [transit.js](../src/routing/transit.js), [compare.js](../src/routing/compare.js) |
+| 경유 후보와 남은 체류 시간 | [gap-places.js](../frontend/src/gap-places.js), [gap-timing.js](../frontend/src/gap-timing.js), [GapStops.jsx](../frontend/src/GapStops.jsx) |
+| 네이버 지도, 경로 상세와 이동 안내 | [LiveMap.jsx](../frontend/src/LiveMap.jsx), [route-geometry.js](../frontend/src/route-geometry.js), [RouteFlow.jsx](../frontend/src/RouteFlow.jsx), [Journey.jsx](../frontend/src/Journey.jsx) |
 
 ## 6. 에셋
 
-`assets/illustrations`에 일러스트 8개, `assets/icons`에 아이콘 17개가 있다. 모든 아이콘은 `currentColor`를 써서 CSS 색으로 바꿀 수 있다. 일러스트는 고정 색(하늘 #ADDFF9, 라임 #B5E27E, 검정 #212124, 회색 #DADFE5와 #ADB1BA)이다. 로고(MODO 워드마크)는 `assets/brand/modo-wordmark.svg`에 있다.
+[frontend/public](../frontend/public/)에 브랜드 워드마크, 아이콘, 일러스트, 개발용 시연 경로, Pretendard Variable 폰트를 둔다. 공통 아이콘과 일러스트는 [design.jsx](../frontend/src/design.jsx)의 `Icon`과 `Art`로 표시한다. [폰트 라이선스](../frontend/public/fonts/OFL.txt)
 
-## 7. 개발할 때 정할 것
+## 7. 디자인에서 확인할 항목
 
-디자인에서 정하지 않았거나 실제 구현에서 결정이 필요한 항목이다. 정해지면 체크한다.
-
-### 외부 연동과 데이터
-
-- [ ] Google 로그인 버튼의 로고를 Google 공식 로고로 교체하고 Calendar 읽기 OAuth 범위를 확정한다. 디자인의 "G"는 자리표시자이다.
-- [ ] 지도 SDK를 정한다(PRD는 카카오맵을 기준으로 한다). 마커(출발, 도착, 경유)와 노선색 경로선은 SDK 오버레이로 구현하고, 바텀시트 높이를 고려한 bounds 맞춤이 필요하다.
-- [ ] `queryRoutes` 공급자와 응답 모양을 정한다. 경로선과 안내 단계(RouteStep 5종)를 후보에 담아 전달한다.
-- [ ] 장소 사진 출처를 정한다(장소 API 사진). 사진이 없을 때의 대체 표시와 로딩 상태가 필요하다. 디자인은 회색 자리표시자만 있다.
-- [ ] 혼잡도 데이터가 없을 때 "정보 없음" 표시 방식을 정한다. 혼잡이 낮은 것으로 계산하지 않는다.
-- [ ] 지도 앱 딥링크(카카오맵, 네이버 지도) 스킴과 실패 시 H07/DeepLinkFailed 토스트의 재시도 동작을 정한다.
-- [ ] 내 장소 저장소를 정한다(`location.js`의 localStorage, `myplaces.js`의 Drive 동기화 사이의 충돌 처리).
-
-### 화면 동작
-
-- [ ] 시연용 숫자와 `데모 예시` 배지를 언제 제거할지 정한다. 실제 데이터가 연결된 화면부터 배지를 뺀다.
-- [ ] H04/RouteLoading은 시연용으로 1.2초 뒤 자동 전환한다. 실제로는 응답 기준으로 전환하고, 기존 성공 경로는 로딩 중에 지우지 않는다.
-- [ ] 시간 휠 피커 구현 방식을 정한다(CSS scroll-snap 직접 구현 또는 라이브러리). 분 단위(5분), 자정을 넘기는 시간, 약속 이후 시각 선택 불가 규칙이 필요하다.
-- [ ] 출발 시각 피커의 "지금" 동작을 정한다(현재 시각 그대로 또는 가장 가까운 5분 단위로 올림).
-- [ ] 피로의 정도 슬라이더의 일정 기반 기본값(디자인은 3) 계산 규칙과 기존 `createPreferences` 값(3단계)과의 변환 규칙을 정한다.
-- [ ] 체류 시간 시트의 선택지(10분, 20분, 30분, 1시간)와 기본 선택(디자인은 20분)을 확정하고, 선택한 값이 경유 후보 검증에 쓰이도록 연결한다.
-- [ ] 도착 목표 없이 진행하는 흐름에서 자동 경유 추천을 하지 않는 규칙을 코드에 반영한다(들를 곳 찾기를 눌렀을 때만 후보 검증).
-- [ ] 목적지 후보(H02/DestinationCandidates) 표시 기준을 정한다(`locateCandidates` 결과 수, 최대 개수, 거리 정렬).
-- [ ] 위치 권한 거절, 캘린더 토큰 만료, 조회 실패 화면으로 들어가고 나오는 조건(재시도 횟수 등)을 정한다.
-- [ ] 마이 화면의 캘린더 설정(M03)에서 연결 해제 시 저장 장소와 일정 캐시를 어떻게 다룰지 정한다.
-
-### 구현 환경
-
-- [ ] 현재 저장소는 바닐라 JS이다. React 도입 방식(Vite 등)과 기존 `src/` 모듈을 그대로 쓸지 훅으로 감쌀지 정한다.
-- [ ] 화면 폭은 390 모바일 기준이다. 데스크톱에서 열 때의 표시 방식(모바일 프레임 중앙 배치 등)을 정한다.
-- [ ] Pretendard 웹폰트 로딩 방식(Variable, 서브셋)과 라이선스 표기를 정한다. Figma의 텍스트 스타일 폰트는 이미 Pretendard Variable이다.
-- [ ] 접근성: 슬라이더는 `aria-valuemin/max/now`와 키보드 조작, 터치 영역 44px 이상, 휠 피커 키보드 조작을 확인한다.
-- [ ] 컨디션 문구, 오류 문구, 빈 상태 문구의 최종 카피를 한 파일(예: `copy.js`)에서 관리할지 정한다.
+- 장소 사진 공급자와 사진이 없을 때 사용할 표시
+- 이동 선호를 나중에 다시 편집할 위치
+- 슬라이더와 시각 휠의 키보드 탐색 및 터치 영역
