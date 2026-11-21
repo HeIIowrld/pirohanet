@@ -133,6 +133,6 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .toast[role=status]{pointer-events:none}
 
 .ride-evidence{display:block;color:var(--fg-link);font-size:13px;line-height:1.45;word-break:keep-all}
-.route-card .ride-evidence{margin-top:4px}
+.comfort-reasons{display:grid;gap:4px;margin:8px 0 0;padding:8px 0 0 15px;border-top:1px solid var(--border-hairline);color:var(--fg-link);font-size:13px;line-height:1.45;word-break:keep-all}
 .avoid-line{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:20px;font-size:14px;color:var(--fg-secondary)}
 .avoid-line select{padding:8px;color:var(--fg-default);background:var(--bg-surface);border:1px solid var(--border-hairline);border-radius:var(--radius-8)}

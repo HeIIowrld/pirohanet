@@ -26,6 +26,8 @@ test('the fastest route remains first even when another route has a better comfo
     {id:'easy',travelMinutes:20,walkMinutes:3,transfers:0},
   ],trip);
   assert.deepEqual(r.direct.map(route=>route.id),['fast','easy']);
+  assert.equal(r.secondLabel,'환승 적은 길');
+  assert.equal(r.comfortReasons,undefined);
 });
 test('Kakao search is available when the Naver geocoder is unconfigured',async()=>{const {searchWithFallback}=await import('./services.js');const r=await searchWithFallback('광화문',async()=>{throw new Error('Geocoding 501')},async()=>({ok:true,json:async()=>({documents:[{place_name:'광화문',address_name:'서울',x:'126.9',y:'37.5'}]})}));assert.equal(r[0].longitude,126.9);assert.equal(r[0].name,'광화문')});
 test('time wheel opens at the displayed hour without rolling minute 58 back to zero',async()=>{const {timeDraftFromInput}=await import('./services.js');assert.deepEqual(timeDraftFromInput('2026-11-21T18:58'),{ampm:'오후',hour:'6',minute:'55'})});
@@ -69,4 +71,40 @@ test('route search uses the chosen condition plus the remaining schedule, capped
   assert.equal(finalLevel([],2,at('14:05')),2);
   assert.equal(finalLevel([],null,at('14:05')),null);
   for(const level of [null,1,2,3,4,5])assert.doesNotThrow(()=>makeTrip(form,null,finalLevel(SAMPLE_EVENTS,level,at('14:05'))));
+});
+
+test('crowding evidence identifies the avoided rail leg when it tips the recommendation', () => {
+  const rail = (line, stops, time, average) => ({
+    type:'SUBWAY', time, vehicles:[{name:line}],
+    stops:stops.map(name => ({name})), railComfort:{average,knownMinutes:time / 60},
+  });
+  const congested = rail('3호선',['교대(법원.검찰청)','종로3가'],1260,96);
+  const fastest = {id:'fast',travelMinutes:30,walkMinutes:5,transfers:2,steps:[congested]};
+  const calmer = {id:'calmer',travelMinutes:42,walkMinutes:3,transfers:1,
+    steps:[rail('2호선',['강남','을지로4가'],2160,57)]};
+  const trip = makeTrip({...form,arrival:''},null,5);
+  const high = routeResult([fastest,calmer],trip);
+  const low = routeResult([fastest,calmer],{...trip,preferences:{fatigueLevel:1}});
+  assert.equal(high.secondLabel,'편한 길');
+  assert.deepEqual(high.comfortReasons.map(({kind,scope,step}) => [kind,scope,step]),[
+    ['crowding','fastest',congested],
+  ]);
+  assert.equal(low.secondLabel,'환승 적은 길');
+  const withoutCrowding = {...fastest,steps:[{...congested,railComfort:undefined}]};
+  assert.equal(routeResult([withoutCrowding,calmer],trip).secondLabel,'환승 적은 길');
+});
+
+test('seat evidence points to the checked vehicle and is absent without a seating benefit', () => {
+  const seat = {name:'9202',type:'광역',remainingSeats:35,checkedAt:Date.parse('2026-11-21T15:30:00+09:00')};
+  const bus = {type:'BUS',time:1200,vehicles:[{name:'9202',type:'광역'}],busComfort:seat};
+  const fastest = {id:'fast',travelMinutes:25,walkMinutes:3,transfers:1,
+    steps:[{...bus,vehicles:[{name:'3030',type:'광역'}],busComfort:undefined}]};
+  const seated = {id:'seated',travelMinutes:26,walkMinutes:3,transfers:1,steps:[bus]};
+  const trip = makeTrip({...form,arrival:''},null,5);
+  const result = routeResult([fastest,seated],trip);
+  assert.equal(result.secondLabel,'편한 길');
+  assert.deepEqual(result.comfortReasons.map(({kind,scope,step}) => [kind,scope,step.busComfort]), [
+    ['seats','recommended',seat],
+  ]);
+  assert.equal(routeResult([fastest,{...seated,steps:[{...bus,busComfort:undefined}]}],trip).direct.length,1);
 });

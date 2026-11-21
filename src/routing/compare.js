@@ -1,4 +1,4 @@
-import {rideProfile} from './ride-comfort.js';
+import {observedComfortReasons, rideProfile} from './ride-comfort.js';
 
 const weights = [
   null,
@@ -53,14 +53,22 @@ function contextFor(route, { traffic, avoidLine, arriveBy }) {
   return { traffic, trafficPenalty, avoidLine, avoidedLineMinutes };
 }
 
+function observationWeights(preferences) {
+  const effort = 0.55 + (preferences.fatigueLevel ?? 1) * 0.22;
+  return {seats:effort,crowding:effort + (preferences.priority === 'crowding' ? 0.6 : 0)};
+}
+
+export function comfortReasons(route, fastest, preferences) {
+  return observedComfortReasons(route,fastest,observationWeights(preferences));
+}
+
 function score(route, preferences, useLegacyCrowding) {
   const base = weights[preferences.fatigueLevel] ?? weights[1];
   const weight = (key) => base[key] + (preferences.priority === key ? 2 : 0);
   const load = route.rideLoad;
-  const effort = 0.55 + (preferences.fatigueLevel ?? 1) * 0.22;
+  const {seats:effort,crowding} = observationWeights(preferences);
   const rideScore = load.minutes
-    ? effort * (load.baseline + load.seats + load.mixedTransfers * 0.5)
-      + load.crowding * (effort + (preferences.priority === 'crowding' ? 0.6 : 0))
+    ? effort * (load.baseline + load.seats + load.mixedTransfers * 0.5) + load.crowding * crowding
     : useLegacyCrowding ? route.crowdingBurden * weight('crowding') : 0;
   return route.travelMinutes + route.context.trafficPenalty + Math.min(8, route.context.avoidedLineMinutes * 0.4)
     + (route.walkMinutes ?? 0) * weight('walking')
