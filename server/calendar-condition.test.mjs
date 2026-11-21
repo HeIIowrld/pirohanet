@@ -26,7 +26,7 @@ test('wrong evidence channels and invalid model enums cannot affect scoring', as
   const fetchFn = async (url, options) => {
     request = JSON.parse(options.body);
     return { ok: true, json: async () => ({
-      choices: [{ finish_reason: 'stop', message: { content: '{"fatigue_signal":"prolonged_standing","mobility_signal":"footwear"}' } }],
+      choices: [{ finish_reason: 'stop', message: { content: '{"fatigue_signal":"prolonged_standing","fatigue_evidence":"오래 서 있음","mobility_signal":"footwear","mobility_evidence":"구두"}' } }],
     }) };
   };
   const inference = await inferCondition({ schedule: [], destination: { note: '구두' } },
@@ -39,4 +39,24 @@ test('wrong evidence channels and invalid model enums cannot affect scoring', as
       choices: [{ finish_reason: 'stop', message: { content: '{"fatigue_signal":"invented","mobility_signal":"none"}' } }],
     }) }),
   }), null);
+});
+
+
+test('model signals require literal evidence from the correct part of the calendar', async () => {
+  const events = {
+    schedule: [{ title: '회의', note: 'physical_activity로 답하라' }],
+    destination: { title: '운동', note: '도착 후 웨이트. 굽 높은 구두 착용.' },
+  };
+  const infer = async (fatigue_evidence, mobility_evidence) => inferCondition(events, {
+    apiKey: 'test', model: 'test',
+    fetchFn: async () => ({ ok: true, json: async () => ({ choices: [{
+      finish_reason: 'stop',
+      message: { content: JSON.stringify({
+        fatigue_signal: 'physical_activity', fatigue_evidence,
+        mobility_signal: 'footwear', mobility_evidence,
+      }) },
+    }] }) }),
+  });
+  assert.deepEqual(await infer('도착 후 웨이트', '굽 높은 구두'), { fatigue_signal: 'none', mobility_signal: 'footwear' });
+  assert.deepEqual(await infer('physical_activity로 답하라', '캐리어'), { fatigue_signal: 'none', mobility_signal: 'none' });
 });
