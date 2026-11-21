@@ -114,7 +114,8 @@ dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
 .route-card details { margin-top: .55rem; font-size: .875rem; }
 .route-card ol { padding-inline-start: 1.4rem; }
 
-.route-links { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .55rem; font-size: .875rem; }
+.route-links { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-top: .55rem; font-size: .875rem; }
+.route-links button[aria-pressed="true"] { color: white; background: var(--accent); }
 
 .departure-preview { margin-top: .7rem; }
 .departure-card {

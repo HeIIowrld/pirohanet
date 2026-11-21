@@ -1,27 +1,31 @@
 import { placeAliasKey } from '../preferences/place-alias.js';
+import { routeKey } from '../routing/compare.js';
 
 export function planDepartureReminder(trip, recommendation) {
-  const { route, reason, href } = recommendation ?? {};
+  const { route, reason, href, showDirections } = recommendation ?? {};
   const appointment = trip.calendar.nextAppointment;
   if (!appointment || placeAliasKey(trip.destination) !== placeAliasKey(appointment.location) ||
       !trip.arriveBy || !Number.isFinite(route?.travelMinutes) || route.travelMinutes <= 0) return null;
 
   const startsAt = Date.parse(appointment.start);
-  const arriveBy = Math.min(+trip.arriveBy, startsAt);
+  const arriveBy = +trip.arriveBy;
   if (!Number.isFinite(arriveBy)) return null;
   const stayMinutes = route.stayMinutes ?? 0;
-  const totalMinutes = Math.ceil(route.travelMinutes + stayMinutes);
-  const leaveAt = arriveBy - totalMinutes * 60_000;
+  const duration = (route.travelMinutes + stayMinutes) * 60_000;
+  const leaveAt = arriveBy - Math.ceil(duration / 60_000) * 60_000;
   return {
-    key: JSON.stringify([startsAt, appointment.location, appointment.title, leaveAt]),
+    key: JSON.stringify([startsAt, appointment.location, appointment.title, leaveAt, routeKey(route)]),
     title: appointment.title || '다음 일정',
     location: appointment.location,
     startsAt,
+    arriveBy,
+    duration,
     travelMinutes: Math.ceil(route.travelMinutes),
     stayMinutes,
     leaveAt,
     reason,
     href,
+    showDirections,
   };
 }
 
@@ -41,15 +45,17 @@ export function createDepartureReminder(timeFormat) {
   let plan = null;
   let timer;
   let previewButton = null;
+  let openDirections;
 
   function hide() {
     card.hidden = true;
     announcement.textContent = '';
     previewButton = null;
+    openDirections = null;
   }
 
   function show(reminder, now, preview = false) {
-    const late = now - reminder.leaveAt >= 60_000;
+    const late = now + reminder.duration > reminder.arriveBy;
     label.textContent = preview ? '출발 알림 미리보기' : '출발 알림';
     heading.textContent = late ? '지금 출발해도 도착 목표를 넘길 수 있어요' : '지금 출발할 시간이에요';
     appointment.textContent = `${timeFormat.format(reminder.startsAt)} · ${reminder.title}`;
@@ -57,9 +63,10 @@ export function createDepartureReminder(timeFormat) {
     reason.textContent = reminder.reason;
     reason.hidden = !reminder.reason;
     const stay = reminder.stayMinutes > 0 ? ` · 체류 ${reminder.stayMinutes}분` : '';
-    timing.textContent = `권장 출발 ${timeFormat.format(reminder.leaveAt)} · 이동 약 ${reminder.travelMinutes}분${stay}`;
+    timing.textContent = `권장 출발 ${timeFormat.format(reminder.leaveAt)} · 도착 목표 ${timeFormat.format(reminder.arriveBy)} · 이동 약 ${reminder.travelMinutes}분${stay}`;
     action.href = reminder.href ?? '#check-places';
-    action.textContent = reminder.href ? '추천 경로 보기' : '경로 찾기로 이동';
+    action.textContent = reminder.href ? '경로 안내 보기' : '경로 찾기로 이동';
+    openDirections = () => reminder.showDirections?.(new Date(preview ? reminder.leaveAt : Date.now()));
     card.hidden = false;
     if (!preview) announcement.textContent = `${label.textContent}. ${heading.textContent}. ${appointment.textContent}. ${reminder.location}. ${reason.textContent}. ${timing.textContent}.`;
   }
@@ -104,6 +111,7 @@ export function createDepartureReminder(timeFormat) {
 
   close.addEventListener('click', () => dismiss(previewButton || status));
   action.addEventListener('click', () => {
+    openDirections?.();
     dismiss(document.querySelector(action.getAttribute('href')) ?? status);
   });
   card.addEventListener('keydown', (event) => {

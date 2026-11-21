@@ -50,11 +50,15 @@ let events = [];
 let source = null;
 let scheduleVersion = 0;
 let scheduleAppointmentKey = null;
+let scheduleTimer;
 let routeVersion = 0;
+let selectedRouteKey = null;
 let sampleReminder = null;
 let stopCatalog = null;
 const sampleStopId = 'seoul_002';
-const seoulTimeField = (date) => new Date(+date + 9 * 60 * 60_000).toISOString().slice(0, 16);
+const seoulOffset = 9 * 60 * 60_000;
+const seoulTimeField = (date) => new Date(+date + seoulOffset).toISOString().slice(0, 16);
+const localTime = (field) => Number.isFinite(field.valueAsNumber) ? new Date(field.valueAsNumber - seoulOffset) : undefined;
 const sampleDeparture = seoulTimeField(SAMPLE_NOW);
 
 function accountMessage(message) {
@@ -68,11 +72,10 @@ function subject(label) {
 }
 
 function readTiming() {
-  const localTime = (value) => value ? new Date(`${value}+09:00`) : undefined;
   const buffer = arrivalBuffer.value;
   return {
-    departAt: localTime(form.elements.departAt.value),
-    arriveBy: localTime(manualArrival.value),
+    departAt: localTime(form.elements.departAt),
+    arriveBy: localTime(manualArrival),
     arrivalBufferMinutes: buffer && buffer !== 'manual' ? Number(buffer) : undefined,
   };
 }
@@ -184,13 +187,17 @@ function showArrivalTarget(trip) {
   if (!trip.arrivalAdvice) return;
 
   const { minutes, reason } = trip.arrivalAdvice;
-  arrivalBuffer.options[0].textContent = `추천 · ${minutes === 0 ? '시작 시각에 도착' : `${minutes}분 전`}`;
+  const recommended = minutes === 0 ? '시작 시각에 도착' : `${Math.ceil(minutes)}분 전`;
+  arrivalBuffer.options[0].textContent = `추천 · ${recommended}`;
   manualArrivalOption.hidden = !manualArrival.value;
   if (manualArrival.value) arrivalBuffer.value = 'manual';
   else if (arrivalBuffer.value === 'manual') arrivalBuffer.value = '';
-  arrivalReason.textContent = manualArrival.value ? '이동 계획에서 입력한 시각을 적용했어요.' : reason;
-  const tooLate = trip.arriveBy <= trip.departAt ? ' 출발 시각이나 도착 여유를 조정해 주세요.' : '';
-  arrivalTarget.textContent = `도착 목표 · ${scheduleTimeFormat.format(trip.arriveBy)}까지${tooLate}`;
+  const recommendationReason = arrivalBuffer.value ? `추천 ${recommended} · ${reason}` : reason;
+  const manualAfterStart = localTime(manualArrival) > trip.arriveBy;
+  const manualReason = manualAfterStart ? '입력한 시각이 일정 시작 이후라 일정 시작을 도착 목표로 적용했어요.' : '이동 계획에서 입력한 시각을 적용했어요.';
+  arrivalReason.textContent = manualArrival.value ? manualReason : recommendationReason;
+  const timingNote = trip.arriveBy <= trip.departAt ? ' 도착 목표가 출발 시각보다 앞서요.' : '';
+  arrivalTarget.textContent = `도착 목표 · ${scheduleTimeFormat.format(trip.arriveBy)}까지${timingNote}`;
 }
 
 function offerConfirmation(alias, places, version) {
@@ -223,19 +230,38 @@ function offerConfirmation(alias, places, version) {
   }
 }
 
-async function refreshSchedule() {
+function appointmentKey(next) {
+  return next ? JSON.stringify([source, next.start, next.title, next.location]) : null;
+}
+
+function syncAppointment() {
+  if (source !== 'google' || appointmentKey(scheduleTrip().calendar.nextAppointment) === scheduleAppointmentKey) return false;
+  void refreshSchedule();
+  return true;
+}
+
+async function refreshSchedule(replaceDestination = false) {
   if (!source) return;
   const version = ++scheduleVersion;
   candidates.replaceChildren();
   let trip = scheduleTrip();
   const next = trip.calendar.nextAppointment;
-  const key = next ? JSON.stringify([source, next.start, next.title, next.location]) : null;
-  if (scheduleAppointmentKey && scheduleAppointmentKey !== key) {
+  const key = appointmentKey(next);
+  const changed = scheduleAppointmentKey !== key;
+  if (scheduleAppointmentKey && changed) {
     arrivalBuffer.value = '';
     manualArrival.value = '';
     trip = scheduleTrip();
   }
+  if (changed || replaceDestination) {
+    if (next || scheduleAppointmentKey) destination.value = next?.location ?? '';
+    clearRouteResults();
+  }
   scheduleAppointmentKey = key;
+  clearTimeout(scheduleTimer);
+  if (source === 'google' && next) {
+    scheduleTimer = setTimeout(() => refreshSchedule(), Math.min(Date.parse(next.start) - Date.now(), 2_147_483_647));
+  }
   showArrivalTarget(trip);
   if (!next) {
     summary.textContent = '장소가 있는 다음 일정이 없어요.';
@@ -246,7 +272,8 @@ async function refreshSchedule() {
   const appointment = `${scheduleTimeFormat.format(new Date(next.start))} · ${next.title || '약속'} · ${alias}`;
   const remembered = savedPlace(alias);
   if (remembered) {
-    summary.textContent = `${appointment} · ${remembered.name ? remembered.name + ' · ' : ''}${remembered.address}`;
+    const name = remembered.name && placeKey(remembered.name) !== placeKey(alias) ? `${remembered.name} · ` : '';
+    summary.textContent = `${appointment} · ${name}${remembered.address}`;
     return;
   }
 
@@ -272,6 +299,7 @@ async function refreshSchedule() {
 
 function clearRouteResults() {
   routeVersion++;
+  selectedRouteKey = null;
   sampleReminder = null;
   previewDeparture.hidden = source !== 'sample';
   departureReminder.set(null);
@@ -286,9 +314,7 @@ function showSchedule(items, kind) {
   }
   events = items;
   source = kind;
-  destination.value = scheduleTrip().destination;
-  clearRouteResults();
-  void refreshSchedule();
+  void refreshSchedule(true);
 }
 
 async function importCalendar() {
@@ -337,6 +363,7 @@ calendarButton.addEventListener('click', () => importCalendar());
 logout.addEventListener('click', signOut);
 
 form.addEventListener('input', ({ target }) => {
+  if (syncAppointment()) return;
   if (target === arrivalBuffer && arrivalBuffer.value !== 'manual') manualArrival.value = '';
   if (target === arrivalBuffer || target === manualArrival || target === form.elements.departAt) {
     showArrivalTarget(scheduleTrip());
@@ -352,15 +379,11 @@ stopSelect.addEventListener('change', () => {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
+  syncAppointment();
   const stop = selectedStop();
   const trip = readTrip(stop);
   if (!trip.origin || !trip.destination) {
     routeStatus.textContent = '출발지와 목적지를 입력해 주세요.';
-    return;
-  }
-
-  if (trip.arriveBy && trip.arriveBy <= trip.departAt) {
-    routeStatus.textContent = '도착 목표는 출발 시각보다 늦어야 해요.';
     return;
   }
 
@@ -391,8 +414,10 @@ form.addEventListener('submit', async (event) => {
     });
     if (!isCurrent()) return;
     const messages = [];
+    let lateDirect;
     if (routes.some(isDirect)) messages.push('이동 시간과 혼잡도는 예상치예요.');
     else if (fastestDirect && trip.arriveBy && fastestDirect.arrivalAt > trip.arriveBy) {
+      lateDirect = fastestDirect;
       const late = Math.ceil((fastestDirect.arrivalAt - trip.arriveBy) / 60_000);
       messages.push(`가장 이른 직행은 ${timeFormat.format(fastestDirect.arrivalAt)} 도착으로, 도착 목표보다 ${late}분 늦어요.`);
     } else messages.push('조건을 만족하는 대중교통 직행 경로를 찾지 못했어요.');
@@ -409,13 +434,24 @@ form.addEventListener('submit', async (event) => {
       }
     }
     routeStatus.textContent = messages.join(' ');
-    const recommendation = renderRoutes(routeResults, routes, timeFormat, trip.preferences.priority, stop?.name);
-    const reminder = planDepartureReminder(trip, recommendation);
-    if (source === 'google') departureReminder.set(reminder);
-    if (source === 'sample') {
-      sampleReminder = reminder;
-      previewDeparture.hidden = !reminder;
+    let plannedRoute;
+    function useRoute(option) {
+      if (!isCurrent() || plannedRoute === option) return;
+      plannedRoute = option;
+      const reminder = planDepartureReminder(trip, option);
+      if (source === 'google') departureReminder.set(reminder);
+      if (source === 'sample') {
+        sampleReminder = reminder;
+        previewDeparture.hidden = !reminder;
+      }
     }
+    useRoute(renderRoutes(routeResults, routes, timeFormat, trip.preferences.priority, stop?.name, {
+      onSelect(option) {
+        selectedRouteKey = option.key;
+        useRoute(option);
+      },
+      selectedKey: selectedRouteKey, lateDirect, departAt: trip.departAt, arriveBy: trip.arriveBy,
+    }));
   } catch (error) {
     if (isCurrent()) {
       const unknown = [trip.origin, trip.destination].find((query) => isPersonalLabel(query) && !savedPlace(query));
@@ -429,5 +465,9 @@ form.addEventListener('submit', async (event) => {
 });
 
 window.addEventListener('pageshow', updateStopOptions);
+window.addEventListener('pageshow', syncAppointment);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncAppointment();
+});
 updateStopOptions();
 void initializeStopCatalog();

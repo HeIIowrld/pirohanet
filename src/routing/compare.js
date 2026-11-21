@@ -11,6 +11,18 @@ export function isDirect(route) {
   return !route.viaStop && !route.reboard;
 }
 
+export function routeArrivalAt(route, departAt) {
+  return new Date(+departAt + (route.travelMinutes + (route.stayMinutes ?? 0)) * 60_000);
+}
+
+export function routeKey(route) {
+  return JSON.stringify([
+    route.mode, route.transfers, route.links?.map(({ url }) => url),
+    route.steps?.map(({ type, guidance, stops, vehicles }) =>
+      [type, guidance, stops?.map(({ name }) => name), vehicles?.map(({ name }) => name)]),
+  ]);
+}
+
 const seoulTime = new Intl.DateTimeFormat('en-US', {
   timeZone: 'Asia/Seoul', weekday: 'short', hour: 'numeric', hourCycle: 'h23',
 });
@@ -52,7 +64,7 @@ export function compareRoutes(candidates, { departAt, arriveBy, maxExtraTravelMi
   const fastestDirect = Math.min(...candidates.filter(isDirect).map((route) => route.travelMinutes));
   const eligible = candidates.map((route) => ({
     ...route,
-    arrivalAt: new Date(+departAt + (route.travelMinutes + (route.stayMinutes ?? 0)) * 60_000),
+    arrivalAt: routeArrivalAt(route, departAt),
     extraTravelMinutes: Number.isFinite(fastestDirect) ? route.travelMinutes - fastestDirect : null,
   })).filter((route) =>
     (arriveBy == null || route.arrivalAt <= arriveBy) &&
