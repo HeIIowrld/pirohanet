@@ -32,9 +32,15 @@
 <pre id="chosen"></pre>
 <img id="map" alt="확정한 장소 지도" hidden>
 <script type="module">
-  import { fetchGoogleEvents, requestGoogleToken, summarize } from './calendar.js';
-  import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
-  import { isPersonalLabel, locateAll, locateCandidates, pushMyPlaces, savedPlace, savePlace, staticMapUrl, syncMyPlaces } from './location.js';
+  // 시연 서버 앞의 Cloudflare가 JS를 4시간 캐시해서, 배포 직후에는 새 HTML이 옛 JS를 불러와 깨진다.
+  // 확인 페이지는 항상 최신 코드를 봐야 하므로 주소에 시각을 붙여 캐시를 피한다.
+  const fresh = `?t=${Date.now()}`;
+  const [{ fetchGoogleEvents, requestGoogleToken, summarize }, { SAMPLE_EVENTS, SAMPLE_NOW }, places] = await Promise.all([
+    import(`./calendar.js${fresh}`),
+    import(`./sample.js${fresh}`),
+    import(`./location.js${fresh}`),
+  ]);
+  const { isPersonalLabel, locateAll, locateCandidates, pushMyPlaces, savedPlace, savePlace, staticMapUrl, syncMyPlaces } = places;
 
   const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 확정한 장소의 지도 이미지가 나온다
 
