@@ -94,7 +94,7 @@ function RouteCard({item,label,reasons,selected,onSelect}) {
   </button>;
 }
 
-export function RouteComparison({result, route, trip, demo, select, choose, changeCondition, changeTrip, showLate}) {
+export function RouteComparison({result, route, trip, demo, select, start, findStops, changeCondition, changeTrip, showLate}) {
   const alternatives = result?.alternatives ?? [];
   const [expanded,setExpanded] = useState(() => alternatives.some(item => item.id === route?.id));
   if (!result?.direct.length) {
@@ -138,7 +138,8 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
     </div>
     <Actions>
       <Button kind="text" onClick={changeCondition}>컨디션·이동 옵션</Button>
-      <Button disabled={!route} onClick={choose}>{trip.arriveBy ? '여유 시간 확인' : '이 경로로 가기'}</Button>
+      {findStops && <Button kind="sky" disabled={!route} onClick={findStops}>여유 시간 확인</Button>}
+      <Button disabled={!route} onClick={start}>이 경로로 안내 시작</Button>
     </Actions>
   </Sheet>;
 }
@@ -154,7 +155,7 @@ function BusInformation({step}) {
   return <div className="bus-information" ref={host}/>;
 }
 
-export function RouteDetails({route, trip, demo, copyLink, openDwell, resume}) {
+export function RouteDetails({route, trip, demo, start, openDwell, resume}) {
   const late = trip.arriveBy && route.arrivalAt > trip.arriveBy;
   const [doorData,setDoorData] = useState(null);
   const hasSubway = route.steps?.some(step => step.type === 'SUBWAY');
@@ -199,13 +200,9 @@ export function RouteDetails({route, trip, demo, copyLink, openDwell, resume}) {
     {doors.some(Boolean) && <p className="route-source">칸·문 위치 자료
       {' · '}<a href="https://data.seoul.go.kr/dataList/OA-22521/L/1/datasetView.do" target="_blank" rel="noreferrer">서울교통공사 환승정보</a>
       {' · '}<a href="https://data.seoul.go.kr/dataList/OA-22749/A/1/datasetView.do" target="_blank" rel="noreferrer">빠른하차정보</a></p>}
-    <div className="route-navigation" aria-label="구간별 길안내">
-      {route.links?.map((link, index) => <div key={link.url}>
-        <a className={`button ${index === 0 ? 'primary' : 'sky'}`} href={link.url} rel="noreferrer">{link.label}</a>
-        <button className="copy-map-link" onClick={() => copyLink(link)}>링크 복사</button>
-      </div>)}
-    </div>
-    {resume && <Button onClick={resume}>이동 안내로 돌아가기</Button>}
-    {openDwell && !trip.arriveBy && !route.viaStop && <Button kind="text" onClick={openDwell}>들를 곳 찾기</Button>}
+    <Actions>
+      <Button onClick={resume ?? start}>{resume ? '이동 안내로 돌아가기' : '이 경로로 안내 시작'}</Button>
+      {openDwell && !trip.arriveBy && !route.viaStop && <Button kind="text" onClick={openDwell}>들를 곳 찾기</Button>}
+    </Actions>
   </section>;
 }
