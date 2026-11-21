@@ -6,22 +6,72 @@
 <!-- 캘린더 파트만 따로 확인하는 페이지. 저장소 루트에서 서버를 띄우고 /src/calendar/demo.html 로 연다. -->
 <script src="https://accounts.google.com/gsi/client"></script>
 <button id="connect">Google 캘린더 불러오기</button>
+<button id="sample">샘플 일정으로 보기</button>
+<label>지금 컨디션
+  <select id="level">
+    <option value="">선택 안 함</option>
+    <option value="0">괜찮아요</option>
+    <option value="1">조금 피곤해요</option>
+    <option value="2">많이 피곤해요</option>
+  </select>
+</label>
 <pre id="out">버튼을 누르면 결과가 여기에 나옵니다.</pre>
+<pre id="place"></pre>
+<img id="map" alt="약속 장소 지도" hidden>
 <script type="module">
   import { fetchGoogleEvents, summarize } from './calendar.js';
   import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
+  import { locate, staticMapUrl } from './location.js';
+
+  const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 지도 이미지가 나온다
 
   const out = document.getElementById('out');
-  const show = (title, data) => (out.textContent = `${title}\n${JSON.stringify(data, null, 2)}`);
+  const level = document.getElementById('level');
+  let loaded = null; // { title, items, now }
 
+  const render = () => {
+    if (!loaded) return;
+    // 결과가 null일 때 원인을 볼 수 있게 받은 일정을 그대로 나열한다
+    const list = loaded.items.map((e) => `- ${e.summary ?? '(제목 없음)'} | ${e.start?.dateTime ?? `${e.start?.date} 종일`} | ${e.location ?? '장소 없음'}`);
+    const result = summarize(loaded.items, loaded.now, level.value === '' ? null : Number(level.value));
+    out.textContent = `${loaded.title} ${loaded.items.length}건\n${list.join('\n')}\n${JSON.stringify(result, null, 2)}`;
+    showPlace(result.nextAppointment?.location);
+  };
+
+  const placeOut = document.getElementById('place');
+  const map = document.getElementById('map');
+  let shownLocation; // 같은 위치를 다시 검색하지 않는다
+  const showPlace = async (location) => {
+    if (location === shownLocation) return;
+    shownLocation = location;
+    map.hidden = true;
+    placeOut.textContent = location ? `"${location}" 위치 찾는 중…` : '';
+    if (!location) return;
+    try {
+      const place = await locate(location);
+      if (location !== shownLocation) return; // 그사이 다른 일정으로 바뀜
+      placeOut.textContent = place ? `위치 변환\n${JSON.stringify(place, null, 2)}` : `"${location}"의 위치를 찾지 못했습니다. 직접 입력이 필요합니다.`;
+      if (place && NAVER_MAP_KEY_ID) {
+        map.src = staticMapUrl([place], NAVER_MAP_KEY_ID);
+        map.hidden = false;
+      }
+    } catch (err) {
+      placeOut.textContent = `위치 변환 실패: ${err.message}`;
+    }
+  };
+  const useSample = (title) => {
+    loaded = { title, items: SAMPLE_EVENTS, now: SAMPLE_NOW };
+    render();
+  };
+
+  level.onchange = render;
+  document.getElementById('sample').onclick = () => useSample('샘플 일정');
   document.getElementById('connect').onclick = async () => {
     try {
-      const items = await fetchGoogleEvents();
-      // 결과가 null일 때 원인을 볼 수 있게 받은 일정을 그대로 나열한다
-      const list = items.map((e) => `- ${e.summary ?? '(제목 없음)'} | ${e.start?.dateTime ?? `${e.start?.date} 종일`} | ${e.location ?? '장소 없음'}`);
-      show(`Google 일정 ${items.length}건\n${list.join('\n')}`, summarize(items));
+      loaded = { title: 'Google 일정', items: await fetchGoogleEvents(), now: new Date() };
+      render();
     } catch (err) {
-      show(`연동 실패(${err.message}) → 샘플 일정`, summarize(SAMPLE_EVENTS, SAMPLE_NOW));
+      useSample(`연동 실패(${err.message}) → 샘플 일정`);
     }
   };
 </script>
