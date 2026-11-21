@@ -2,14 +2,8 @@ import { locate } from '../calendar/location.js';
 
 export async function resolvePlace(query, fetchFn = fetch) {
   const place = await locate(query, fetchFn);
-  if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lon)) return null;
-
-  return {
-    name: place.name,
-    address: place.address,
-    latitude: place.lat,
-    longitude: place.lon,
-  };
+  if (!place || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return null;
+  return place;
 }
 
 export async function resolveTripPlaces({ origin, destination, stop }, lookup = resolvePlace) {

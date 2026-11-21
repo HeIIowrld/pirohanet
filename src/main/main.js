@@ -1,3 +1,4 @@
+import { locateCandidates } from '../calendar/location.js';
 import { SAMPLE_EVENTS, SAMPLE_NOW } from '../calendar/sample.js';
 import { resolvePlace, resolveTripPlaces } from '../map/places.js';
 import { placeAliasKey } from '../preferences/place-alias.js';
@@ -14,7 +15,7 @@ const login = document.querySelector('#google-login');
 const calendarButton = document.querySelector('#google-calendar');
 const logout = document.querySelector('#logout');
 const accountStatus = document.querySelector('#account-status');
-const confirmPlace = document.querySelector('#confirm-calendar-place');
+const candidates = document.querySelector('#calendar-place-candidates');
 const savedSection = document.querySelector('#saved-places');
 const savedList = document.querySelector('#saved-place-list');
 const timeFormat = new Intl.DateTimeFormat('ko-KR', {
@@ -133,27 +134,39 @@ function scheduleTrip() {
   return prepareTrip({}, events, source === 'sample' ? SAMPLE_NOW : new Date());
 }
 
-function offerConfirmation(alias, place, version) {
-  confirmPlace.textContent = `${place.address} 확인`;
-  confirmPlace.hidden = false;
-  confirmPlace.onclick = async () => {
-    confirmPlace.disabled = true;
-    try {
-      await storePlace(alias, place);
-      if (version === scheduleVersion) await refreshSchedule();
-      accountMessage(`‘${alias}’ 장소를 기억했어요.`);
-    } catch (error) {
-      accountMessage(error.message);
-    } finally {
-      confirmPlace.disabled = false;
-    }
-  };
+function offerConfirmation(alias, places, version) {
+  candidates.replaceChildren();
+  for (const place of places) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'secondary';
+    button.textContent = place.name && place.name !== alias
+      ? `${place.name} · ${place.address} 확인`
+      : `${place.address} 확인`;
+    candidates.append(button);
+    button.addEventListener('click', async () => {
+      const choices = [...candidates.children];
+      for (const choice of choices) choice.disabled = true;
+      try {
+        await storePlace(alias, place);
+        if (version === scheduleVersion) {
+          destination.value = alias;
+          await refreshSchedule();
+        }
+        accountMessage(`‘${alias}’ 장소를 기억했어요.`);
+      } catch (error) {
+        accountMessage(error.message);
+      } finally {
+        for (const choice of choices) choice.disabled = false;
+      }
+    });
+  }
 }
 
 async function refreshSchedule() {
   if (!source) return;
   const version = ++scheduleVersion;
-  confirmPlace.hidden = true;
+  candidates.replaceChildren();
   const trip = scheduleTrip();
   const alias = trip.destination;
   if (!trip.arriveBy) {
@@ -170,10 +183,18 @@ async function refreshSchedule() {
 
   summary.textContent = `${appointment} · 주소 확인 중…`;
   try {
-    const place = await resolvePlace(alias);
-    if (version !== scheduleVersion) return;
-    summary.textContent = `${appointment} · ${place?.address || '목적지에 주소를 직접 입력해 주세요.'}`;
-    if (source === 'google' && signedIn && place?.address) offerConfirmation(alias, place, version);
+    if (source === 'google' && signedIn) {
+      const places = (await locateCandidates(alias)).filter((place) => place.address &&
+        Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
+      if (version !== scheduleVersion) return;
+      summary.textContent = `${appointment} · ${places.length ? '일정 장소를 확인해 주세요.' : '목적지에 주소를 직접 입력해 주세요.'}`;
+      offerConfirmation(alias, places, version);
+    } else {
+      const place = await resolvePlace(alias);
+      if (version === scheduleVersion) {
+        summary.textContent = `${appointment} · ${place?.address || '주소를 찾지 못했어요.'}`;
+      }
+    }
   } catch {
     if (version === scheduleVersion) summary.textContent = `${appointment} · 위치 검색에 실패했어요.`;
   }
@@ -237,7 +258,7 @@ form.addEventListener('submit', async (event) => {
     confirmedPlaces.hidden = false;
     routeStatus.textContent = '장소를 확인했어요. 경로 조회는 준비 중이에요.';
     if (corrected && places.destination.address && destination.value.trim() === trip.destination) {
-      offerConfirmation(alias, places.destination, version);
+      offerConfirmation(alias, [places.destination], version);
     }
   } catch {
     if (version === scheduleVersion) {

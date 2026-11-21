@@ -83,7 +83,8 @@ dt { margin-top: .75rem; font-size: .85rem; font-weight: 650; }
 dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
 
 .account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .55rem; }
-#confirm-calendar-place { margin-top: .55rem; text-align: left; }
+#calendar-place-candidates:empty { display: none; }
+#calendar-place-candidates button { text-align: left; }
 #saved-place-list { display: grid; gap: .75rem; padding: 0; list-style: none; }
 #saved-place-list p { overflow-wrap: anywhere; }
 .saved-place-edit { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
