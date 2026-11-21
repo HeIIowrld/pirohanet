@@ -40,7 +40,14 @@ export function subwayDirection(step, data) {
   const direction = line === '2'
     ? increasing ? '내선' : '외선'
     : increasing === (line === '1') ? '상선' : '하선';
-  return { line, direction, stations, stops, previous: stations[stepIndex(first, -offset)] };
+  const last = indices.at(-1);
+  const penultimate = indices.at(-2);
+  // 강동은 도착 후 5호선 본선과 마천 지선이 갈라져 현재 경로만으로 다음 역을 확정할 수 없다.
+  const next = last >= 0 && penultimate >= 0 && last === stepIndex(penultimate, offset) &&
+      !(line === '5' && stops.at(-1) === '강동')
+    ? stations[stepIndex(last, offset)]
+    : undefined;
+  return { line, direction, stations, stops, previous: stations[stepIndex(first, -offset)], next };
 }
 
 export function expectedCrowding(data, { line, direction, stations }, name, at) {
