@@ -90,8 +90,9 @@ body,button,input,select,textarea,.gsi-material-button,.gsi-material-button .gsi
 .saved-place-row>button{padding:8px;color:var(--fg-secondary)}
 .route-navigation{display:grid;gap:12px;margin:14px 0}
 .route-navigation>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-.route-navigation .button{flex-basis:100%}
-.route-navigation a,.copy-map-link,.route-source,.bus-information{font-size:13px;color:var(--fg-secondary)}
+.route-navigation .button{flex-basis:100%;color:inherit;text-decoration:none}
+.route-navigation .button.sky{color:var(--fg-link)}
+.copy-map-link,.route-source,.bus-information{font-size:13px;color:var(--fg-secondary)}
 .bus-information button{border-radius:8px;padding:4px 8px;background:var(--bg-surface)}
 .event-row:disabled{opacity:.55;cursor:default}
 

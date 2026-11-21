@@ -151,7 +151,7 @@ function BusInformation({step}) {
   return <div className="bus-information" ref={host}/>;
 }
 
-export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell, resume}) {
+export function RouteDetails({route, trip, demo, copyLink, openDwell, resume}) {
   const late = trip.arriveBy && route.arrivalAt > trip.arriveBy;
   const [doorData,setDoorData] = useState(null);
   const hasSubway = route.steps?.some(step => step.type === 'SUBWAY');
@@ -198,8 +198,7 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell, 
       {' · '}<a href="https://data.seoul.go.kr/dataList/OA-22749/A/1/datasetView.do" target="_blank" rel="noreferrer">빠른하차정보</a></p>}
     <div className="route-navigation" aria-label="구간별 길안내">
       {route.links?.map((link, index) => <div key={link.url}>
-        <Button kind={index === 0 ? 'primary' : 'sky'} onClick={() => navigate(link)}>{link.label}</Button>
-        <a href={link.url} target="_blank" rel="noreferrer">직접 열기</a>
+        <a className={`button ${index === 0 ? 'primary' : 'sky'}`} href={link.url} rel="noreferrer">{link.label}</a>
         <button className="copy-map-link" onClick={() => copyLink(link)}>링크 복사</button>
       </div>)}
     </div>
