@@ -125,6 +125,18 @@ test('the Sinchon to Hongik University rail segment has actual track points', as
   assert.equal(step.osmGeometry,true);
 });
 
+test('Shinbundang Line follows mapped tracks through intermediate stations', async () => {
+  const shapes = JSON.parse(await readFile(new URL('../public/assets/data/osm-subway-shapes.json',import.meta.url)));
+  const tracks = shapes.lines['신분당선'];
+  const first = tracks['신논현|강남'];
+  const second = tracks['강남|양재'];
+  const step = {type:'SUBWAY',approximate:true,railSegments:2,vehicles:[{name:'신분당선'}],
+    stops:[{name:'신논현역'},{name:'양재역'}],points:[first[0],second.at(-1)]};
+  const [mapped] = (await addMapGeometry({steps:[step]},new AbortController().signal,async () => Response.json(shapes))).steps;
+  assert.deepEqual(mapStepPoints(mapped),[...first,...second]);
+  assert.equal(mapped.approximate,false);
+});
+
 test('roads supplied by GBIS are clipped to the selected bus boarding and alighting points', async () => {
   const from = [126.935,37.555];
   const middle = [126.9335,37.556];
@@ -139,4 +151,18 @@ test('roads supplied by GBIS are clipped to the selected bus boarding and alight
   assert.ok(mapStepPoints(step).every(([lon]) => lon>=to[0] && lon<=from[0]));
   assert.equal(step.approximate,false);
   assert.equal(step.gbisGeometry,true);
+});
+
+test('a Gyeonggi bus without GBIS geometry uses its mapped road in the boarding direction', async () => {
+  const from = [126.935,37.555];
+  const middle = [126.9335,37.556];
+  const to = [126.932,37.555];
+  const road = [from,middle,to];
+  const bus = {type:'BUS',approximate:true,seoulBusRouteId:'229000273',vehicles:[{name:'7101파주'}],points:[from,to]};
+  const [mapped,reversed] = (await addMapGeometry({steps:[bus,{...bus,points:[to,from]}]},new AbortController().signal,
+    async url => Response.json(url.endsWith('osm-bus-shapes.json') ? {lines:{'7101':[road]}} : {}))).steps;
+  assert.deepEqual(mapStepPoints(mapped),road);
+  assert.equal(mapped.approximate,false);
+  assert.deepEqual(mapStepPoints(reversed),[to,from]);
+  assert.equal(reversed.approximate,true);
 });

@@ -122,7 +122,7 @@ export function RouteComparison({result, route, trip, demo, select, start, findS
       {trip.condition?.label && <p className="route-source">{trip.condition.source} · {trip.condition.label}
         {trip.condition.reason && ` · ${trip.condition.reason}`}</p>}
       {trip.condition?.mobilityLabel && <p className="route-source">이동 조건 · {trip.condition.mobilityLabel}</p>}
-      {route?.source === 'seoul' && <p className="route-source">서울시 환승경로 · 흐린 선은 추정 경로예요. 좌표가 부족한 구간은 선을 생략해요.</p>}
+      {route?.source === 'seoul' && <p className="route-source">서울시 환승경로</p>}
       {result.direct.map((item,index) => <RouteCard key={item.id} item={item}
         label={index === 0 ? '빠른 길' : (result.secondLabel ?? '편한 길')}
         reasons={index === 1 ? result.comfortReasons : null}

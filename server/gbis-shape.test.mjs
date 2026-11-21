@@ -32,6 +32,8 @@ test('TOPIS supplies ordered road points for requested Seoul routes', async () =
   const [first,second] = await Promise.all([fetchShape('100100450'),fetchShape('100100450')]);
   assert.equal(first,second);
   assert.deepEqual(first,[[[126.93,37.55],[126.94,37.56]]]);
-  assert.deepEqual(await fetchShape('219000027'),[]);
-  assert.equal(calls,1);
+  assert.deepEqual(await fetchShape('219000027'),first);
+  assert.deepEqual(await fetchShape('165000381'),first);
+  assert.deepEqual(await fetchShape('bad-route'),[]);
+  assert.equal(calls,3);
 });

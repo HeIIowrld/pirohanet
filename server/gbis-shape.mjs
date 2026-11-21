@@ -7,6 +7,7 @@ const earthRadius = 6_378_137;
 
 export const isGbisRouteId = id => /^(?:1[0-2]\d|2\d{2})\d{6}$/.test(id);
 export const isSeoulRouteId = id => /^(?:1[01]\d|12[0-4])\d{6}$/.test(id);
+export const isTopisRouteId = id => isGbisRouteId(id) || /^(?:16\d|170)\d{6}$/.test(id);
 
 function toWgs84(row) {
   const longitude = Number(row.lon) / earthRadius * 180 / Math.PI;
@@ -57,7 +58,7 @@ export function createSeoulBusShape({fetchFn = fetch} = {}) {
     return points.length > 1 ? [points] : [];
   }
 
-  return cachedShapes(request,isSeoulRouteId);
+  return cachedShapes(request,isTopisRouteId);
 }
 
 function cachedShapes(request,isRouteId) {

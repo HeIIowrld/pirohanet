@@ -26,11 +26,11 @@ function snap(line, point) {
   return closest;
 }
 
-export function matchBusShape(step, shapes) {
+export function matchBusShape(step, shapes, options) {
   const name = step.vehicles?.[0]?.name;
   if (!name) return null;
   const ref = name.replace(/([0-9][a-z]?)[가-힣]+$/iu,'$1');
-  return clipBusShape(step,shapes?.[name] ?? shapes?.[ref] ?? []);
+  return clipBusShape(step,shapes?.[name] ?? shapes?.[ref] ?? [],options);
 }
 
 export function clipBusShape(step, lines = [], {forwardOnly = false} = {}) {

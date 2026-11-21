@@ -22,16 +22,17 @@ const busColors = new Map(Object.entries({
   급행간선:incheonExpress,
 }));
 
-function railColor(name) {
+export function railLineName(name) {
   const line = name.replace(/[\s·ㆍ]/gu,'').replace(/^수도권전철|^서울지하철|^서울(?=[1-9]호선)/u,'')
     .replace(/\(.*\)$|급행$|특급$/u,'');
   const aliases = {
     경의선:'경의중앙선', 중앙선:'경의중앙선', 분당선:'수인분당선', 수인선:'수인분당선',
-    공항선:'공항철도', 인천공항철도:'공항철도', 인천선:'인천1호선',
+    공항선:'공항철도', 인천공항철도:'공항철도', 인천국제공항철도:'공항철도', 인천선:'인천1호선',
+    인천도시철도1호선:'인천1호선', 인천도시철도2호선:'인천2호선', 서울경전철신림선:'신림선',
     용인에버라인:'용인경전철', 에버라인:'용인경전철', 김포도시철도:'김포골드라인',
-    우이신설경전철:'우이신설선', 광역급행철도A노선:'GTX-A', GTXA:'GTX-A',
+    우이신설경전철:'우이신설선', 광역급행철도A노선:'GTX-A', 수도권광역급행철도A선:'GTX-A', GTXA:'GTX-A',
   };
-  return railColors.get(aliases[line] ?? line) ?? '#346883';
+  return aliases[line] ?? line;
 }
 
 function seoulBusColor(name) {
@@ -75,7 +76,7 @@ export function routeColor(step) {
   switch (step.type) {
     case 'WALKING': return '#666E78';
     case 'BUS': return busColor(step);
-    case 'SUBWAY': return railColor(step.vehicles?.[0]?.name ?? '');
+    case 'SUBWAY': return railColors.get(railLineName(step.vehicles?.[0]?.name ?? '')) ?? '#346883';
     default: return '#61676F';
   }
 }
