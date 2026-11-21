@@ -75,8 +75,8 @@ npm --prefix packages/landmark-route-planner run dev
 
 ## yccthon 배포
 
-`main`에 푸시하면 [GitHub Actions 워크플로](.github/workflows/deploy-yccthon.yml)가 테스트와 빌드를 실행합니다. Nginx 응답을 확인하며 `/var/www/pirohanet/current`에 정적 파일을 배포합니다. `/`는 `/src/main/`으로 이동하고, 이 주소가 React 앱을 제공합니다.
+`main`에 푸시하면 [GitHub Actions 워크플로](.github/workflows/deploy-yccthon.yml)가 테스트와 빌드를 실행합니다. Nginx 응답을 확인하며 `/var/www/pirohanet/current`에 정적 파일을 배포합니다. `/`와 `/src/main/`에서 React 앱을 제공합니다.
 
 [Nginx 설정](deploy/yccthon-nginx.conf)은 API와 OAuth 요청을 5173 포트의 Node 서비스로 전달합니다. Node 코드를 변경한 경우 운영 서비스를 같은 버전으로 갱신하고 재시작합니다. AI 캘린더 분석을 쓰려면 `APP_ORIGIN`을 앱의 공개 주소에 맞추고 Nginx에서 `/api/calendar-condition`을 전달합니다. 버스 관측 기록을 이어 쓰려면 운영 서비스의 `.data/`를 유지합니다.
 
-운영 지도 설정은 `/var/www/pirohanet/map-config.json`의 `naverClientId`입니다. Nginx가 이 파일을 `/assets/map-config.json`으로 제공합니다.
+운영 지도 설정은 `/var/www/pirohanet/map-config.json`의 `naverClientId`입니다. Nginx가 이 파일을 `/assets/map-config.json`으로 제공합니다. 브라우저에서 사내 IP로 앱을 열면 지도 인증이 등록된 [공개 HTTPS 주소](https://piro4.hjpark.net/)로 이동합니다.
