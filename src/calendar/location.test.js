@@ -1,7 +1,7 @@
 // 실행: node src/calendar/location.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { locate, locateAll, locateCandidates, staticMapUrl } from './location.js';
+import { isPersonalLabel, locate, locateAll, locateCandidates, savedPlace, savePlace, staticMapUrl } from './location.js';
 
 const KYOBO = { roadAddress: '서울특별시 종로구 종로 1', jibunAddress: '서울특별시 종로구 종로1가 1', x: '126.9779', y: '37.5709' };
 const KYOBO_PLACE = { name: '교보문고 광화문점', address: '서울특별시 종로구 종로 1', latitude: 37.5709, longitude: 126.9779 };
@@ -84,6 +84,62 @@ test('여러 위치를 한꺼번에 바꾸고, 같은 글자는 한 번만 찾�
   assert.deepEqual(places.get('여의도').map((place) => place.name), ['여의도역', '여의도공원']);
   assert.deepEqual(places.get('회의실 B'), []);
   assert.equal(calls.filter((call) => call === '/api/place 여의도').length, 1);
+});
+
+// localStorage 대신 쓰는 메모리 저장소
+function fakeStore(initial = {}) {
+  const data = new Map(Object.entries(initial));
+  return { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), data };
+}
+const OFFICE = { name: '현대자동차 본사 양재사옥', address: '서울 서초구 헌릉로 12', latitude: 37.46, longitude: 127.04 };
+
+test('회사·집 같은 이름은 검색하지 않고 빈 후보를 돌려준다', async () => {
+  const { fetchFn, calls } = fakeServer({ '/api/place 회사': { documents: [kakao('농업회사법인 화조원', '제주시 애월읍', 126.3, 33.4)] } });
+  assert.deepEqual(await locateCandidates('회사', fetchFn, fakeStore()), []);
+  assert.deepEqual(await locateCandidates(' 집 ', fetchFn, fakeStore()), []);
+  assert.deepEqual(calls, []);
+  assert.equal(isPersonalLabel('Home'), true);
+  assert.equal(isPersonalLabel('현대자동차 회사'), false);
+});
+
+test('내 장소로 저장하면 검색 없이 그 장소를 돌려준다', async () => {
+  const { fetchFn, calls } = fakeServer({});
+  const store = fakeStore();
+  savePlace('회사', { ...OFFICE, extra: '저장하지 않는 값' }, store);
+  assert.deepEqual(await locateCandidates(' 회사', fetchFn, store), [OFFICE]);
+  assert.deepEqual(await locate('회사', fetchFn, store), OFFICE);
+  assert.deepEqual((await locateAll(['회사', '회사'], fetchFn, store)).get('회사'), [OFFICE]);
+  assert.deepEqual(calls, []);
+  assert.deepEqual(savedPlace('회사', store), OFFICE);
+});
+
+test('저장한 내 장소가 일반 검색 결과보다 먼저다', async () => {
+  const { fetchFn } = fakeServer({ '/api/place 교보문고': { documents: [kakao('교보문고 광화문점', '서울 종로구 종로 1', 126.97, 37.57)] } });
+  const store = fakeStore();
+  assert.equal((await locate('교보문고', fetchFn, store)).name, '교보문고 광화문점');
+  savePlace('교보문고', { name: '교보문고 강남점', address: '서울 서초구 강남대로 465', latitude: 37.5, longitude: 127.02 }, store);
+  assert.equal((await locate('교보문고', fetchFn, store)).name, '교보문고 강남점');
+});
+
+test('기억을 지우면 다시 묻는 상태로 돌아간다', async () => {
+  const { fetchFn } = fakeServer({});
+  const store = fakeStore();
+  savePlace('회사', OFFICE, store);
+  savePlace('회사', null, store);
+  assert.equal(savedPlace('회사', store), null);
+  assert.deepEqual(await locateCandidates('회사', fetchFn, store), []);
+});
+
+test('저장소가 깨졌거나 막혀 있어도 위치 찾기는 동작한다', async () => {
+  const { fetchFn } = fakeServer({ '/api/geocode 서울특별시 종로구 종로 1': { addresses: [KYOBO] } });
+  const broken = fakeStore({ 'pirohanet.myPlaces': '{깨진 값' });
+  const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+  const badShape = fakeStore({ 'pirohanet.myPlaces': JSON.stringify({ 회사: { name: '좌표 없음' } }) });
+  for (const store of [broken, blocked, badShape, null]) {
+    assert.equal(savedPlace('회사', store), null);
+    assert.doesNotThrow(() => savePlace('회사', OFFICE, store));
+    assert.equal((await locateCandidates('서울특별시 종로구 종로 1', fetchFn, store)).length, 1);
+  }
 });
 
 test('지도 이미지 주소', () => {

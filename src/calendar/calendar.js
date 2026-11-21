@@ -114,9 +114,29 @@ function load(events, dayStart, until, prefix) {
   };
 }
 
-// 브라우저 전용. 페이지에 <script src="https://accounts.google.com/gsi/client"></script>가 있어야 하고,
-// 팝업이 막히지 않도록 버튼 클릭 핸들러 안에서 호출한다. 실패하면 reject하니 호출부에서 sample.js로 대체한다.
-export function fetchGoogleEvents(clientId = GOOGLE_CLIENT_ID, now = new Date()) {
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.readonly', // 일정 읽기
+  'https://www.googleapis.com/auth/drive.appdata', // 내 장소를 사용자 계정의 앱 전용 숨김 폴더에 저장 (account-places.js)
+].join(' ');
+
+// 브라우저 전용. Google 로그인 창을 띄워 액세스 토큰을 받는다. 토큰은 1시간 동안 유효하다.
+// 페이지에 <script src="https://accounts.google.com/gsi/client"></script>가 있어야 하고,
+// 팝업이 막히지 않도록 버튼 클릭 핸들러 안에서 호출한다. 실패하면 reject한다.
+export function requestGoogleToken(clientId = GOOGLE_CLIENT_ID) {
+  return new Promise((resolve, reject) => {
+    google.accounts.oauth2
+      .initTokenClient({
+        client_id: clientId,
+        scope: GOOGLE_SCOPES,
+        error_callback: (err) => reject(new Error(err.type ?? 'Google 로그인 실패')),
+        callback: (token) => (token.error ? reject(new Error(token.error)) : resolve(token.access_token)),
+      })
+      .requestAccessToken();
+  });
+}
+
+// requestGoogleToken으로 받은 토큰으로 어제부터 이후 6일까지의 일정을 읽는다. 실패하면 호출부에서 sample.js로 대체한다.
+export async function fetchGoogleEvents(token, now = new Date()) {
   const dayStart = kstDayStart(+now);
   const params = new URLSearchParams({
     timeMin: new Date(dayStart - DAY).toISOString(), // 어제 늦은 일정까지
@@ -124,25 +144,9 @@ export function fetchGoogleEvents(clientId = GOOGLE_CLIENT_ID, now = new Date())
     singleEvents: 'true',
     orderBy: 'startTime',
   });
-  return new Promise((resolve, reject) => {
-    google.accounts.oauth2
-      .initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        error_callback: (err) => reject(new Error(err.type ?? 'Google 로그인 실패')),
-        callback: async (token) => {
-          if (token.error) return reject(new Error(token.error));
-          try {
-            const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
-              headers: { Authorization: `Bearer ${token.access_token}` },
-            });
-            if (!res.ok) throw new Error(`Calendar API ${res.status}`);
-            resolve((await res.json()).items ?? []);
-          } catch (err) {
-            reject(err);
-          }
-        },
-      })
-      .requestAccessToken();
+  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  if (!res.ok) throw new Error(`Calendar API ${res.status}`);
+  return (await res.json()).items ?? [];
 }

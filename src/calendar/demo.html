@@ -15,9 +15,14 @@
     <option value="2">많이 피곤해요</option>
   </select>
 </label>
+<p id="account"></p>
 <pre id="out">버튼을 누르면 결과가 여기에 나옵니다.</pre>
 <form id="research">
-  <p><label>다음 약속 장소 <select id="dest"></select></label></p>
+  <p>
+    <label>다음 약속 장소 <select id="dest"></select></label>
+    <button type="button" id="remember" hidden>기억하기</button>
+    <button type="button" id="forget" hidden>기억 지우기</button>
+  </p>
   <p>
     <label>여기 없나요? 글자를 고쳐서 <input id="query" size="30"></label>
     <button>다시 검색</button>
@@ -27,9 +32,10 @@
 <pre id="chosen"></pre>
 <img id="map" alt="확정한 장소 지도" hidden>
 <script type="module">
-  import { fetchGoogleEvents, summarize } from './calendar.js';
+  import { fetchGoogleEvents, requestGoogleToken, summarize } from './calendar.js';
+  import { pushMyPlaces, syncMyPlaces } from './account-places.js';
   import { SAMPLE_EVENTS, SAMPLE_NOW } from './sample.js';
-  import { locateAll, locateCandidates, staticMapUrl } from './location.js';
+  import { isPersonalLabel, locateAll, locateCandidates, savedPlace, savePlace, staticMapUrl } from './location.js';
 
   const NAVER_MAP_KEY_ID = ''; // 네이버 클라우드 Application의 키 ID를 넣으면 확정한 장소의 지도 이미지가 나온다
 
@@ -38,6 +44,7 @@
   const dest = $('dest');
   const level = $('level');
   let loaded = null; // { title, items, now, places, placeError }
+  let googleToken = null; // 로그인했을 때만 내 장소를 계정에 저장한다
   let destFor = null; // 후보를 채워 둔 약속의 위치 글자
   let destCandidates = []; // 선택 목록에 보여 주는 후보
 
@@ -49,13 +56,20 @@
     if (loaded.placeError) return `\n    위치 변환 실패: ${loaded.placeError}`;
     if (!loaded.places) return '\n    위치 찾는 중…';
     const candidates = loaded.places.get(location.trim()) ?? [];
-    return candidates.length ? candidates.map((place, i) => `\n    ${candidateLine(place, i)}`).join('') : '\n    위치를 찾지 못함';
+    if (savedPlace(location)) return `\n    ★ 내 장소: ${candidateLine(candidates[0], 0).slice(3)}`;
+    if (!candidates.length) return isPersonalLabel(location) ? '\n    어디인지 물어봐야 하는 이름' : '\n    위치를 찾지 못함';
+    return candidates.map((place, i) => `\n    ${candidateLine(place, i)}`).join('');
   };
 
   // 사용자가 고른 후보가 확정 장소가 된다. 이 값을 경로 탐색의 목적지로 넘긴다.
   const showChosen = () => {
     const place = destCandidates[dest.value];
     $('chosen').textContent = place ? `확정 장소\n${JSON.stringify(place, null, 2)}` : '';
+    // 약속의 위치 글자를 고른 장소로 기억해 두면, 다음부터는 검색하지 않고 그 장소를 쓴다
+    const saved = destFor ? savedPlace(destFor) : null;
+    $('remember').hidden = !(destFor && place) || (saved?.latitude === place.latitude && saved?.longitude === place.longitude);
+    $('remember').textContent = `"${destFor}"을(를) 이 장소로 기억하기`;
+    $('forget').hidden = !saved;
     $('map').hidden = !(place && NAVER_MAP_KEY_ID);
     if (!$('map').hidden) $('map').src = staticMapUrl([place], NAVER_MAP_KEY_ID);
   };
@@ -63,7 +77,11 @@
   const setCandidates = (candidates) => {
     destCandidates = candidates;
     dest.replaceChildren(...candidates.map((place, i) => new Option(candidateLine(place, i), i)));
-    $('status').textContent = candidates.length ? '' : '후보가 없습니다. 글자를 고쳐 다시 검색해 주세요.';
+    $('status').textContent = candidates.length
+      ? ''
+      : isPersonalLabel($('query').value)
+        ? `"${$('query').value}"이(가) 어디인지 알려 주세요. 실제 장소 이름이나 주소로 다시 검색해 고른 뒤 기억하기를 누르면 됩니다.`
+        : '후보가 없습니다. 글자를 고쳐 다시 검색해 주세요.';
     showChosen();
   };
 
@@ -100,15 +118,47 @@
     if (loaded === current) render(); // 그사이 다른 일정을 불러왔으면 그리지 않는다
   };
 
+  // 기억하거나 지운 뒤에는 그 위치 글자의 후보를 다시 만들어 화면을 새로 그린다
+  const refreshDest = async () => {
+    loaded.places.set(destFor, await locateCandidates(destFor));
+    destFor = null;
+    render();
+  };
+  // 이 브라우저에 먼저 기억하고, 로그인 상태면 계정에도 올린다. 계정 저장이 실패해도 이 브라우저의 기억은 남는다.
+  const remember = async (place) => {
+    savePlace(destFor, place);
+    refreshDest();
+    const done = place ? '기억했습니다' : '기억을 지웠습니다';
+    if (!googleToken) return ($('account').textContent = `로그인하지 않아 이 브라우저에서만 ${done}.`);
+    try {
+      await pushMyPlaces(googleToken);
+      $('account').textContent = `Google 계정의 내 장소에도 반영했습니다(${done}).`;
+    } catch (err) {
+      $('account').textContent = `계정 반영 실패(${err.message}). 이 브라우저에서만 ${done}.`;
+    }
+  };
+  $('remember').onclick = () => remember(destCandidates[dest.value]);
+  $('forget').onclick = () => remember(null);
+
   level.onchange = render;
   dest.onchange = showChosen;
   $('sample').onclick = () => show('샘플 일정', SAMPLE_EVENTS, SAMPLE_NOW);
   $('connect').onclick = async () => {
+    let items;
     try {
-      show('Google 일정', await fetchGoogleEvents(), new Date());
+      googleToken = await requestGoogleToken();
+      items = await fetchGoogleEvents(googleToken);
     } catch (err) {
-      show(`연동 실패(${err.message}) → 샘플 일정`, SAMPLE_EVENTS, SAMPLE_NOW);
+      return show(`연동 실패(${err.message}) → 샘플 일정`, SAMPLE_EVENTS, SAMPLE_NOW);
     }
+    // 위치를 찾기 전에 계정의 내 장소부터 받아 온다. 실패해도 일정과 위치 찾기는 계속한다.
+    try {
+      const count = Object.keys(await syncMyPlaces(googleToken)).length;
+      $('account').textContent = `Google 계정의 내 장소 ${count}곳을 불러왔습니다.`;
+    } catch (err) {
+      $('account').textContent = `계정의 내 장소를 불러오지 못했습니다(${err.message}). 이 브라우저에 기억한 것만 씁니다.`;
+    }
+    show('Google 일정', items, new Date());
   };
   // 후보에 원하는 곳이 없으면 글자를 고쳐 다시 찾는다. 새 후보가 선택 목록을 대신한다.
   $('research').onsubmit = async (event) => {
