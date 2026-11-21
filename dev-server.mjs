@@ -64,6 +64,7 @@ const config = { ...env, ...process.env };
 const handleBusInformation = createBusInformation({
   root: ROOT,
   serviceKey: config.SEOUL_BUSSTATION_INFO || config.DATA_GO_KR_SERVICE_KEY,
+  gyeonggiServiceKey:config.GYEONGGI_BUS_INFO,
   sendJson,
 });
 const handlePersonalization = createPersonalization({

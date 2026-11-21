@@ -25,7 +25,39 @@ function summarizeBoarding(lines) {
   return `${lines[0]} 외 ${lines.length-1}개 노선`;
 }
 
-function RouteCard({item,label,selected,onSelect}) {
+function comfortReason(item,fastest) {
+  if (item.transfers < fastest?.transfers) return '갈아타는 횟수가 적어요.';
+  if (item.walkMinutes < fastest?.walkMinutes) return '걷는 시간이 짧아요.';
+  const seats = item.steps?.find(step => step.busComfort?.remainingSeats > 0)?.busComfort;
+  if (seats && item.rideLoad?.seats < fastest?.rideLoad?.seats) {
+    return `${seats.name} · 조회 기준 잔여 ${seats.remainingSeats}석`;
+  }
+  if (item.rideLoad?.knownMinutes > 0 && item.rideLoad.crowding < fastest?.rideLoad?.crowding) {
+    return '확인된 혼잡도를 반영한 탑승 부담이 낮아요.';
+  }
+  return '탑승 시간과 노선 유형을 반영한 이동 부담이 낮아요.';
+}
+
+function RideEvidence({step}) {
+  if (step.type === 'SUBWAY') {
+    const rail = step.railComfort;
+    return <small className="ride-evidence">{step.vehicles?.[0]?.name || '지하철'} ·
+      {rail ? ` 시간대 평균 혼잡도 ${Math.round(rail.average)}% (${Math.round(rail.knownMinutes)}분 자료)` : ' 시간대 혼잡 자료 없음'}</small>;
+  }
+  if (step.type !== 'BUS') return null;
+  const observation = step.busComfort;
+  const vehicle = observation ?? step.vehicles?.[0];
+  const label = vehicle?.type ? `${vehicle.type}버스` : '버스';
+  const facts = [
+    [label,vehicle?.name].filter(Boolean).join(' '),
+    observation?.congestion ? `${observation.congestionSource} 차내 혼잡 ${observation.congestion}` : '차내 혼잡 자료 없음',
+    observation?.remainingSeats != null ? `조회 기준 잔여 ${observation.remainingSeats}석` : null,
+    observation?.remainingSeats != null && Number.isFinite(observation.checkedAt) ? `${clock(observation.checkedAt)} 조회` : null,
+  ].filter(Boolean);
+  return <small className="ride-evidence">{facts.join(' · ')}</small>;
+}
+
+function RouteCard({item,label,reason,selected,onSelect}) {
   const category = routeCategory(item);
   const lines = (item.steps ?? []).flatMap(step => summarizeBoarding(boardingLines(step)) ?? []);
   return <button className={`route-card ${selected ? 'selected' : ''}`}
@@ -35,6 +67,7 @@ function RouteCard({item,label,selected,onSelect}) {
     <div><strong>{minutes(item.travelMinutes)}분</strong><span>{clock(item.arrivalAt)} 도착</span></div>
     {!!lines.length && <div className="route-line-summary">{lines.join(' → ')}</div>}
     <p>도보 {minutes(item.walkMinutes)}분 · 환승 {item.transfers ?? 0}회 · {crowding(item)}</p>
+    {reason && <small className="ride-evidence">{reason}</small>}
     {hasLateNightBusLeg(item) && <small className="status">심야 노선 포함 · 운행 시간 확인</small>}
   </button>;
 }
@@ -62,7 +95,9 @@ export function RouteComparison({result, route, trip, demo, select, choose, chan
     <div className="sheet-body">
       <div className="heading-row"><h2>어떤 길로 갈까요?</h2>{demo && <Badge/>}</div>
       {result.direct.map((item,index) => <RouteCard key={item.id} item={item}
-        label={index === 0 ? '빠른 길' : '편한 길'} selected={route?.id === item.id} onSelect={() => select(item)}/>)}
+        label={index === 0 ? '빠른 길' : (result.secondLabel ?? '편한 길')}
+        reason={index === 1 && result.secondLabel === '편한 길' ? comfortReason(item,result.direct[0]) : null}
+        selected={route?.id === item.id} onSelect={() => select(item)}/>)}
       {alternatives.length > 0 && <>
         <button type="button" className="route-alternatives-toggle" aria-expanded={expanded}
           aria-controls="route-alternatives" onClick={() => setExpanded(!expanded)}>
@@ -122,6 +157,7 @@ export function RouteDetails({route, trip, demo, navigate, copyLink, openDwell})
           ({BUS:'var(--state-success)',SUBWAY:'var(--brand-sky-deep)',WALKING:'var(--walk)'})[step.type]}}/></span>
         <div><strong>{step.guidance || step.title}</strong>
           <small>{step.description || (Number.isFinite(step.time) ? `약 ${minutes(step.time / 60)}분` : '')}</small>
+          {!demo && <RideEvidence step={step}/>}
           {step.type === 'BUS' && <>
             {boardingLines(step).length > 1 && <small>이 구간의 노선 후보 · {boardingLines(step).join(' / ')}</small>}
             <BusInformation step={step}/>

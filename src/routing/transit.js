@@ -121,14 +121,22 @@ function profile(route, departAt, data) {
       const boarding = direction ? averageAt(direction.stops[0], 0) : null;
       boardings.push({ direction, boarding, at });
       if (direction) {
+        let measuredMinutes = 0;
+        let load = 0;
         const segmentMinutes = minutes / (direction.stops.length - 1);
         for (const [index, name] of direction.stops.slice(0, -1).entries()) {
           const crowding = averageAt(name, index * segmentMinutes);
           if (crowding === null) continue;
+          measuredMinutes += segmentMinutes;
+          load += segmentMinutes * crowding;
           knownRideMinutes += segmentMinutes;
           crowdMinutes += segmentMinutes * crowding / 100;
           crowdingBurden += segmentMinutes * Math.max(0, crowding / 100 - 1);
         }
+        if (measuredMinutes > 0) step = {...step, railComfort:{
+          knownMinutes:measuredMinutes, average:load/measuredMinutes,
+          line:step.vehicles?.[0]?.name, direction:direction.direction,
+        }};
       }
     }
     elapsed += minutes;

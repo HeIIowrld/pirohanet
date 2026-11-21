@@ -61,3 +61,40 @@ test('bus information matches the boarding direction, uses current reports, and 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('normally seated bus types honor reported zero seats without interpreting passenger counts as seats', () => {
+  const now = Date.parse('2026-11-21T14:23:00+09:00');
+  const row = {routeType:'6',rerdie_Div1:'2',reride_Num1:'0',repTm1:'2026-11-21 14:22:00.0',arrmsg1:'2분후'};
+  assert.equal(readArrival(row,1,now).remainingSeats,0);
+  assert.equal(readArrival({...row,routeType:'4'},1,now).remainingSeats,undefined);
+  assert.equal(readArrival({...row,reride_Num1:''},1,now).remainingSeats,undefined);
+});
+
+test('regional seat counts require the exact station, route and stop order',async () => {
+  const root = await mkdtemp(join(tmpdir(),'modo-region-'));
+  try {
+    const route = {rtNm:'3030안양',busRouteAbrv:'3030',routeType:'8',stId:'121000974',busRouteId:'208000027',staOrd:'49',nxtStn:'다음'};
+    const regional = {stationId:121000974,routeId:208000027,routeTypeCd:11,staOrder:49,flag:'RUN',routeName:3030,vehId1:100,predictTimeSec1:90,remainSeatCnt1:0};
+    const handler = createBusInformation({
+      root, serviceKey:'test',gyeonggiServiceKey:'test',
+      sendJson:(_,status,body)=>({status,body}),
+      fetchFn: async url => {
+        if (url.hostname==='apis.data.go.kr') {
+          return Response.json({response:{msgBody:{busArrivalList:[{...regional,staOrder:50,remainSeatCnt1:50},regional]}}});
+        }
+        const itemList = url.pathname.endsWith('getStationByPos')
+          ? [{arsId:'22653',stationNm:'승차',dist:'10'}]
+          : url.pathname.endsWith('getStationByUid') ? [route] : [];
+        return Response.json({msgHeader:{headerCd:'0'},msgBody:{itemList}});
+      },
+    });
+    const board = new URLSearchParams({lat:37.49,lon:127.02,stop:'승차',next:'다음',routes:'3030',at:Date.now()});
+    const response = await handler({method:'GET'},{setHeader(){}},new URL(`http://localhost/api/bus-information?${board}`));
+    assert.equal(response.status,200);
+    assert.equal(response.body.routes[0].arrivals[0].remainingSeats,0);
+    assert.equal(response.body.routes[0].source,'경기버스정보');
+    assert.deepEqual(response.body.routes[0].aliases,['3030안양','3030','3030']);
+  } finally {
+    await rm(root,{recursive:true,force:true});
+  }
+});

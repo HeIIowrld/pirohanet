@@ -6,8 +6,15 @@ const MINUTE = 60_000;
 const DAY = 1440 * MINUTE;
 const LABELS = { 3: '여유', 4: '보통', 5: '혼잡', 6: '매우 혼잡' };
 const MAX_REPORT_AGE = 3 * MINUTE;
-const normalizeStop = (name = '') => name.replace(/\(중\)\s*$/, '').replace(/[\s.]/g, '');
-const normalizeRoute = (name = '') => name.replace(/\([^)]*\)$/, '').trim().toUpperCase();
+const SEATED_GYEONGGI_TYPES = new Set([11, 12, 14, 16, 17, 21, 22]);
+const GYEONGGI_CROWDED_TYPES = new Set([13, 15, 23]);
+
+function nonnegativeInteger(value) {
+  return /^\d+$/.test(String(value ?? '')) && Number.isSafeInteger(Number(value))
+    ? Number(value) : null;
+}
+const normalizeStop = (name = '') => String(name ?? '').replace(/\(중\)\s*$/, '').replace(/[\s.]/g, '');
+const normalizeRoute = (name = '') => String(name ?? '').replace(/\([^)]*\)$/, '').trim().toUpperCase();
 
 function timeBucket(timestamp) {
   const kst = new Date(timestamp + 9 * 60 * MINUTE);
@@ -29,8 +36,14 @@ export function readArrival(row, index, now) {
   const imminent = typeof message === 'string' && /^곧\s*도착/.test(message);
   if (!imminent && (!match || (!match[1] && !match[2]))) return null;
   const seconds = imminent ? 0 : Number(match[1] || 0) * 60 + Number(match[2] || 0);
-  const code = Number(row[`congestion${index}`]);
-  return { seconds, congestion: LABELS[code] ?? null, code: LABELS[code] ? code : null };
+  const occupancyType = Number(row[`rerdie_Div${index}`]);
+  const occupancy = nonnegativeInteger(row[`reride_Num${index}`]);
+  const code = occupancyType === 4 && LABELS[occupancy] ? occupancy : Number(row[`congestion${index}`]);
+  const seats = Number(row.routeType) === 6 && occupancyType === 2 ? occupancy : null;
+  return {
+    seconds, congestion:LABELS[code] ?? null, code:LABELS[code] ? code : null,
+    ...(seats === null ? {} : {remainingSeats:seats}),
+  };
 }
 
 function createHistory(root) {
@@ -82,7 +95,18 @@ function cachedLookup(ttl, lookup) {
   };
 }
 
-export function createBusInformation({ root, serviceKey, sendJson, fetchFn = fetch }) {
+function regionalArrival(row,index,checkedAt) {
+  const seconds = nonnegativeInteger(row[`predictTimeSec${index}`]);
+  const vehicle = nonnegativeInteger(row[`vehId${index}`]);
+  if (seconds === null || !vehicle) return null;
+  const type = Number(row.routeTypeCd);
+  const seats = SEATED_GYEONGGI_TYPES.has(type) ? nonnegativeInteger(row[`remainSeatCnt${index}`]) : null;
+  const code = GYEONGGI_CROWDED_TYPES.has(type) ? Number(row[`crowded${index}`]) + 2 : null;
+  return {seconds, at:checkedAt + seconds*1000, congestion:LABELS[code] ?? null,
+    ...(seats === null ? {} : {remainingSeats:seats})};
+}
+
+export function createBusInformation({ root, serviceKey, gyeonggiServiceKey, sendJson, fetchFn = fetch }) {
   const history = serviceKey ? createHistory(root) : null;
   async function getStationData(operation, params) {
     const url = new URL(`http://ws.bus.go.kr/api/rest/stationinfo/${operation}`);
@@ -104,6 +128,16 @@ export function createBusInformation({ root, serviceKey, sendJson, fetchFn = fet
     ]);
     const reports = new Map(accessible.map((row) => [`${row.busRouteId}/${row.staOrd}`, row]));
     return { rows, reports, checkedAt: Date.now() };
+  });
+
+  const regionalArrivals = cachedLookup(15_000, async stationId => {
+    const url = new URL('https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalListv2');
+    url.search = new URLSearchParams({serviceKey:decodeURIComponent(gyeonggiServiceKey),stationId,format:'json'});
+    const response = await fetchFn(url,{signal:AbortSignal.timeout(3500)});
+    if (!response.ok) throw new Error('Gyeonggi bus provider unavailable');
+    const {response:body} = await response.json();
+    const rows = body?.msgBody?.busArrivalList;
+    return {rows:Array.isArray(rows) ? rows : rows ? [rows] : [], checkedAt:Date.now()};
   });
 
   return async (req, res, url) => {
@@ -138,20 +172,37 @@ export function createBusInformation({ root, serviceKey, sendJson, fetchFn = fet
       const showLive = boardingAt >= checkedAt - 5 * MINUTE && boardingAt <= checkedAt + 30 * MINUTE;
       const result = rows.filter((row) => [row.rtNm, row.busRouteAbrv].some((name) => routes.includes(normalizeRoute(name))) &&
         normalizeStop(row.nxtStn) === normalizeStop(next) && /^\d+$/.test(row.busRouteId));
+      // The regional seat feed shares the station ID, route ID and stop order with these Seoul rows.
+      // Only use regional data after the Seoul stop, requested route and next stop have matched.
+      const regionalStation = result.find(row => Number(row.routeType) === 8 && /^\d+$/.test(row.stId))?.stId;
+      const regional = showLive && gyeonggiServiceKey && regionalStation
+        ? await regionalArrivals(regionalStation,regionalStation).catch(() => null)
+        : null;
       return sendJson(res, 200, {
         checkedAt, showLive, routes: result.map((row) => {
           const accessible = reports.get(`${row.busRouteId}/${row.staOrd}`);
-          const from = (report) => [1, 2].map((index) => readArrival(report, index, checkedAt)).filter(Boolean);
+          const from = report => [1,2].map(index => readArrival({...report,routeType:row.routeType},index,checkedAt)).filter(Boolean);
           const accessibleLive = accessible ? from(accessible) : [];
-          const live = accessibleLive.length ? accessibleLive : from(row);
-          const approaching = live.find(({ code, seconds }) => code && seconds <= 180);
-          if (approaching) history.record(station.arsId, row.busRouteId, checkedAt, approaching.code);
+          const regularLive = from(row);
+          const live = regularLive.some(item => item.remainingSeats !== undefined) ? regularLive
+            : accessibleLive.length ? accessibleLive : regularLive;
+          const approaching = live.find(({code,seconds}) => code && seconds <= 180);
+          if (approaching) history.record(station.arsId,row.busRouteId,checkedAt,approaching.code);
+          const regionalRow = Number(row.routeType) === 8 && regional?.rows.find(entry =>
+            String(entry.stationId) === String(row.stId) &&
+            String(entry.routeId) === String(row.busRouteId) &&
+            String(entry.staOrder) === String(row.staOrd));
+          const regionalLive = regionalRow && !['STOP','WAIT'].includes(regionalRow.flag)
+            ? [1,2].map(index => regionalArrival(regionalRow,index,regional.checkedAt)).filter(Boolean) : [];
           return {
-            name: row.rtNm,
-            arrivals: showLive ? live.map(({ seconds, congestion }) => ({
-              seconds, congestion, at: checkedAt + seconds * 1000,
+            name:row.rtNm,
+            aliases:[row.rtNm,row.busRouteAbrv,regionalRow?.routeName].filter(Boolean).map(String),
+            source:regionalLive.length ? '경기버스정보' : '서울시 버스정보',
+            arrivals:showLive ? regionalLive.length ? regionalLive : live.map(({seconds,congestion,remainingSeats}) => ({
+              seconds,congestion,at:checkedAt + seconds*1000,
+              ...(remainingSeats === undefined ? {} : {remainingSeats}),
             })) : [],
-            prediction: history.predict(station.arsId, row.busRouteId, boardingAt, checkedAt),
+            prediction:history.predict(station.arsId,row.busRouteId,boardingAt,checkedAt),
           };
         }),
       });
