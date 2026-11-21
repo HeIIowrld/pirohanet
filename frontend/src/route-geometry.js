@@ -9,20 +9,27 @@ const stationsByLine = new Map(Object.entries(stationPoints).map(([line,stations
 
 const walkingPaths = new Map();
 const maxWalkingPaths = 48;
-const busStopDataUrl = '/assets/data/seoul-bus-stops.json';
-let busStopsPromise;
+const busStopRequests = new Map();
 
-function getBusStops(fetchFn) {
+function busStopDataUrl(routeId) {
+  const region = /^(?:16[0-9]|170)\d{6}$/.test(routeId) ? 'incheon' : 'seoul';
+  return `/assets/data/${region}-bus-stops.json`;
+}
+
+function getBusStops(routeId,fetchFn) {
+  const url = busStopDataUrl(routeId);
   const load = async () => {
-    const response = await fetchFn(busStopDataUrl);
+    const response = await fetchFn(url);
     return response.ok ? (await response.json()).routes : null;
   };
   if (fetchFn !== globalThis.fetch) return load().catch(() => null);
-  busStopsPromise ??= load().catch(() => null).then(routes => {
-    if (!routes) busStopsPromise = null;
-    return routes;
-  });
-  return busStopsPromise;
+  if (!busStopRequests.has(url)) {
+    busStopRequests.set(url,load().catch(() => null).then(routes => {
+      if (!routes) busStopRequests.delete(url);
+      return routes;
+    }));
+  }
+  return busStopRequests.get(url);
 }
 
 function location([longitude,latitude]) {
@@ -38,7 +45,7 @@ function railGeometry(step) {
   if (!path) return step;
   const intermediate = path.slice(1,-1).map(name => stations.get(name));
   if (intermediate.some(point => !point)) return step;
-  return {...step,knownStations:true,points:[step.points[0],...intermediate,step.points.at(-1)]};
+  return {...step,knownStops:true,points:[step.points[0],...intermediate,step.points.at(-1)]};
 }
 
 function distanceBetween([x1,y1],[x2,y2]) {
@@ -81,6 +88,7 @@ function busGeometry(step, routes) {
   let nearest = 75;
   for (let index = 0; index < stops.length; index++) {
     const [id,lon,lat] = stops[index];
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
     const point = [lon,lat];
     if (start >= 0 && id !== boarding) {
       const distance = distanceBetween(point,to);
@@ -94,25 +102,24 @@ function busGeometry(step, routes) {
       start = index;
     }
   }
-  if (start < 0 || end - start < 2) return step;
+  if (start < 0 || end <= start) return step;
   const intermediate = stops.slice(start+1,end).map(([,lon,lat]) => [lon,lat]);
-  return {...step,points:[from,...intermediate,to]};
+  if (intermediate.some(point => !point.every(Number.isFinite))) return step;
+  return {...step,knownStops:true,points:[from,...intermediate,to]};
 }
 
 export function mapStepPoints(step) {
   const points = step.points ?? [];
-  if (step.approximate && !step.knownStations && (step.type === 'BUS' || step.type === 'SUBWAY') && points.length < 3) return [];
+  if (step.approximate && !step.knownStops && (step.type === 'BUS' || step.type === 'SUBWAY') && points.length < 3) return [];
   return points;
 }
 
 export async function addStreetGeometry(route,signal,fetchFn = fetch) {
   const estimated = step => step.approximate && step.points?.length === 2;
-  const busStops = route.steps.some(step => estimated(step) && step.type === 'BUS' && step.seoulBusRouteId)
-    ? getBusStops(fetchFn) : null;
   const steps = await Promise.all(route.steps.map(async step => {
     if (!estimated(step)) return step;
     if (step.type === 'WALKING') return walkingGeometry(step,signal,fetchFn);
-    if (step.type === 'BUS' && busStops) return busGeometry(step,await busStops);
+    if (step.type === 'BUS' && step.seoulBusRouteId) return busGeometry(step,await getBusStops(step.seoulBusRouteId,fetchFn));
     return step;
   }));
   return {...route,steps};
