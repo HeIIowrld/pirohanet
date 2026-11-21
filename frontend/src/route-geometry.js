@@ -20,7 +20,7 @@ function busStopDataUrl(routeId) {
 
 function getGeometry(url,field,fetchFn) {
   const load = async () => {
-    const response = await fetchFn(url);
+    const response = await fetchFn(url,{signal:AbortSignal.timeout(5000)});
     return response.ok ? (await response.json())[field] : null;
   };
   if (fetchFn !== globalThis.fetch) return load().catch(() => null);
@@ -87,10 +87,7 @@ export function addRailGeometry(route) {
 }
 
 export function mapStepPoints(step) {
-  const points = step.points ?? [];
-  if (step.type === 'BUS' && step.approximate) return [];
-  if (step.approximate && !step.knownStops && step.type === 'SUBWAY' && points.length < 3) return [];
-  return points;
+  return step.invalidBusRide ? [] : step.points ?? [];
 }
 
 export async function addMapGeometry(route,signal,fetchFn = fetch) {
@@ -106,9 +103,10 @@ export async function addMapGeometry(route,signal,fetchFn = fetch) {
     const stopLists = await getGeometry(stopDataUrl,'routes',fetchFn);
     const stops = stopLists?.[id];
     const range = busRideRange(step,stops);
-    if (range === null || (stops?.length && !range)) return step;
-    const intermediate = range ? stops.slice(range.start+1,range.end).map(([,lon,lat]) => [lon,lat]) : [];
-    if (intermediate.some(point => !point.every(Number.isFinite))) return step;
+    if (range === null) return {...step,invalidBusRide:true};
+    if (stops?.length && !range) return step;
+    const intermediate = range ? stops.slice(range.start+1,range.end)
+      .map(([,lon,lat]) => [lon,lat]).filter(point => point.every(Number.isFinite)) : [];
     const withStops = {...step,points:[step.points[0],...intermediate,step.points.at(-1)]};
 
     if (stopDataUrl.endsWith('incheon-bus-stops.json')) {
@@ -116,7 +114,7 @@ export async function addMapGeometry(route,signal,fetchFn = fetch) {
       if (official?.[id]) {
         const line = official[id][range?.direction];
         const road = line && clipBusShape(withStops,[line],{forwardOnly:true});
-        return road ? {...step,points:road,approximate:false,incheonGeometry:true} : step;
+        if (road) return {...step,points:road,approximate:false,incheonGeometry:true};
       }
     }
     if (/^(?:1[0-2]\d|2\d{2})\d{6}$/.test(id)) {
@@ -127,7 +125,7 @@ export async function addMapGeometry(route,signal,fetchFn = fetch) {
     if (!range) return step;
     const busShapes = await getGeometry('/assets/data/osm-bus-shapes.json','lines',fetchFn);
     const points = matchBusShape(withStops,busShapes);
-    return points ? {...step,points,approximate:false,osmGeometry:true} : step;
+    return points ? {...step,points,approximate:false,osmGeometry:true} : withStops;
   }));
   return {...route,steps};
 }
