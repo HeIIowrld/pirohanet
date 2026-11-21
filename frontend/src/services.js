@@ -62,21 +62,23 @@ export function routeResult(candidates, trip, places) {
     maxExtraTravelMinutes:trip.preferences.maxExtraTravelMinutes});
   const direct = eligible.filter(isDirect);
   const fastest = direct.reduce((best, item) => !best || item.arrivalAt < best.arrivalAt ? item : best, null);
-  const improvesEffort = item => Math.ceil(item.walkMinutes ?? 0) < Math.ceil(fastest.walkMinutes ?? 0) ||
-    (item.transfers ?? 0) < (fastest.transfers ?? 0);
-  const easier = fastest && direct
-    .filter(item => item.id !== fastest.id && item.comfortScore < fastest.comfortScore - 0.01)
-    .map(item => ({item,reasons:comfortReasons(item,fastest,trip.preferences)}))
-    .find(({item,reasons}) => reasons.length > 0 || improvesEffort(item));
-  const tradeoff = fastest && !easier && direct.find(item => item.id !== fastest.id && improvesEffort(item));
-  const second = easier?.item ?? tradeoff;
+  const lessWalking = item => Math.ceil(item.walkMinutes ?? 0) < Math.ceil(fastest.walkMinutes ?? 0);
+  const fewerTransfers = item => (item.transfers ?? 0) < (fastest.transfers ?? 0);
+  const best = direct[0];
+  const preferred = fastest && best.comfortScore < fastest.comfortScore ? best : null;
+  const second = preferred ?? (fastest && direct.find(item => fewerTransfers(item) || lessWalking(item)));
   const recommended = [fastest,second].filter(Boolean);
-  const hasComfortReasons = Boolean(easier?.reasons.length);
-  const secondLabel = hasComfortReasons || (easier && trip.preferences.mobility) ? '편한 길' :
-    (second?.transfers ?? 0) < (fastest?.transfers ?? 0) ? '환승 적은 길' : '도보 적은 길';
+  const reasons = preferred ? comfortReasons(preferred,fastest,trip.preferences) : [];
+  let secondLabel;
+  if (second) {
+    if (reasons.length || (preferred && trip.preferences.mobility)) secondLabel = '편한 길';
+    else if (fewerTransfers(second)) secondLabel = '환승 적은 길';
+    else if (lessWalking(second)) secondLabel = '도보 적은 길';
+    else secondLabel = '종합 추천';
+  }
   return {
     all, eligible,
-    direct:recommended,secondLabel,comfortReasons:hasComfortReasons ? easier.reasons : undefined,
+    direct:recommended,secondLabel,comfortReasons:reasons.length ? reasons : undefined,
     alternatives:alternateRoutes(direct,recommended),
     stops:eligible.filter(item => item.viaStop),
   };
