@@ -40,6 +40,15 @@ jobs:
           fi
 
           git -C "$stage" archive "$GITHUB_SHA" src | tar -x -C "$stage/site"
+          mkdir "$stage/build"
+          git -C "$stage" archive "$GITHUB_SHA" | tar -x -C "$stage/build"
+          runner_node="/home/github-runner/actions-runner/externals/node24/bin"
+          export PATH="$runner_node:$PATH"
+          npm --prefix "$stage/build" ci --no-audit --no-fund
+          npm --prefix "$stage/build" test
+          npm --prefix "$stage/build" run build
+          install -m 644 "$stage/build/dist/index.html" "$stage/site/src/main/index.html"
+          cp -a "$stage/build/dist/assets" "$stage/build/dist/fonts" "$stage/site/"
           if [ -n "$(find "$stage/site" ! -type d ! -type f -print -quit)" ]; then
             echo "The published tree must contain only regular files and directories." >&2
             exit 1
@@ -69,7 +78,11 @@ jobs:
             curl -fsS --max-time 10 -o "$stage/response" "http://127.0.0.1$url_path" \
               && cmp "$deploy_dir/$release/$file_path" "$stage/response"
           }
-          if ! check_published_file /src/main/ src/main/index.html \
+          bundle=$(sed -n 's/.*src="\/assets\/\([^"]*\.js\)".*/\1/p' "$deploy_dir/$release/src/main/index.html")
+          if [ -z "$bundle" ] \
+              || ! check_published_file /src/main/ src/main/index.html \
+              || ! check_published_file "/assets/$bundle" "assets/$bundle" \
+              || ! check_published_file /assets/brand/modo-wordmark.svg assets/brand/modo-wordmark.svg \
               || ! check_published_file /src/routing/transit.js src/routing/transit.js \
               || ! check_published_file /src/main/saved-places.js src/main/saved-places.js \
               || ! check_published_file /src/calendar/demo.html src/calendar/demo.html; then

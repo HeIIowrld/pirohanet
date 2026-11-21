@@ -1,5 +1,7 @@
 import { prepareTrip } from '../../src/main/trip.js';
-import { compareRoutes } from '../../src/routing/compare.js';
+import { queryTransit } from '../../src/routing/transit.js';
+import { loadRecommendedStops, resolveRecommendedStop } from '../../src/places/recommended-stops.js';
+import { compareRoutes, isDirect } from '../../src/routing/compare.js';
 import { summarize } from '../../src/calendar/calendar.js';
 import { api } from '../../src/preferences/account-api.js';
 export { api };
@@ -16,26 +18,79 @@ export function makeTrip(form, event, level, now=new Date()) {
   if(arriveBy && arriveBy<=departAt) throw new Error('도착 목표는 출발 시각 이후로 정해 주세요.');
   if(event && arriveBy && +arriveBy>Date.parse(event.start.dateTime)) throw new Error('약속 시각 이전으로 도착 목표를 정해 주세요.');
   // Keep the calendar module's existing 0–2 API compatible. UI values remain 1–5.
-  const trip=prepareTrip({origin:form.origin,destination:form.destination,departAt}, [], now);
+  const trip=prepareTrip({origin:form.origin,destination:form.destination,departAt}, event ? [event] : [], now);
   return {...trip,arriveBy,preferences:{...trip.preferences,...form.preferences,fatigueLevel:level,normalizedFatigue:level===null?null:(level-1)/4,maxExtraTravelMinutes:form.preferences?.maxExtraTravelMinutes??null}};
 }
-export function routeResult(data, trip, stayMinutes=20) {
-  const unique=[data.baseline,...(data.direct??[]),data.recommended,...(data.stops??[])].filter((r,i,a)=>r && a.findIndex(x=>x?.id===r.id)===i);
-  const all=unique.map(r=>({...r,travelMinutes:r.walk,stayMinutes:r.place?stayMinutes:0,viaStop:Boolean(r.place),arrivalAt:new Date(+trip.departAt+(r.walk+(r.place?stayMinutes:0))*60000)}));
-  const eligible=compareRoutes(all,{departAt:trip.departAt,arriveBy:trip.arriveBy,maxExtraTravelMinutes:trip.preferences.maxExtraTravelMinutes});
-  return {all,eligible,direct:eligible.filter(r=>!r.viaStop),stops:eligible.filter(r=>r.viaStop)};
+function routeKey(route) {
+  return JSON.stringify(route.steps.map(step => [step.guidance, step.type, step.time]));
 }
-export async function queryRoutes(trip,{demo=false,stops=false,saved=[],locations={}}={}) {
-  // The existing walking provider requires an upper bound. With no user target,
-  // use a provider-only horizon and remove that constraint in routeResult.
-  return api('/api/recommend','POST',{mode:demo?'demo':'live',origin:trip.origin,destination:trip.destination,
-    departAt:trip.departAt.toISOString(),arriveBy:(trip.arriveBy??new Date(+trip.departAt+86400000)).toISOString(),
-    fatigue:trip.preferences.fatigueLevel>=4?'tired':trip.preferences.fatigueLevel<=2&&trip.preferences.fatigueLevel!==null?'relaxed':'normal',
-    allowance:30,includeStops:stops,places:stops?saved.map(p=>({name:p.name||p.alias,category:'기타'})):[],calendar:!demo,locations});
+
+function stopDistance(place, destination) {
+  const latitude = destination.latitude * Math.PI / 180;
+  return Math.hypot(place.latitude - destination.latitude,
+    (place.longitude - destination.longitude) * Math.cos(latitude));
 }
-export function mapLink(origin,destination) {
-  return `https://map.kakao.com/link/from/${encodeURIComponent(origin.name||origin.address)},${origin.latitude},${origin.longitude}/to/${encodeURIComponent(destination.name||destination.address)},${destination.latitude},${destination.longitude}`;
+
+function accessibilityDistance(item, destination) {
+  const {lat,lng} = item.location;
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return stopDistance({latitude:lat,longitude:lng},destination);
+  }
+  return item.location.route_address?.includes(destination.address) ? .01 : .02;
 }
+
+async function nearbyStops(destination, saved) {
+  const usable = saved.filter(place => Number.isFinite(place.longitude) && Number.isFinite(place.latitude));
+  const ranked = places => places.sort((a,b) => stopDistance(a, destination) - stopDistance(b, destination));
+  const personal = ranked(usable).slice(0, 2);
+  const catalog = await loadRecommendedStops().catch(() => null);
+  const district = destination.address?.match(/(?:^|\s)([^\s]+구)(?:\s|$)/)?.[1];
+  const nearby = (catalog?.places ?? []).filter(item => district && item.location.district === district)
+    .sort((a,b) => accessibilityDistance(a, destination) - accessibilityDistance(b, destination))
+    .slice(0, 4);
+  const publicPlaces = await Promise.allSettled(nearby.map(item => resolveRecommendedStop(item)));
+  return [...personal, ...publicPlaces.flatMap(result => result.status === 'fulfilled' && result.value ? [result.value] : [])]
+    .filter(place => stopDistance(place, destination) <= 0.045);
+}
+
+export function routeResult(candidates, trip, places) {
+  const options = {departAt:trip.departAt, preferences:trip.preferences, places};
+  const all = compareRoutes(candidates, options);
+  const eligible = compareRoutes(candidates, {...options, arriveBy:trip.arriveBy,
+    maxExtraTravelMinutes:trip.preferences.maxExtraTravelMinutes});
+  const direct = eligible.filter(isDirect);
+  const fastest = direct.reduce((best, item) => !best || item.arrivalAt < best.arrivalAt ? item : best, null);
+  const easier = direct.find(item => item.id !== fastest?.id &&
+    (item.comfortScore < fastest.comfortScore || item.walkMinutes < fastest.walkMinutes ||
+      item.transfers < fastest.transfers ||
+      (item.crowdingCompared && item.crowdingBurden < fastest.crowdingBurden)));
+  return {
+    all, eligible,
+    direct: fastest ? [fastest, easier].filter(Boolean) : [],
+    stops: eligible.filter(item => item.viaStop),
+  };
+}
+
+export async function queryRoutes(trip, {places, previous, stops=false, saved=[], stayMinutes=20}={}) {
+  if (!places?.origin || !places?.destination) throw new Error('출발지와 목적지를 다시 선택해 주세요.');
+  if (!stops) {
+    const all = await queryTransit({...trip, places});
+    return routeResult(all.map(item => ({...item, id:routeKey(item), stayMinutes:0})), trip, places);
+  }
+  const results = await Promise.allSettled((await nearbyStops(places.destination, saved)).map(async place => {
+    const preferences = {...trip.preferences, savedStop:{query:place.name || place.alias, stayMinutes}};
+    const candidates = await queryTransit({...trip, places:{...places, stop:place}, preferences, detourOnly:true});
+    return candidates.filter(item => item.viaStop).map(item => ({...item, place,
+      id:JSON.stringify([place.latitude, place.longitude, routeKey(item)])}));
+  }));
+  const candidates = results.flatMap(item => item.status === 'fulfilled' ? item.value : []);
+  if (!candidates.length && results.length && results.every(item => item.status === 'rejected')) {
+    throw new Error('경유 경로를 불러오지 못했어요. 다시 시도해 주세요.');
+  }
+  const compared = routeResult([...(previous?.all ?? []).filter(isDirect), ...candidates], trip, places);
+  return {...compared, direct:previous?.direct ?? compared.direct};
+}
+
 // Keep the existing geocoder contract intact while allowing Kakao-only installs.
 export async function searchWithFallback(query, lookup, fetchFn=fetch) {
   try { return await lookup(query); }
