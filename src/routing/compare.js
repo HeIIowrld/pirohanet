@@ -59,7 +59,14 @@ function observationWeights(preferences) {
 }
 
 export function comfortReasons(route, fastest, preferences) {
-  return observedComfortReasons(route,fastest,observationWeights(preferences));
+  const reasons = observedComfortReasons(route,fastest,observationWeights(preferences));
+  if (route.context.avoidedLineMinutes < fastest.context.avoidedLineMinutes) {
+    reasons.push({kind:'avoidedLine',line:route.context.avoidLine,entirely:route.context.avoidedLineMinutes === 0});
+  }
+  if (route.context.trafficPenalty < fastest.context.trafficPenalty) {
+    reasons.push({kind:'traffic',period:fastest.context.traffic});
+  }
+  return reasons;
 }
 
 function score(route, preferences, useLegacyCrowding) {
